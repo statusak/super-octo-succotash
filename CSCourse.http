@@ -1,0 +1,6 @@
+@CSCourse_HostAddress = http://localhost:5215
+
+GET {{CSCourse_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
