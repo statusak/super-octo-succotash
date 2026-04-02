@@ -1,4 +1,4 @@
-using CSCourse.Interfaces;
+﻿using CSCourse.Interfaces;
 using CSCourse.Services;
 using System.Reflection;
 
@@ -20,6 +20,12 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
+    builder.Host.UseDefaultServiceProvider(options =>
+    {
+        options.ValidateScopes = true;
+        options.ValidateOnBuild = true;
+    });
+
     app.MapOpenApi();
     app.UseSwagger();
     app.UseSwaggerUI();
