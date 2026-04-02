@@ -21,7 +21,7 @@ namespace CSCourse.Controllers
             {
                 return Ok(_eventService.GetEventById(index));
             }
-            catch (ArgumentOutOfRangeException)
+            catch (InvalidOperationException)
             {
                 return NotFound($"Event with index {index} not found");
             }
@@ -41,7 +41,7 @@ namespace CSCourse.Controllers
                 _eventService.UpdateEvent(index, @event);
                 return NoContent();
             }
-            catch (ArgumentOutOfRangeException)
+            catch (InvalidOperationException)
             {
                 return NotFound($"Event with index {index} not found");
             }
@@ -55,7 +55,7 @@ namespace CSCourse.Controllers
                 _eventService.DeleteEvent(index);
                 return Ok();
             }
-            catch (ArgumentOutOfRangeException)
+            catch (InvalidOperationException)
             {
                 return NotFound($"Event with index {index} not found");
             }
