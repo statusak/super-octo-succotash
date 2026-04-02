@@ -3,7 +3,7 @@ using CSCourse.Models;
 
 namespace CSCourse.Services
 {
-    public class EventMemory : IEventService
+    public class EventMemoryService : IEventService
     {
         private static int _ID = 0;
         public static List<Event> Events { get; set; } = [];
