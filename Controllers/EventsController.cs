@@ -1,6 +1,5 @@
-﻿using CSCourse.Dto;
-using CSCourse.Interfaces;
-using CSCourse.Models;
+﻿using CSCourse.Models;
+using CSCourse.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Diagnostics;
 using System.Net;

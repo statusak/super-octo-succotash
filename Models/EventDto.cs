@@ -1,7 +1,7 @@
-﻿using CSCourse.DTO;
+﻿using CSCourse.Validators;
 using System.ComponentModel.DataAnnotations;
 
-namespace CSCourse.Dto
+namespace CSCourse.Models
 {
     /// <summary>
     /// Класс Dto, содержащий информацию о мероприятии.

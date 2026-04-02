@@ -1,6 +1,6 @@
 ﻿using CSCourse.Models;
 
-namespace CSCourse.Interfaces
+namespace CSCourse.Services
 {
     /// <summary>
     /// Сервис для работы с мероприятиями: предоставляет методы для получения, создания, обновления и удаления событий.

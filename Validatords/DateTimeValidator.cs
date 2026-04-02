@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace CSCourse.DTO
+namespace CSCourse.Validators
 {
     public class DateTimeValidator : ValidationAttribute
     {

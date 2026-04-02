@@ -1,5 +1,4 @@
-﻿using CSCourse.Interfaces;
-using CSCourse.Models;
+﻿using CSCourse.Models;
 
 namespace CSCourse.Services
 {

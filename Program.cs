@@ -1,5 +1,4 @@
-﻿using CSCourse.Interfaces;
-using CSCourse.Services;
+﻿using CSCourse.Services;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
