@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using CSCourse.DTO;
+using System.ComponentModel.DataAnnotations;
 
 namespace CSCourse.Dto
 {
@@ -12,6 +13,7 @@ namespace CSCourse.Dto
         public required DateTime StartAt { get; set; }
         
         [Required(ErrorMessage = "EndAt is required.")]
+        [DateTimeValidator(ErrorMessage = "EndAt must be later than StartAt.")]
         public required DateTime EndAt { get; set; }
     }
 }
