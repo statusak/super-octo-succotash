@@ -1,6 +1,8 @@
-﻿using CSCourse.Interfaces;
+﻿using CSCourse.Dto;
+using CSCourse.Interfaces;
 using CSCourse.Models;
 using Microsoft.AspNetCore.Mvc;
+using System.Net;
 
 namespace CSCourse.Controllers
 {
@@ -28,8 +30,21 @@ namespace CSCourse.Controllers
         }
 
         [HttpPost]
-        public ActionResult Post([FromBody] Event @event)
+        public ActionResult Post([FromBody] EventDto @eventDto)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var @event = new Event {
+                Id = 0,
+                Title = @eventDto.Title,
+                Description = @eventDto.Description,
+                StartAt = @eventDto.StartAt,
+                EndAt = @eventDto.EndAt,
+            };
+
             _eventService.CreateEvent(@event);
             return Created();
         }
