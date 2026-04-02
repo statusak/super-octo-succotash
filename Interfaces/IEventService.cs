@@ -1,4 +1,6 @@
-﻿namespace CSCourse
+﻿using CSCourse.Models;
+
+namespace CSCourse.Interfaces
 {
     public interface IEventService
     {

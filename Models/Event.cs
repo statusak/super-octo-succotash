@@ -1,4 +1,4 @@
-﻿namespace CSCourse
+﻿namespace CSCourse.Models
 {
     public class Event
     {
