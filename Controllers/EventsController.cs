@@ -2,6 +2,7 @@
 using CSCourse.Interfaces;
 using CSCourse.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Diagnostics;
 using System.Net;
 
 namespace CSCourse.Controllers
@@ -49,8 +50,22 @@ namespace CSCourse.Controllers
             return Created();
         }
         [HttpPut("{index:int}")]
-        public ActionResult Put(int index, [FromBody] Event @event)
+        public ActionResult Put(int index, [FromBody] EventDto @eventDto)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var @event = new Event
+            {
+                Id = 0,
+                Title = @eventDto.Title,
+                Description = @eventDto.Description,
+                StartAt = @eventDto.StartAt,
+                EndAt = @eventDto.EndAt,
+            };
+
             try
             {
                 _eventService.UpdateEvent(index, @event);
