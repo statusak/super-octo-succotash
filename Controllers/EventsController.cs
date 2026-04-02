@@ -10,7 +10,7 @@ namespace CSCourse.Controllers
     /// Контроллер для управления мероприятиями (Events). Предоставляет REST API endpoints для получения, создания, обновления и удаления мероприятий.
     /// </summary>
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("/[controller]")]
     public class EventsController(IEventService _eventService) : ControllerBase
     {
         /// <summary>
