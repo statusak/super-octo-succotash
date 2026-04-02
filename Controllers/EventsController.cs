@@ -33,19 +33,19 @@ namespace CSCourse.Controllers
             _eventService.CreateEvent(@event);
             return Created();
         }
-        [HttpPut("{index: int}")]
-        public ActionResult Put(int index, [FromBody] Event @event)
-        {
-            try
-            {
-                _eventService.UpdateEvent(index, @event);
-                return NoContent();
-            }
-            catch (ArgumentOutOfRangeException)
-            {
-                return NotFound($"Event with index {index} not found");
-            }
-        }
+        //[HttpPut("{index: int}")]
+        //public ActionResult Put(int index, [FromBody] Event @event)
+        //{
+        //    try
+        //    {
+        //        _eventService.UpdateEvent(index, @event);
+        //        return NoContent();
+        //    }
+        //    catch (ArgumentOutOfRangeException)
+        //    {
+        //        return NotFound($"Event with index {index} not found");
+        //    }
+        //}
 
         [HttpDelete("{index:int}")]
         public ActionResult Delete(int index)
