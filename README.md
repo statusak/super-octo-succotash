@@ -21,11 +21,11 @@
    * `DeleteEvent(int id)` — удалить мероприятие.
 
 3. **RESTful API для управления событиями** — контроллер `EventsController` предоставляет следующие эндпоинты:
-   * `GET /api/events` — список всех мероприятий;
-   * `GET /api/events/{index}` — мероприятие по ID;
-   * `POST /api/events` — создание нового мероприятия;
-   * `PUT /api/events/{index}` — обновление мероприятия;
-   * `DELETE /api/events/{index}` — удаление мероприятия.
+   * `GET /events` — список всех мероприятий;
+   * `GET /events/{index}` — мероприятие по ID;
+   * `POST /events` — создание нового мероприятия;
+   * `PUT /events/{index}` — обновление мероприятия;
+   * `DELETE /events/{index}` — удаление мероприятия.
 
 4. **Интеграция Swagger/OpenAPI** — автоматическая генерация интерактивной документации API
 
