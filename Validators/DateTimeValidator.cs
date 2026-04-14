@@ -4,7 +4,7 @@ namespace CSCourse.Validators
 {
     public class DateTimeValidator : ValidationAttribute
     {
-        protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+        protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
         {
             var startAtProperty = validationContext.ObjectType.GetProperty("StartAt");
             var endAtProperty = validationContext.ObjectType.GetProperty("EndAt");
@@ -12,8 +12,8 @@ namespace CSCourse.Validators
             if (startAtProperty == null || endAtProperty == null)
                 return new ValidationResult("Required properties not found.");
 
-            var startDate = (DateTime)startAtProperty.GetValue(validationContext.ObjectInstance);
-            var endDate = (DateTime)endAtProperty.GetValue(validationContext.ObjectInstance);
+            var startDate = Convert.ToDateTime(startAtProperty.GetValue(validationContext.ObjectInstance));
+            var endDate = Convert.ToDateTime(endAtProperty.GetValue(validationContext.ObjectInstance));
 
             if (endDate <= startDate)
             {

@@ -1,8 +1,6 @@
 ﻿using CSCourse.Models;
 using CSCourse.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Diagnostics;
-using System.Net;
 
 namespace CSCourse.Controllers
 {
