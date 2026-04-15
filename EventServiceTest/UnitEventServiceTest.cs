@@ -315,5 +315,75 @@ namespace EventServiceTest
             Assert.Contains("Event with index 999 not found", actionResult.Value.ToString());
         }
 
+
+        [Fact]
+        public void Put_UpdateExistingEvent_ReturnsNoContent()
+        {
+            var existingEvents = _eventMemoryService.GetAll(1, int.MaxValue).Events;
+            foreach (var @event in existingEvents)
+            {
+                _eventMemoryService.DeleteEvent(@event.Id);
+            }
+
+            var originalEvent = new Event
+            {
+                Id = 1,
+                Title = "Конференция разработчиков",
+                Description = "Ежегодная конференция...",
+                StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
+                EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
+            };
+
+            _eventMemoryService.CreateEvent(originalEvent);
+
+            var updateDto = new EventDto
+            {
+                Title = "Обновлённая конференция",
+                Description = "Описание после обновления",
+                StartAt = new DateTime(2026, 12, 2, 9, 0, 0),
+                EndAt = new DateTime(2026, 12, 2, 17, 0, 0)
+            };
+
+            var actionResult = _controller.Put(1, updateDto) as NoContentResult;
+
+            Assert.NotNull(actionResult);
+            Assert.Equal(204, actionResult.StatusCode);
+
+            var updatedEvent = _eventMemoryService.GetEventById(1);
+            Assert.Equal(updateDto.Title, updatedEvent.Title);
+            Assert.Equal(updateDto.Description, updatedEvent.Description);
+            Assert.Equal(updateDto.StartAt, updatedEvent.StartAt);
+            Assert.Equal(updateDto.EndAt, updatedEvent.EndAt);
+        }
+
+        [Fact]
+        public void Put_UpdateNonExistingEvent_ReturnsNotFound()
+        {
+            var existingEvents = _eventMemoryService.GetAll(1, int.MaxValue).Events;
+            foreach (var @event in existingEvents)
+            {
+                if (@event.Id == 999)
+                {
+                    _eventMemoryService.DeleteEvent(999);
+                }
+            }
+
+            var updateDto = new EventDto
+            {
+                Title = "Попытка обновления",
+                Description = "Это событие не существует",
+                StartAt = DateTime.Now,
+                EndAt = DateTime.Now.AddHours(2)
+            };
+
+            var actionResult = _controller.Put(999, updateDto) as NotFoundObjectResult;
+
+            Assert.NotNull(actionResult);
+            Assert.Equal(404, actionResult.StatusCode);
+
+            Assert.NotNull(actionResult.Value);
+            Assert.Contains("Event with index 999 not found", actionResult.Value.ToString());
+        }
+
     }
 }
