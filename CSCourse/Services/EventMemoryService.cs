@@ -4,7 +4,7 @@ namespace CSCourse.Services
 {
     public class EventMemoryService : IEventService
     {
-        private static int _ID = 0;
+        private static int _ID = 1;
         private static List<Event> Events { get; set; } = [];
 
         public PaginatedResult GetAll(int page, int pageSize)
@@ -16,18 +16,18 @@ namespace CSCourse.Services
             }; 
         }
 
-        public PaginatedResult GetAll(FilterEvent @filterEvent, int page, int pageSize)
+        public PaginatedResult GetAll(FilterEvent filterEvent, int page, int pageSize)
         {
-            var filteredEvents = Events.Where(e => e.Title.ToLower().Contains(@filterEvent.Title));
+            var filteredEvents = Events.Where(e => e.Title.ToLower().Contains(filterEvent.Title));
 
-            if (@filterEvent.StartAt != null)
+            if (filterEvent.StartAt != null)
             {
-                filteredEvents = filteredEvents.Where(e => @filterEvent.StartAt >= e.StartAt);
+                filteredEvents = filteredEvents.Where(e => filterEvent.StartAt >= e.StartAt);
             }
 
-            if (@filterEvent.EndAt != null)
+            if (filterEvent.EndAt != null)
             {
-                filteredEvents = filteredEvents.Where(e => @filterEvent.EndAt <= e.EndAt);
+                filteredEvents = filteredEvents.Where(e => filterEvent.EndAt <= e.EndAt);
             }
 
             return new PaginatedResult
