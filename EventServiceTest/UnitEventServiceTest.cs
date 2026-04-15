@@ -180,5 +180,84 @@ namespace EventServiceTest
             Assert.Single(actualResult.Events);
             Assert.Equal("Конференция разработчиков", actualResult.Events[0].Title);
         }
+
+        [Fact]
+        public void GetAll_WithDateFilter_ReturnsFilteredByDateResults()
+        {
+            var existingEvents = _eventMemoryService.GetAll(1, int.MaxValue).Events;
+            foreach (var @event in existingEvents)
+            {
+                _eventMemoryService.DeleteEvent(@event.Id);
+            }
+
+            var allEvents = new List<Event>
+            {
+                new Event
+                {
+                    Id = 1,
+                    Title = "Конференция утром",
+                    Description = "Утренняя конференция",
+                    StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
+                    EndAt = new DateTime(2026, 12, 1, 12, 0, 0)
+                },
+                new Event
+                {
+                    Id = 2,
+                    Title = "Встреча днём",
+                    Description = "Дневная встреча",
+                    StartAt = new DateTime(2026, 12, 1, 14, 0, 0),
+                    EndAt = new DateTime(2026, 12, 1, 16, 0, 0)
+                },
+                new Event
+                {
+                    Id = 3,
+                    Title = "Вечернее собрание",
+                    Description = "Собрание вечером",
+                    StartAt = new DateTime(2026, 12, 1, 18, 0, 0),
+                    EndAt = new DateTime(2026, 12, 1, 20, 0, 0)
+                },
+                new Event
+                {
+                    Id = 4,
+                    Title = "Ранняя планерка",
+                    Description = "Утренняя планерка",
+                    StartAt = new DateTime(2026, 12, 1, 8, 0, 0),
+                    EndAt = new DateTime(2026, 12, 1, 9, 0, 0)
+                }
+            };
+
+            foreach (var @event in allEvents)
+            {
+                _eventMemoryService.CreateEvent(@event);
+            }
+
+            var filterDto = new FilterEventDto
+            {
+                StartAt = new DateTime(2026, 12, 1, 11, 0, 0),  
+                EndAt = new DateTime(2026, 12, 1, 12, 0, 0)
+            };
+
+            var actionResult = _controller.GetAll(filterDto, 1, 10).Result as OkObjectResult;
+            var actualResult = actionResult?.Value as PaginatedResult;
+
+            Assert.NotNull(actionResult);
+            Assert.Equal(200, actionResult.StatusCode);
+            Assert.NotNull(actualResult);
+
+            Assert.Equal(allEvents.Count, actualResult.CountEvents);
+            Assert.Equal(1, actualResult.Events.Count);
+
+            var returnedIds = actualResult.Events.Select(e => e.Id).ToList();
+            Assert.Contains(1, returnedIds); 
+
+            Assert.DoesNotContain(2, returnedIds); 
+            Assert.DoesNotContain(3, returnedIds);
+            Assert.DoesNotContain(4, returnedIds); 
+
+            var firstEvent = actualResult.Events[0];
+            Assert.Equal("Конференция утром", firstEvent.Title);
+            Assert.True(firstEvent.StartAt <= filterDto.StartAt);
+            Assert.True(firstEvent.EndAt >= filterDto.EndAt);
+        }
     }
 }
