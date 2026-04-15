@@ -5,7 +5,7 @@ namespace CSCourse.Services
     public class EventMemoryService : IEventService
     {
         private static int _ID = 0;
-        public static List<Event> Events { get; set; } = [];
+        private static List<Event> Events { get; set; } = [];
 
         public PaginatedResult GetAll(int page, int pageSize)
         {
@@ -41,10 +41,11 @@ namespace CSCourse.Services
         {
             return Events.First(x => x.Id == id);
         }
-        public void CreateEvent(Event @event)
+        public int CreateEvent(Event @event)
         {
             @event.Id = _ID++;
             Events.Add(@event);
+            return @event.Id;
         }
 
         public void UpdateEvent(int id, Event @event)

@@ -26,7 +26,7 @@ namespace CSCourse.Services
         /// Создаёт новое мероприятие.
         /// </summary>
         /// <param name="event">Объект Event с данными для создания мероприятия.</param>
-        void CreateEvent(Event @event);
+        int CreateEvent(Event @event);
 
         /// <summary>
         /// Обновляет существующее мероприятие по указанному идентификатору.
