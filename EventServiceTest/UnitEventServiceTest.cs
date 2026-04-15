@@ -385,5 +385,60 @@ namespace EventServiceTest
             Assert.Contains("Event with index 999 not found", actionResult.Value.ToString());
         }
 
+        [Fact]
+        public void Delete_DeleteExistingEvent_ReturnsOk()
+        {
+            // Arrange: очищаем сервис от предыдущих событий
+            var existingEvents = _eventMemoryService.GetAll(1, int.MaxValue).Events;
+            foreach (var @event in existingEvents)
+            {
+                _eventMemoryService.DeleteEvent(@event.Id);
+            }
+
+            // Создаём тестовое событие и добавляем его в сервис
+            var testEvent = new Event
+            {
+                Id = 1,
+                Title = "Конференция разработчиков",
+                Description = "Ежегодная конференция...",
+                StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
+                EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
+            };
+
+            _eventMemoryService.CreateEvent(testEvent);
+
+            var actionResult = _controller.Delete(1) as OkResult;
+
+            Assert.NotNull(actionResult);
+            Assert.Equal(200, actionResult.StatusCode);
+
+            var allEvents = _eventMemoryService.GetAll(1, int.MaxValue).Events;
+            Assert.DoesNotContain(testEvent, allEvents);
+            Assert.Empty(allEvents);
+        }
+
+        [Fact]
+        public void Delete_DeleteNonExistingEvent_ReturnsNotFound()
+        {
+            var existingEvents = _eventMemoryService.GetAll(1, int.MaxValue).Events;
+            foreach (var @event in existingEvents)
+            {
+                if (@event.Id == 999)
+                {
+                    _eventMemoryService.DeleteEvent(999);
+                }
+            }
+
+            var actionResult = _controller.Delete(999) as NotFoundObjectResult;
+
+            Assert.NotNull(actionResult);
+            Assert.Equal(404, actionResult.StatusCode);
+
+            Assert.NotNull(actionResult.Value);
+            Assert.Contains("Event with index 999 not found", actionResult.Value.ToString());
+
+            var remainingEvents = _eventMemoryService.GetAll(1, int.MaxValue).Events;
+            Assert.All(remainingEvents, e => Assert.NotEqual(999, e.Id));
+        }
     }
 }
