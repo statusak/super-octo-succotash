@@ -2,27 +2,41 @@
 using CSCourse.Models;
 using CSCourse.Services;
 using CSCourse.Validators;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.AspNetCore.Routing;
-using Moq;
+using Microsoft.Extensions.Logging;
 using System.ComponentModel.DataAnnotations;
+using System.Xml;
 
 namespace EventServiceTest
 {
-    public class UnitEventServiceTest
+    public class EventServiceFixture : IDisposable
     {
-        private IEventService _eventMemoryService;
-        private EventsController _controller;
+        public IEventService Service { get; private set; }
+        public EventsController Controller { get; private set; }
 
-
-        public UnitEventServiceTest()
+        public EventServiceFixture()
         {
-            _eventMemoryService = new EventMemoryService();
-            _controller = new EventsController(_eventMemoryService);
+            Service = new EventMemoryService();
+            Controller = new EventsController(Service);
         }
 
+        public void Dispose()
+        {
+            var allEvents = Service.GetAll(1, int.MaxValue).Events;
+            foreach (var e in allEvents) Service.DeleteEvent(e.Id);
+        }
+    }
+
+    public class UnitEventServiceTest : IClassFixture<EventServiceFixture>
+    {
+        private readonly IEventService _service;
+        private readonly EventsController _controller;
+
+        public UnitEventServiceTest(EventServiceFixture fixture)
+        {
+            _service = fixture.Service;
+            _controller = fixture.Controller;
+        }
 
         [Fact]
         public void EventService_CreateEvent_Success()
@@ -81,10 +95,10 @@ namespace EventServiceTest
         [Fact]
         public void GetAll_WithValidData_ReturnsOkResultWithPaginatedEvents()
         {
-            var existingEvents = _eventMemoryService.GetAll(1, int.MaxValue).Events;
+            var existingEvents = _service.GetAll(1, int.MaxValue).Events;
             foreach (var @event in existingEvents)
             {
-                _eventMemoryService.DeleteEvent(@event.Id);
+                _service.DeleteEvent(@event.Id);
             }
 
             var testEvents = new List<Event>
@@ -109,7 +123,7 @@ namespace EventServiceTest
 
             foreach (var @event in testEvents)
             {
-                _eventMemoryService.CreateEvent(@event);
+                _service.CreateEvent(@event);
             }
 
 
@@ -134,10 +148,10 @@ namespace EventServiceTest
         [Fact]
         public void GetAll_WithFilter_ReturnsFilteredResults()
         {
-            var existingEvents = _eventMemoryService.GetAll(1, int.MaxValue).Events;
+            var existingEvents = _service.GetAll(1, int.MaxValue).Events;
             foreach (var @event in existingEvents)
             {
-                _eventMemoryService.DeleteEvent(@event.Id);
+                _service.DeleteEvent(@event.Id);
             }
 
             var allEvents = new List<Event>
@@ -162,7 +176,7 @@ namespace EventServiceTest
 
             foreach (var @event in allEvents)
             {
-                _eventMemoryService.CreateEvent(@event);
+                _service.CreateEvent(@event);
             }
 
             var filterDto = new FilterEventDto
@@ -184,12 +198,6 @@ namespace EventServiceTest
         [Fact]
         public void GetAll_WithDateFilter_ReturnsFilteredByDateResults()
         {
-            var existingEvents = _eventMemoryService.GetAll(1, int.MaxValue).Events;
-            foreach (var @event in existingEvents)
-            {
-                _eventMemoryService.DeleteEvent(@event.Id);
-            }
-
             var allEvents = new List<Event>
             {
                 new Event
@@ -226,9 +234,15 @@ namespace EventServiceTest
                 }
             };
 
-            foreach (var @event in allEvents)
+            var existingEvents = _service.GetAll(1, int.MaxValue).Events;
+            foreach (var @event in existingEvents)
             {
-                _eventMemoryService.CreateEvent(@event);
+                _service.DeleteEvent(@event.Id);
+            }
+            int expectedId = _service.CreateEvent(allEvents[0]);
+            foreach (var @event in allEvents[1..])
+            {
+                _service.CreateEvent(@event);
             }
 
             var filterDto = new FilterEventDto
@@ -247,12 +261,12 @@ namespace EventServiceTest
             Assert.Equal(allEvents.Count, actualResult.CountEvents);
             Assert.Equal(1, actualResult.Events.Count);
 
-            var returnedIds = actualResult.Events.Select(e => e.Id).ToList();
-            Assert.Contains(1, returnedIds); 
+            var returnedIds = actualResult.Events.Select(e => e.Id).ToArray();
+            Assert.Contains(expectedId, returnedIds); 
 
-            Assert.DoesNotContain(2, returnedIds); 
-            Assert.DoesNotContain(3, returnedIds);
-            Assert.DoesNotContain(4, returnedIds); 
+            Assert.DoesNotContain(++expectedId, returnedIds); 
+            Assert.DoesNotContain(++expectedId, returnedIds);
+            Assert.DoesNotContain(++expectedId, returnedIds); 
 
             var firstEvent = actualResult.Events[0];
             Assert.Equal("Конференция утром", firstEvent.Title);
@@ -263,10 +277,10 @@ namespace EventServiceTest
         [Fact]
         public void GetById_ExistingEvent_ReturnsOkResultWithEvent()
         {
-            var existingEvents = _eventMemoryService.GetAll(1, int.MaxValue).Events;
+            var existingEvents = _service.GetAll(1, int.MaxValue).Events;
             foreach (var @event in existingEvents)
             {
-                _eventMemoryService.DeleteEvent(@event.Id);
+                _service.DeleteEvent(@event.Id);
             }
 
             var testEvent = new Event
@@ -278,16 +292,16 @@ namespace EventServiceTest
                 EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
             };
 
-            _eventMemoryService.CreateEvent(testEvent);
+            int createdId = _service.CreateEvent(testEvent);
 
-            var actionResult = _controller.GetById(1).Result as OkObjectResult;
+            var actionResult = _controller.GetById(createdId).Result as OkObjectResult;
             var actualEvent = actionResult?.Value as Event;
 
             Assert.NotNull(actionResult);
             Assert.Equal(200, actionResult.StatusCode);
             Assert.NotNull(actualEvent);
 
-            Assert.Equal(testEvent.Id, actualEvent.Id);
+            Assert.Equal(createdId, actualEvent.Id);
             Assert.Equal(testEvent.Title, actualEvent.Title);
             Assert.Equal(testEvent.Description, actualEvent.Description);
             Assert.Equal(testEvent.StartAt, actualEvent.StartAt);
@@ -297,12 +311,12 @@ namespace EventServiceTest
         [Fact]
         public void GetById_NonExistingEvent_ReturnsNotFound()
         {
-            var existingEvents = _eventMemoryService.GetAll(1, int.MaxValue).Events;
+            var existingEvents = _service.GetAll(1, int.MaxValue).Events;
             foreach (var @event in existingEvents)
             {
                 if (@event.Id == 999)
                 {
-                    _eventMemoryService.DeleteEvent(999);
+                    _service.DeleteEvent(999);
                 }
             }
 
@@ -319,10 +333,10 @@ namespace EventServiceTest
         [Fact]
         public void Put_UpdateExistingEvent_ReturnsNoContent()
         {
-            var existingEvents = _eventMemoryService.GetAll(1, int.MaxValue).Events;
+            var existingEvents = _service.GetAll(1, int.MaxValue).Events;
             foreach (var @event in existingEvents)
             {
-                _eventMemoryService.DeleteEvent(@event.Id);
+                _service.DeleteEvent(@event.Id);
             }
 
             var originalEvent = new Event
@@ -334,7 +348,7 @@ namespace EventServiceTest
                 EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
             };
 
-            _eventMemoryService.CreateEvent(originalEvent);
+            _service.CreateEvent(originalEvent);
 
             var updateDto = new EventDto
             {
@@ -349,7 +363,7 @@ namespace EventServiceTest
             Assert.NotNull(actionResult);
             Assert.Equal(204, actionResult.StatusCode);
 
-            var updatedEvent = _eventMemoryService.GetEventById(1);
+            var updatedEvent = _service.GetEventById(1);
             Assert.Equal(updateDto.Title, updatedEvent.Title);
             Assert.Equal(updateDto.Description, updatedEvent.Description);
             Assert.Equal(updateDto.StartAt, updatedEvent.StartAt);
@@ -359,12 +373,12 @@ namespace EventServiceTest
         [Fact]
         public void Put_UpdateNonExistingEvent_ReturnsNotFound()
         {
-            var existingEvents = _eventMemoryService.GetAll(1, int.MaxValue).Events;
+            var existingEvents = _service.GetAll(1, int.MaxValue).Events;
             foreach (var @event in existingEvents)
             {
                 if (@event.Id == 999)
                 {
-                    _eventMemoryService.DeleteEvent(999);
+                    _service.DeleteEvent(999);
                 }
             }
 
@@ -388,14 +402,11 @@ namespace EventServiceTest
         [Fact]
         public void Delete_DeleteExistingEvent_ReturnsOk()
         {
-            // Arrange: очищаем сервис от предыдущих событий
-            var existingEvents = _eventMemoryService.GetAll(1, int.MaxValue).Events;
+            var existingEvents = _service.GetAll(1, int.MaxValue).Events;
             foreach (var @event in existingEvents)
             {
-                _eventMemoryService.DeleteEvent(@event.Id);
+                _service.DeleteEvent(@event.Id);
             }
-
-            // Создаём тестовое событие и добавляем его в сервис
             var testEvent = new Event
             {
                 Id = 1,
@@ -405,14 +416,14 @@ namespace EventServiceTest
                 EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
             };
 
-            _eventMemoryService.CreateEvent(testEvent);
+            int createdId = _service.CreateEvent(testEvent);
 
-            var actionResult = _controller.Delete(1) as OkResult;
+            var actionResult = _controller.Delete(createdId) as OkResult;
 
             Assert.NotNull(actionResult);
             Assert.Equal(200, actionResult.StatusCode);
 
-            var allEvents = _eventMemoryService.GetAll(1, int.MaxValue).Events;
+            var allEvents = _service.GetAll(1, int.MaxValue).Events;
             Assert.DoesNotContain(testEvent, allEvents);
             Assert.Empty(allEvents);
         }
@@ -420,12 +431,12 @@ namespace EventServiceTest
         [Fact]
         public void Delete_DeleteNonExistingEvent_ReturnsNotFound()
         {
-            var existingEvents = _eventMemoryService.GetAll(1, int.MaxValue).Events;
+            var existingEvents = _service.GetAll(1, int.MaxValue).Events;
             foreach (var @event in existingEvents)
             {
                 if (@event.Id == 999)
                 {
-                    _eventMemoryService.DeleteEvent(999);
+                    _service.DeleteEvent(999);
                 }
             }
 
@@ -437,7 +448,7 @@ namespace EventServiceTest
             Assert.NotNull(actionResult.Value);
             Assert.Contains("Event with index 999 not found", actionResult.Value.ToString());
 
-            var remainingEvents = _eventMemoryService.GetAll(1, int.MaxValue).Events;
+            var remainingEvents = _service.GetAll(1, int.MaxValue).Events;
             Assert.All(remainingEvents, e => Assert.NotEqual(999, e.Id));
         }
     }
