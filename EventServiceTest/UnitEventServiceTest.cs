@@ -1,39 +1,41 @@
-﻿using CSCourse.Models;
+﻿using CSCourse.Controllers;
+using CSCourse.Models;
 using CSCourse.Services;
+using Microsoft.AspNetCore.Mvc;
+using Moq;
 
 namespace EventServiceTest
 {
     public class UnitEventServiceTest
     {
-        private readonly IEventService _service;
+        private Mock<IEventService> _mockEventService;
+        private EventsController _controller;
+
 
         public UnitEventServiceTest()
         {
-            _service = new EventMemoryService();
+            _mockEventService = new Mock<IEventService>();
+            _controller = new EventsController(_mockEventService.Object);
         }
 
 
         [Fact]
         public void EventService_CreateEvent_Success()
         {
-            var eventToCreate = new Event
+            var validDto = new EventDto
             {
-                Id = 0,
                 Title = "Тестовая конференция",
                 Description = "Описание мероприятия",
                 StartAt = DateTime.Now.AddHours(1),
                 EndAt = DateTime.Now.AddHours(2)
             };
 
-            int id = _service.CreateEvent(eventToCreate);
+            _mockEventService.Setup(s => s.CreateEvent(It.IsAny<Event>()));
 
-            var createdEvent = _service.GetEventById(id);
-            Assert.NotNull(createdEvent);
-            Assert.Equal(eventToCreate.Id, id);
-            Assert.Equal(eventToCreate.Title, createdEvent.Title);
-            Assert.Equal(eventToCreate.Description, createdEvent.Description);
-            Assert.Equal(eventToCreate.StartAt, createdEvent.StartAt);
-            Assert.Equal(eventToCreate.EndAt, createdEvent.EndAt);
+            var result = _controller.Post(validDto) as CreatedResult;
+
+            Assert.NotNull(result);
+            Assert.Equal(201, result.StatusCode);
         }
     }
 }
