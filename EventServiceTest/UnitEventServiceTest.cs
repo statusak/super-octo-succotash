@@ -5,6 +5,7 @@ using CSCourse.Validators;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Routing;
 using Moq;
 using System.ComponentModel.DataAnnotations;
 
@@ -12,16 +13,14 @@ namespace EventServiceTest
 {
     public class UnitEventServiceTest
     {
-        private Mock<IEventService> _mockEventService;
+        private IEventService _eventMemoryService;
         private EventsController _controller;
 
 
         public UnitEventServiceTest()
         {
-            _mockEventService = new Mock<IEventService>();
-            _controller = new EventsController(_mockEventService.Object);
-
-            _mockEventService.Setup(s => s.CreateEvent(It.IsAny<Event>()));
+            _eventMemoryService = new EventMemoryService();
+            _controller = new EventsController(_eventMemoryService);
         }
 
 
@@ -36,8 +35,6 @@ namespace EventServiceTest
                 EndAt = DateTime.Now.AddHours(2)
             };
 
-            
-
             var result = _controller.Post(validDto) as CreatedResult;
 
             Assert.NotNull(result);
@@ -47,7 +44,6 @@ namespace EventServiceTest
         [Fact]
         public void DateTimeValidator_EndBeforeStart_ReturnsError()
         {
-            // Arrange
             var dto = new EventDto
             {
                 Title = "Тест",
@@ -58,10 +54,8 @@ namespace EventServiceTest
             var validator = new DateTimeValidator { ErrorMessage = "EndAt must be later than StartAt." };
             var validationContext = new ValidationContext(dto);
 
-            // Act
             var result = validator.GetValidationResult(dto.EndAt, validationContext);
 
-            // Assert
             Assert.NotNull(result);
             Assert.Equal("EndAt must be later than StartAt.", result.ErrorMessage);
         }
@@ -69,7 +63,6 @@ namespace EventServiceTest
         [Fact]
         public void DateTimeValidator_StartBeforeEnd_ReturnsSuccess()
         {
-            // Arrange
             var dto = new EventDto
             {
                 Title = "Тест",
@@ -80,11 +73,112 @@ namespace EventServiceTest
             var validator = new DateTimeValidator { ErrorMessage = "EndAt must be later than StartAt." };
             var validationContext = new ValidationContext(dto);
 
-            // Act
             var result = validator.GetValidationResult(dto.EndAt, validationContext);
 
-            // Assert
             Assert.Null(result);
+        }
+
+        [Fact]
+        public void GetAll_WithValidData_ReturnsOkResultWithPaginatedEvents()
+        {
+            var existingEvents = _eventMemoryService.GetAll(1, int.MaxValue).Events;
+            foreach (var @event in existingEvents)
+            {
+                _eventMemoryService.DeleteEvent(@event.Id);
+            }
+
+            var testEvents = new List<Event>
+            {
+                new Event
+                {
+                    Id = 1,
+                    Title = "Конференция разработчиков",
+                    Description = "Ежегодная конференция...",
+                    StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
+                    EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
+                },
+                new Event
+                {
+                    Id = 2,
+                    Title = "Митап по C#",
+                    Description = "Обсуждение новых возможностей языка",
+                    StartAt = new DateTime(2026, 12, 5, 14, 0, 0),
+                    EndAt = new DateTime(2026, 12, 5, 17, 0, 0)
+                }
+            };
+
+            foreach (var @event in testEvents)
+            {
+                _eventMemoryService.CreateEvent(@event);
+            }
+
+
+            var actionResult = _controller.GetAll(null, null, null).Result as OkObjectResult;
+            var actualResult = actionResult?.Value as PaginatedResult;
+
+            Assert.NotNull(actionResult);
+            Assert.Equal(200, actionResult.StatusCode);
+            Assert.NotNull(actualResult);
+            Assert.Equal(testEvents.Count, actualResult.CountEvents);
+            Assert.Equal(testEvents.Count, actualResult.Events.Count);
+
+            for (int i = 0; i < testEvents.Count; i++)
+            {
+                Assert.Equal(testEvents[i].Id, actualResult.Events[i].Id);
+                Assert.Equal(testEvents[i].Title, actualResult.Events[i].Title);
+                Assert.Equal(testEvents[i].StartAt, actualResult.Events[i].StartAt);
+                Assert.Equal(testEvents[i].EndAt, actualResult.Events[i].EndAt);
+            }
+        }
+
+        [Fact]
+        public void GetAll_WithFilter_ReturnsFilteredResults()
+        {
+            var existingEvents = _eventMemoryService.GetAll(1, int.MaxValue).Events;
+            foreach (var @event in existingEvents)
+            {
+                _eventMemoryService.DeleteEvent(@event.Id);
+            }
+
+            var allEvents = new List<Event>
+            {
+                new Event
+                {
+                    Id = 1,
+                    Title = "Конференция разработчиков",
+                    Description = "Ежегодная конференция...",
+                    StartAt = DateTime.Now,
+                    EndAt = DateTime.Now.AddHours(8)
+                },
+                new Event
+                {
+                    Id = 2,
+                    Title = "Встреча команды",
+                    Description = "Планерка",
+                    StartAt = DateTime.Now.AddDays(1),
+                    EndAt = DateTime.Now.AddDays(1).AddHours(2)
+                }
+            };
+
+            foreach (var @event in allEvents)
+            {
+                _eventMemoryService.CreateEvent(@event);
+            }
+
+            var filterDto = new FilterEventDto
+            {
+                Title = "конференция"
+            };
+
+
+            var actionResult = _controller.GetAll(filterDto, 1, 10).Result as OkObjectResult;
+            var actualResult = actionResult?.Value as PaginatedResult;
+
+            Assert.NotNull(actionResult);
+            Assert.Equal(200, actionResult.StatusCode);
+            Assert.NotNull(actualResult);
+            Assert.Single(actualResult.Events);
+            Assert.Equal("Конференция разработчиков", actualResult.Events[0].Title);
         }
     }
 }
