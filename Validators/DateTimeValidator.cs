@@ -12,8 +12,17 @@ namespace CSCourse.Validators
             if (startAtProperty == null || endAtProperty == null)
                 return new ValidationResult("Required properties not found.");
 
-            var startDate = Convert.ToDateTime(startAtProperty.GetValue(validationContext.ObjectInstance));
-            var endDate = Convert.ToDateTime(endAtProperty.GetValue(validationContext.ObjectInstance));
+            var startDate = DateTime.MinValue;
+            if (startAtProperty.GetValue(validationContext.ObjectInstance) != null)
+            {
+                startDate = Convert.ToDateTime(startAtProperty.GetValue(validationContext.ObjectInstance));
+            }
+
+            var endDate = DateTime.MaxValue;
+            if (endAtProperty.GetValue(validationContext.ObjectInstance) != null)
+            {
+                endDate = Convert.ToDateTime(endAtProperty.GetValue(validationContext.ObjectInstance));
+            }
 
             if (endDate <= startDate)
             {

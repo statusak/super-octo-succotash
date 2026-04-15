@@ -7,9 +7,21 @@ namespace CSCourse.Services
         private static int _ID = 0;
         public static List<Event> Events { get; set; } = [];
 
-        public List<Event> GetAll()
+        public List<Event> GetAll(FilterEvent @filterEvent)
         {
-            return Events;
+            var filteredEvents = Events.Where(e => e.Title.ToLower().Contains(@filterEvent.Title));
+
+            if (@filterEvent.StartAt != null)
+            {
+                filteredEvents = filteredEvents.Where(e => @filterEvent.StartAt >= e.StartAt);
+            }
+
+            if (@filterEvent.EndAt != null)
+            {
+                filteredEvents = filteredEvents.Where(e => @filterEvent.EndAt <= e.EndAt);
+            }
+
+            return filteredEvents.ToList();
         }
 
         public Event? GetEventById(int id)

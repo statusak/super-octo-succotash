@@ -11,7 +11,7 @@ namespace CSCourse.Services
         /// Получает список всех мероприятий.
         /// </summary>
         /// <returns>Список объектов Event.</returns>
-        List<Event> GetAll();
+        List<Event> GetAll(FilterEvent @filterEvent);
 
         /// <summary>
         /// Получает мероприятие по его уникальному идентификатору.

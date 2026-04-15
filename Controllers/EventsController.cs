@@ -1,6 +1,8 @@
 ﻿using CSCourse.Models;
 using CSCourse.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Diagnostics;
+using System.Runtime.Intrinsics.Arm;
 
 namespace CSCourse.Controllers
 {
@@ -14,9 +16,11 @@ namespace CSCourse.Controllers
         /// <summary>
         /// Получает список всех мероприятий.
         /// </summary>
+        /// <param name="FilterEventDto">Фильтр мероприятий</param>
         /// <remarks>
         /// Возвращает полный список доступных мероприятий в системе.
         /// Пример ответа:
+        /// <code>
         /// [
         ///   {
         ///     "id": 1,
@@ -26,12 +30,25 @@ namespace CSCourse.Controllers
         ///     "endAt": "2023-12-01T18:00:00"
         ///   }
         /// ]
+        /// </code>
         /// </remarks>
         /// <returns>Список мероприятий (HTTP 200 OK)</returns>
         [HttpGet]
-        public ActionResult<List<Event>> GetAll()
+        public ActionResult<List<Event>> GetAll([FromQuery] FilterEventDto? @filterEventDto)
         {
-            return Ok(_eventService.GetAll());
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var @filterEvent = new FilterEvent
+            {
+                Title = string.IsNullOrEmpty(@filterEventDto?.Title) ? "" : @filterEventDto.Title.ToLower(),
+                StartAt = @filterEventDto?.StartAt,
+                EndAt = @filterEventDto?.EndAt,
+            };
+
+            return Ok(_eventService.GetAll(@filterEvent));
         }
 
         /// <summary>
