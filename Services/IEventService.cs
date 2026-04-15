@@ -11,7 +11,9 @@ namespace CSCourse.Services
         /// Получает список всех мероприятий.
         /// </summary>
         /// <returns>Список объектов Event.</returns>
-        List<Event> GetAll(FilterEvent @filterEvent);
+        PaginatedResult GetAll(int page, int pageSize);
+
+        PaginatedResult GetAll(FilterEvent filterEvent, int page, int pageSize);
 
         /// <summary>
         /// Получает мероприятие по его уникальному идентификатору.

@@ -7,7 +7,16 @@ namespace CSCourse.Services
         private static int _ID = 0;
         public static List<Event> Events { get; set; } = [];
 
-        public List<Event> GetAll(FilterEvent @filterEvent)
+        public PaginatedResult GetAll(int page, int pageSize)
+        {
+            return new PaginatedResult
+            {
+                CountEvents = Events.Count,
+                Events = Events.Skip((page - 1) * pageSize).Take(pageSize).ToList()
+            }; 
+        }
+
+        public PaginatedResult GetAll(FilterEvent @filterEvent, int page, int pageSize)
         {
             var filteredEvents = Events.Where(e => e.Title.ToLower().Contains(@filterEvent.Title));
 
@@ -21,7 +30,11 @@ namespace CSCourse.Services
                 filteredEvents = filteredEvents.Where(e => @filterEvent.EndAt <= e.EndAt);
             }
 
-            return filteredEvents.ToList();
+            return new PaginatedResult
+            {
+                CountEvents = Events.Count,
+                Events = filteredEvents.Skip((page - 1) * pageSize).Take(pageSize).ToList()
+            };
         }
 
         public Event? GetEventById(int id)

@@ -16,7 +16,9 @@ namespace CSCourse.Controllers
         /// <summary>
         /// Получает список всех мероприятий.
         /// </summary>
-        /// <param name="FilterEventDto">Фильтр мероприятий</param>
+        /// <param name="filterEventDto">Фильтр мероприятий</param>
+        /// <param name="page">страница, которую необходимо вернуть(по умолчанию 1)</param>
+        /// <param name="pageSize">количество элементов на странице(по умолчанию 10)</param>
         /// <remarks>
         /// Возвращает полный список доступных мероприятий в системе.
         /// Пример ответа:
@@ -34,7 +36,7 @@ namespace CSCourse.Controllers
         /// </remarks>
         /// <returns>Список мероприятий (HTTP 200 OK)</returns>
         [HttpGet]
-        public ActionResult<List<Event>> GetAll([FromQuery] FilterEventDto? @filterEventDto)
+        public ActionResult<PaginatedResult> GetAll([FromQuery] FilterEventDto? filterEventDto, int? page, int? pageSize)
         {
             if (!ModelState.IsValid)
             {
@@ -43,12 +45,12 @@ namespace CSCourse.Controllers
 
             var @filterEvent = new FilterEvent
             {
-                Title = string.IsNullOrEmpty(@filterEventDto?.Title) ? "" : @filterEventDto.Title.ToLower(),
-                StartAt = @filterEventDto?.StartAt,
-                EndAt = @filterEventDto?.EndAt,
+                Title = string.IsNullOrEmpty(filterEventDto?.Title) ? "" : filterEventDto.Title.ToLower(),
+                StartAt = filterEventDto?.StartAt,
+                EndAt = filterEventDto?.EndAt,
             };
 
-            return Ok(_eventService.GetAll(@filterEvent));
+            return Ok(_eventService.GetAll(@filterEvent, page??=1, pageSize??=10));
         }
 
         /// <summary>
