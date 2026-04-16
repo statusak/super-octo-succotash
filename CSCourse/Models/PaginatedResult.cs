@@ -1,8 +1,26 @@
 ﻿namespace CSCourse.Models
 {
+    /// <summary>
+    /// Представляет результат пагинации для списка мероприятий.
+    /// Используется для передачи данных с разбивкой на страницы в REST API.
+    /// </summary>
     public class PaginatedResult
     {
-        public required List<Event> Events { get; set ;}
+        /// <summary>
+        /// Список мероприятий на текущей странице.
+        /// </summary>
+        /// <remarks>
+        /// Содержит подмножество всех мероприятий, соответствующее текущей странице и размеру страницы.
+        /// Может быть пустым (но не null), если на запрошенной странице нет данных.
+        /// </remarks>
+        public required List<Event> Events { get; set; }
+
+        /// <summary>
+        /// Общее количество мероприятий, доступных в системе (до пагинации).
+        /// </summary>
+        /// <remarks>
+        /// Позволяет клиенту рассчитать общее количество страниц и отобразить информацию о пагинации.W
+        /// </remarks>
         public required int CountEvents { get; set; }
     }
 }
