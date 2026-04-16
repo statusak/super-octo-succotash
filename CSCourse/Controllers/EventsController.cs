@@ -1,8 +1,6 @@
 ﻿using CSCourse.Models;
 using CSCourse.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Diagnostics;
-using System.Runtime.Intrinsics.Arm;
 
 namespace CSCourse.Controllers
 {
@@ -14,27 +12,35 @@ namespace CSCourse.Controllers
     public class EventsController(IEventService _eventService) : ControllerBase
     {
         /// <summary>
-        /// Получает список всех мероприятий.
+        /// Получает список мероприятий с возможностью фильтрации и пагинации.
         /// </summary>
-        /// <param name="filterEventDto">Фильтр мероприятий</param>
-        /// <param name="page">страница, которую необходимо вернуть(по умолчанию 1)</param>
-        /// <param name="pageSize">количество элементов на странице(по умолчанию 10)</param>
+        /// <param name="filterEventDto">Параметры фильтрации мероприятий (опционально)</param>
+        /// <param name="page">Номер страницы для возврата (опционально, по умолчанию — 1, первая страница)</param>
+        /// <param name="pageSize">Количество элементов на странице (опционально, по умолчанию — 10)</param>
         /// <remarks>
-        /// Возвращает полный список доступных мероприятий в системе.
-        /// Пример ответа:
+        /// Возвращает пагинированный список мероприятий, соответствующих заданным критериям фильтрации.
+        /// Поддерживает фильтрацию по названию (частичное совпадение), датам начала и окончания.
+        ///
+        /// Пример запроса:
+        /// GET /Events?page=2&pageSize=5&title=конференция
+        ///
+        /// Пример ответа (HTTP 200 OK):
         /// <code>
-        /// [
-        ///   {
-        ///     "id": 1,
-        ///     "title": "Конференция разработчиков",
-        ///     "description": "Ежегодная конференция...",
-        ///     "startAt": "2023-12-01T10:00:00",
-        ///     "endAt": "2023-12-01T18:00:00"
-        ///   }
-        /// ]
+        /// {
+        ///   "events": [
+        ///     {
+        ///       "id": 1,
+        ///       "title": "Конференция разработчиков",
+        ///       "description": "Ежегодная конференция...",
+        ///       "startAt": "2023-12-01T10:00:00",
+        ///       "endAt": "2023-12-01T18:00:00"
+        ///     }
+        ///   ],
+        ///   "countEvents": 25,
+        /// }
         /// </code>
         /// </remarks>
-        /// <returns>Список мероприятий (HTTP 200 OK)</returns>
+        /// <returns>Пагинированный результат с списком мероприятий</returns>
         [HttpGet]
         public ActionResult<PaginatedResult> GetAll([FromQuery] FilterEventDto? filterEventDto, int? page, int? pageSize)
         {
@@ -43,31 +49,37 @@ namespace CSCourse.Controllers
                 return BadRequest(ModelState);
             }
 
-            var @filterEvent = new FilterEvent
+            var filterEvent = new FilterEvent
             {
                 Title = string.IsNullOrEmpty(filterEventDto?.Title) ? "" : filterEventDto.Title.ToLower(),
                 StartAt = filterEventDto?.StartAt,
                 EndAt = filterEventDto?.EndAt,
             };
 
-            return Ok(_eventService.GetAll(@filterEvent, page??=1, pageSize??=10));
+            return Ok(_eventService.GetAll(filterEvent, page ?? 1, pageSize ?? 10));
         }
 
         /// <summary>
-        /// Получает мероприятие по его идентификатору.
+        /// Получает детальную информацию о конкретном мероприятии по его идентификатору.
         /// </summary>
-        /// <param name="index">Уникальный идентификатор мероприятия (целое число)</param>
+        /// <param name="index">Уникальный идентификатор мероприятия (целое положительное число)</param>
         /// <remarks>
-        /// Поиск мероприятия по ID. Если мероприятие не найдено, возвращается ошибка 404.
+        /// Выполняет поиск мероприятия в системе по указанному ID.
+        /// Если мероприятие найдено, возвращает полную информацию о нём.
+        /// В случае отсутствия мероприятия с указанным ID возвращается ошибка 404 (Not Found).
+        ///
+        /// Пример запроса:
+        /// GET /Events/1
         /// </remarks>
-        /// <response code="200">Мероприятие успешно найдено</response>
-        /// <response code="404">Мероприятие не найдено</response>
+        /// <response code="200">Успешный ответ: информация о мероприятии (HTTP 200 OK)</response>
+        /// <response code="404">Мероприятие с указанным ID не найдено (HTTP 404 Not Found)</response>
         [HttpGet("{index:int}")]
         public ActionResult<Event> GetById(int index)
         {
             try
             {
-                return Ok(_eventService.GetEventById(index));
+                var eventItem = _eventService.GetEventById(index);
+                return Ok(eventItem);
             }
             catch (InvalidOperationException)
             {
@@ -76,17 +88,27 @@ namespace CSCourse.Controllers
         }
 
         /// <summary>
-        /// Создаёт новое мероприятие.
+        /// Создаёт новое мероприятие в системе.
         /// </summary>
-        /// <param name="eventDto">Данные мероприятия для создания (в формате JSON)</param>
+        /// <param name="eventDto">Модель данных для создания мероприятия (обязательный параметр, в формате JSON)</param>
         /// <remarks>
-        /// Создаёт новое мероприятие на основе переданных данных.
-        /// Требуется валидная модель EventDto.
+        /// Добавляет новое мероприятие на основе переданных данных.
+        /// Для успешного создания требуется валидная модель EventDto с заполненными обязательными полями.
+        ///
+        /// Пример тела запроса (JSON):
+        /// <code>
+        /// {
+        ///   "title": "Новая конференция",
+        ///   "description": "Описание мероприятия",
+        ///   "startAt": "2024-01-15T09:00:00",
+        ///   "endAt": "2024-01-15T17:00:00"
+        /// }
+        /// </code>
         /// </remarks>
-        /// <response code="201">Мероприятие успешно создано</response>
-        /// <response code="400">Некорректные данные или ошибки валидации</response>
+        /// <response code="201">Мероприятие успешно создано (HTTP 201 Created)</response>
+        /// <response code="400">Ошибка валидации или некорректные данные (HTTP 400 Bad Request)</response>
         [HttpPost]
-        public ActionResult Post([FromBody] EventDto @eventDto)
+        public ActionResult Post([FromBody] EventDto eventDto)
         {
             if (!ModelState.IsValid)
             {
@@ -96,10 +118,10 @@ namespace CSCourse.Controllers
             var @event = new Event
             {
                 Id = 0,
-                Title = @eventDto.Title,
-                Description = @eventDto.Description,
-                StartAt = @eventDto.StartAt,
-                EndAt = @eventDto.EndAt,
+                Title = eventDto.Title,
+                Description = eventDto.Description,
+                StartAt = eventDto.StartAt,
+                EndAt = eventDto.EndAt,
             };
 
             _eventService.CreateEvent(@event);
@@ -107,19 +129,24 @@ namespace CSCourse.Controllers
         }
 
         /// <summary>
-        /// Обновляет существующее мероприятие.
+        /// Полностью обновляет существующее мероприятие.
         /// </summary>
-        /// <param name="index">Идентификатор мероприятия для обновления</param>
-        /// <param name="eventDto">Обновлённые данные мероприятия</param>
+        /// <param name="index">Идентификатор мероприятия, которое необходимо обновить</param>
+        /// <param name="eventDto">Обновлённые данные мероприятия (в формате JSON)</param>
         /// <remarks>
-        /// Полностью заменяет данные существующего мероприятия.
-        /// Если мероприятие с указанным ID не найдено, возвращается ошибка 404.
+        /// Заменяет все данные существующего мероприятия на новые.
+        /// Требует валидной модели EventDto с заполненными полями.
+        /// Если мероприятие с указанным ID не существует, возвращается ошибка 404.
+        ///
+        /// Пример запроса:
+        /// PUT /Events/1
+        /// С телом запроса (JSON), аналогичным методу POST.
         /// </remarks>
-        /// <response code="204">Мероприятие успешно обновлено</response>
-        /// <response code="400">Некорректные данные или ошибки валидации</response>
-        /// <response code="404">Мероприятие не найдено</response>
+        /// <response code="204">Данные мероприятия успешно обновлены (HTTP 204 No Content)</response>
+        /// <response code="400">Некорректные данные или ошибки валидации (HTTP 400 Bad Request)</response>
+        /// <response code="404">Мероприятие не найдено (HTTP 404 Not Found)</response>
         [HttpPut("{index:int}")]
-        public ActionResult Put(int index, [FromBody] EventDto @eventDto)
+        public ActionResult Put(int index, [FromBody] EventDto eventDto)
         {
             if (!ModelState.IsValid)
             {
@@ -128,11 +155,11 @@ namespace CSCourse.Controllers
 
             var @event = new Event
             {
-                Id = 0,
-                Title = @eventDto.Title,
-                Description = @eventDto.Description,
-                StartAt = @eventDto.StartAt,
-                EndAt = @eventDto.EndAt,
+                Id = index,
+                Title = eventDto.Title,
+                Description = eventDto.Description,
+                StartAt = eventDto.StartAt,
+                EndAt = eventDto.EndAt,
             };
 
             try
@@ -147,15 +174,19 @@ namespace CSCourse.Controllers
         }
 
         /// <summary>
-        /// Удаляет мероприятие по идентификатору.
+        /// Удаляет мероприятие из системы по его идентификатору.
         /// </summary>
-        /// <param name="index">Идентификатор удаляемого мероприятия</param>
+        /// <param name="index">Идентификатор мероприятия, подлежащего удалению</param>
         /// <remarks>
-        /// Удаляет мероприятие из системы.
-        /// Если мероприятие не найдено, возвращается ошибка 404.
+        /// Производит удаление мероприятия из базы данных.
+        /// Операция необратима.
+        /// Если мероприятие не существует, возвращается ошибка 404.
+        ///
+        /// Пример запроса:
+        /// DELETE /Events/1
         /// </remarks>
-        /// <response code="200">Мероприятие успешно удалено</response>
-        /// <response code="404">Мероприятие не найдено</response>
+        /// <response code="200">Мероприятие успешно удалено (HTTP 200 OK)</response>
+        /// <response code="404">Мероприятие не найдено в системе (HTTP 404 Not Found)</response>
         [HttpDelete("{index:int}")]
         public ActionResult Delete(int index)
         {
