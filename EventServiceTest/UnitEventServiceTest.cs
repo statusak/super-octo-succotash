@@ -3,9 +3,7 @@ using CSCourse.Models;
 using CSCourse.Services;
 using CSCourse.Validators;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using System.ComponentModel.DataAnnotations;
-using System.Xml;
 
 namespace EventServiceTest
 {
@@ -259,7 +257,7 @@ namespace EventServiceTest
             Assert.NotNull(actualResult);
 
             Assert.Equal(allEvents.Count, actualResult.CountEvents);
-            Assert.Equal(1, actualResult.Events.Count);
+            Assert.Single(actualResult.Events);
 
             var returnedIds = actualResult.Events.Select(e => e.Id).ToArray();
             Assert.Contains(expectedId, returnedIds); 
@@ -364,10 +362,10 @@ namespace EventServiceTest
             Assert.Equal(204, actionResult.StatusCode);
 
             var updatedEvent = _service.GetEventById(1);
-            Assert.Equal(updateDto.Title, updatedEvent.Title);
-            Assert.Equal(updateDto.Description, updatedEvent.Description);
-            Assert.Equal(updateDto.StartAt, updatedEvent.StartAt);
-            Assert.Equal(updateDto.EndAt, updatedEvent.EndAt);
+            Assert.Equal(updateDto.Title, updatedEvent?.Title);
+            Assert.Equal(updateDto.Description, updatedEvent?.Description);
+            Assert.Equal(updateDto.StartAt, updatedEvent?.StartAt);
+            Assert.Equal(updateDto.EndAt, updatedEvent?.EndAt);
         }
 
         [Fact]

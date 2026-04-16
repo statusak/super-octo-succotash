@@ -22,7 +22,7 @@ namespace CSCourse.Controllers
         /// Поддерживает фильтрацию по названию (частичное совпадение), датам начала и окончания.
         ///
         /// Пример запроса:
-        /// GET /Events?page=2&pageSize=5&title=конференция
+        /// GET /Events?page=2&amp;pageSize=5&amp;title=конференция
         ///
         /// Пример ответа (HTTP 200 OK):
         /// <code>
