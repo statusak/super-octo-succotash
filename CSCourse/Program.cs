@@ -3,7 +3,7 @@ using CSCourse.Services;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddScoped<IEventService, EventMemoryService>();
+builder.Services.AddSingleton<IEventService, EventMemoryService>();
 
 builder.Services.AddSwaggerGen(options =>
 {

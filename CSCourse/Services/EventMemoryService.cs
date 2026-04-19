@@ -4,8 +4,8 @@ namespace CSCourse.Services
 {
     public class EventMemoryService : IEventService
     {
-        private static int _ID = 1;
-        private static List<Event> Events { get; set; } = [];
+        private int _ID = 1;
+        private readonly List<Event> Events = [];
 
         public PaginatedResult GetAll(int page, int pageSize)
         {
