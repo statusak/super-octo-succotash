@@ -2,9 +2,7 @@
 using CSCourse.Models;
 using CSCourse.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Diagnostics;
 using System.ComponentModel.DataAnnotations;
-
 
 namespace EventServiceTest
 {
