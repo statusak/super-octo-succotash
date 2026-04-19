@@ -18,7 +18,7 @@ namespace CSCourse.Services
 
         public PaginatedResult GetAll(FilterEvent filterEvent, int page, int pageSize)
         {
-            var filteredEvents = Events.Where(e => e.Title.ToLower().Contains(filterEvent.Title));
+            var filteredEvents = Events.Where(e => e.Title.Contains(filterEvent.Title, StringComparison.CurrentCultureIgnoreCase));
 
             if (filterEvent.StartAt != null)
             {

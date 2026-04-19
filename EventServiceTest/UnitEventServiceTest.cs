@@ -158,7 +158,7 @@ namespace EventServiceTest
                 new Event
                 {
                     Id = 1,
-                    Title = "Конференция разработчиков",
+                    Title = "КоНфЕрЕнЦиЯ разработчиков",
                     Description = "Ежегодная конференция...",
                     StartAt = DateTime.Now,
                     EndAt = DateTime.Now.AddHours(8)
@@ -180,7 +180,7 @@ namespace EventServiceTest
 
             var filterDto = new FilterEventDto
             {
-                Title = "конференция"
+                Title = "кОнФеРеНцИЯ"
             };
 
 

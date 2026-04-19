@@ -51,7 +51,7 @@ namespace CSCourse.Controllers
 
             var filterEvent = new FilterEvent
             {
-                Title = string.IsNullOrEmpty(filterEventDto?.Title) ? "" : filterEventDto.Title.ToLower(),
+                Title = string.IsNullOrEmpty(filterEventDto?.Title) ? "" : filterEventDto.Title,
                 StartAt = filterEventDto?.StartAt,
                 EndAt = filterEventDto?.EndAt,
             };
