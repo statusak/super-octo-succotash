@@ -5,38 +5,14 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace EventServiceTest
 {
-    public class EventServiceFixture : IDisposable
+    public class UnitEventServiceTest
     {
-        public IEventService Service { get; private set; }
-        public EventsController Controller { get; private set; }
-
-        public EventServiceFixture()
-        {
-            Service = new EventMemoryService();
-            Controller = new EventsController(Service);
-        }
-
-        public void Dispose()
-        {
-            var allEvents = Service.GetAll(1, int.MaxValue).Events;
-            foreach (var e in allEvents) Service.DeleteEvent(e.Id);
-        }
-    }
-
-    public class UnitEventServiceTest : IClassFixture<EventServiceFixture>
-    {
-        private readonly IEventService _service;
-        private readonly EventsController _controller;
-
-        public UnitEventServiceTest(EventServiceFixture fixture)
-        {
-            _service = fixture.Service;
-            _controller = fixture.Controller;
-        }
-
         [Fact]
         public void EventService_CreateEvent_Success()
         {
+            var service = new EventMemoryService();
+            var controller = new EventsController(service);
+
             var validDto = new EventDto
             {
                 Title = "Тестовая конференция",
@@ -45,7 +21,7 @@ namespace EventServiceTest
                 EndAt = DateTime.Now.AddHours(2)
             };
 
-            var result = _controller.Post(validDto) as CreatedResult;
+            var result = controller.Post(validDto) as CreatedResult;
 
             Assert.NotNull(result);
             Assert.Equal(201, result.StatusCode);
@@ -56,11 +32,8 @@ namespace EventServiceTest
         [Fact]
         public void GetAll_WithValidData_ReturnsOkResultWithPaginatedEvents()
         {
-            var existingEvents = _service.GetAll(1, int.MaxValue).Events;
-            foreach (var @event in existingEvents)
-            {
-                _service.DeleteEvent(@event.Id);
-            }
+            var service = new EventMemoryService();
+            var controller = new EventsController(service);
 
             var testEvents = new List<Event>
             {
@@ -84,11 +57,11 @@ namespace EventServiceTest
 
             foreach (var @event in testEvents)
             {
-                _service.CreateEvent(@event);
+                service.CreateEvent(@event);
             }
 
 
-            var actionResult = _controller.GetAll(null, null, null).Result as OkObjectResult;
+            var actionResult = controller.GetAll(null, null, null).Result as OkObjectResult;
             var actualResult = actionResult?.Value as PaginatedResult;
 
             Assert.NotNull(actionResult);
@@ -109,11 +82,8 @@ namespace EventServiceTest
         [Fact]
         public void GetAll_WithFilter_ReturnsFilteredResults()
         {
-            var existingEvents = _service.GetAll(1, int.MaxValue).Events;
-            foreach (var @event in existingEvents)
-            {
-                _service.DeleteEvent(@event.Id);
-            }
+            var service = new EventMemoryService();
+            var controller = new EventsController(service);
 
             var allEvents = new List<Event>
             {
@@ -137,7 +107,7 @@ namespace EventServiceTest
 
             foreach (var @event in allEvents)
             {
-                _service.CreateEvent(@event);
+                service.CreateEvent(@event);
             }
 
             var filterDto = new FilterEventDto
@@ -146,7 +116,7 @@ namespace EventServiceTest
             };
 
 
-            var actionResult = _controller.GetAll(filterDto, 1, 10).Result as OkObjectResult;
+            var actionResult = controller.GetAll(filterDto, 1, 10).Result as OkObjectResult;
             var actualResult = actionResult?.Value as PaginatedResult;
 
             Assert.NotNull(actionResult);
@@ -159,6 +129,9 @@ namespace EventServiceTest
         [Fact]
         public void GetAll_WithDateFilter_ReturnsFilteredByDateResults()
         {
+            var service = new EventMemoryService();
+            var controller = new EventsController(service);
+
             var allEvents = new List<Event>
             {
                 new Event
@@ -195,18 +168,13 @@ namespace EventServiceTest
                 }
             };
 
-            var existingEvents = _service.GetAll(1, int.MaxValue).Events;
-            foreach (var @event in existingEvents)
-            {
-                _service.DeleteEvent(@event.Id);
-            }
             int[] expectedIds = new int[2];
             int[] notExpectedIds = new int[3];
-            expectedIds[0] = _service.CreateEvent(allEvents[0]);
-            expectedIds[1] = _service.CreateEvent(allEvents[3]);
+            expectedIds[0] = service.CreateEvent(allEvents[0]);
+            expectedIds[1] = service.CreateEvent(allEvents[3]);
 
-            notExpectedIds[0] = _service.CreateEvent(allEvents[1]);
-            notExpectedIds[1] = _service.CreateEvent(allEvents[2]);
+            notExpectedIds[0] = service.CreateEvent(allEvents[1]);
+            notExpectedIds[1] = service.CreateEvent(allEvents[2]);
 
             var filterDto = new FilterEventDto
             {
@@ -214,7 +182,7 @@ namespace EventServiceTest
                 EndAt = new DateTime(2026, 12, 1, 12, 0, 0)
             };
 
-            var actionResult = _controller.GetAll(filterDto, 1, 10).Result as OkObjectResult;
+            var actionResult = controller.GetAll(filterDto, 1, 10).Result as OkObjectResult;
             var actualResult = actionResult?.Value as PaginatedResult;
 
             Assert.NotNull(actionResult);
@@ -238,11 +206,8 @@ namespace EventServiceTest
         [Fact]
         public void GetById_ExistingEvent_ReturnsOkResultWithEvent()
         {
-            var existingEvents = _service.GetAll(1, int.MaxValue).Events;
-            foreach (var @event in existingEvents)
-            {
-                _service.DeleteEvent(@event.Id);
-            }
+            var service = new EventMemoryService();
+            var controller = new EventsController(service);
 
             var testEvent = new Event
             {
@@ -253,9 +218,9 @@ namespace EventServiceTest
                 EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
             };
 
-            int createdId = _service.CreateEvent(testEvent);
+            int createdId = service.CreateEvent(testEvent);
 
-            var actionResult = _controller.GetById(createdId).Result as OkObjectResult;
+            var actionResult = controller.GetById(createdId).Result as OkObjectResult;
             var actualEvent = actionResult?.Value as Event;
 
             Assert.NotNull(actionResult);
@@ -272,16 +237,10 @@ namespace EventServiceTest
         [Fact]
         public void GetById_NonExistingEvent_ReturnsNotFound()
         {
-            var existingEvents = _service.GetAll(1, int.MaxValue).Events;
-            foreach (var @event in existingEvents)
-            {
-                if (@event.Id == 999)
-                {
-                    _service.DeleteEvent(999);
-                }
-            }
+            var service = new EventMemoryService();
+            var controller = new EventsController(service);
 
-            var actionResult = _controller.GetById(999).Result as NotFoundObjectResult;
+            var actionResult = controller.GetById(999).Result as NotFoundObjectResult;
 
             Assert.NotNull(actionResult);
             Assert.Equal(404, actionResult.StatusCode);
@@ -294,11 +253,8 @@ namespace EventServiceTest
         [Fact]
         public void Put_UpdateExistingEvent_ReturnsNoContent()
         {
-            var existingEvents = _service.GetAll(1, int.MaxValue).Events;
-            foreach (var @event in existingEvents)
-            {
-                _service.DeleteEvent(@event.Id);
-            }
+            var service = new EventMemoryService();
+            var controller = new EventsController(service);
 
             var originalEvent = new Event
             {
@@ -309,7 +265,7 @@ namespace EventServiceTest
                 EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
             };
 
-            _service.CreateEvent(originalEvent);
+            service.CreateEvent(originalEvent);
 
             var updateDto = new EventDto
             {
@@ -319,12 +275,12 @@ namespace EventServiceTest
                 EndAt = new DateTime(2026, 12, 2, 17, 0, 0)
             };
 
-            var actionResult = _controller.Put(1, updateDto) as NoContentResult;
+            var actionResult = controller.Put(1, updateDto) as NoContentResult;
 
             Assert.NotNull(actionResult);
             Assert.Equal(204, actionResult.StatusCode);
 
-            var updatedEvent = _service.GetEventById(1);
+            var updatedEvent = service.GetEventById(1);
             Assert.Equal(updateDto.Title, updatedEvent?.Title);
             Assert.Equal(updateDto.Description, updatedEvent?.Description);
             Assert.Equal(updateDto.StartAt, updatedEvent?.StartAt);
@@ -334,14 +290,8 @@ namespace EventServiceTest
         [Fact]
         public void Put_UpdateNonExistingEvent_ReturnsNotFound()
         {
-            var existingEvents = _service.GetAll(1, int.MaxValue).Events;
-            foreach (var @event in existingEvents)
-            {
-                if (@event.Id == 999)
-                {
-                    _service.DeleteEvent(999);
-                }
-            }
+            var service = new EventMemoryService();
+            var controller = new EventsController(service);
 
             var updateDto = new EventDto
             {
@@ -351,7 +301,7 @@ namespace EventServiceTest
                 EndAt = DateTime.Now.AddHours(2)
             };
 
-            var actionResult = _controller.Put(999, updateDto) as NotFoundObjectResult;
+            var actionResult = controller.Put(999, updateDto) as NotFoundObjectResult;
 
             Assert.NotNull(actionResult);
             Assert.Equal(404, actionResult.StatusCode);
@@ -363,11 +313,9 @@ namespace EventServiceTest
         [Fact]
         public void Delete_DeleteExistingEvent_ReturnsOk()
         {
-            var existingEvents = _service.GetAll(1, int.MaxValue).Events;
-            foreach (var @event in existingEvents)
-            {
-                _service.DeleteEvent(@event.Id);
-            }
+            var service = new EventMemoryService();
+            var controller = new EventsController(service);
+
             var testEvent = new Event
             {
                 Id = 1,
@@ -377,31 +325,26 @@ namespace EventServiceTest
                 EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
             };
 
-            int createdId = _service.CreateEvent(testEvent);
+            int createdId = service.CreateEvent(testEvent);
 
-            var actionResult = _controller.Delete(createdId) as OkResult;
+            var actionResult = controller.Delete(createdId) as OkResult;
 
             Assert.NotNull(actionResult);
             Assert.Equal(200, actionResult.StatusCode);
 
-            var allEvents = _service.GetAll(1, int.MaxValue).Events;
+            var allEvents = service.GetAll(1, int.MaxValue).Events;
             Assert.DoesNotContain(testEvent, allEvents);
+            Console.WriteLine(allEvents);
             Assert.Empty(allEvents);
         }
 
         [Fact]
         public void Delete_DeleteNonExistingEvent_ReturnsNotFound()
         {
-            var existingEvents = _service.GetAll(1, int.MaxValue).Events;
-            foreach (var @event in existingEvents)
-            {
-                if (@event.Id == 999)
-                {
-                    _service.DeleteEvent(999);
-                }
-            }
+            var service = new EventMemoryService();
 
-            var actionResult = _controller.Delete(999) as NotFoundObjectResult;
+            var controller = new EventsController(service);
+            var actionResult = controller.Delete(999) as NotFoundObjectResult;
 
             Assert.NotNull(actionResult);
             Assert.Equal(404, actionResult.StatusCode);
@@ -409,7 +352,7 @@ namespace EventServiceTest
             Assert.NotNull(actionResult.Value);
             Assert.Contains("Event with index 999 not found", actionResult.Value.ToString());
 
-            var remainingEvents = _service.GetAll(1, int.MaxValue).Events;
+            var remainingEvents = service.GetAll(1, int.MaxValue).Events;
             Assert.All(remainingEvents, e => Assert.NotEqual(999, e.Id));
         }
     }
