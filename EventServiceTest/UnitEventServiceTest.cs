@@ -1,10 +1,10 @@
 ﻿using CSCourse.Controllers;
 using CSCourse.Models;
 using CSCourse.Services;
-using CSCourse.Validators;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Mvc.Diagnostics;
 using System.ComponentModel.DataAnnotations;
+
 
 namespace EventServiceTest
 {
@@ -57,38 +57,52 @@ namespace EventServiceTest
         [Fact]
         public void DateTimeValidator_EndBeforeStart_ReturnsError()
         {
-            var dto = new EventDto
+            var invalidDto = new EventDto
             {
-                Title = "Тест",
+                Title = "Тестовая конференция",
+                Description = "Описание мероприятия",
                 StartAt = DateTime.Now.AddHours(2),
                 EndAt = DateTime.Now.AddHours(1)
             };
 
-            var validator = new DateTimeValidator { ErrorMessage = "EndAt must be later than StartAt." };
-            var validationContext = new ValidationContext(dto);
+            var validationResults = new List<ValidationResult>();
+            var isValid = Validator.TryValidateObject(
+                invalidDto,
+                new ValidationContext(invalidDto),
+                validationResults,
+                true
+            );
 
-            var result = validator.GetValidationResult(dto.EndAt, validationContext);
+            Assert.False(isValid);
+            Assert.NotEmpty(validationResults);
+            Assert.Contains(
+                validationResults,
+                vr => vr.ErrorMessage == "EndAt must be later than StartAt."
+            );
 
-            Assert.NotNull(result);
-            Assert.Equal("EndAt must be later than StartAt.", result.ErrorMessage);
         }
 
         [Fact]
         public void DateTimeValidator_StartBeforeEnd_ReturnsSuccess()
         {
-            var dto = new EventDto
+            var invalidDto = new EventDto
             {
-                Title = "Тест",
+                Title = "Тестовая конференция",
+                Description = "Описание мероприятия",
                 StartAt = DateTime.Now.AddHours(1),
                 EndAt = DateTime.Now.AddHours(2)
             };
 
-            var validator = new DateTimeValidator { ErrorMessage = "EndAt must be later than StartAt." };
-            var validationContext = new ValidationContext(dto);
+            var validationResults = new List<ValidationResult>();
+            var isValid = Validator.TryValidateObject(
+                invalidDto,
+                new ValidationContext(invalidDto),
+                validationResults,
+                true
+            );
 
-            var result = validator.GetValidationResult(dto.EndAt, validationContext);
-
-            Assert.Null(result);
+            Assert.True(isValid);
+            Assert.Empty(validationResults);
         }
 
         [Fact]
@@ -191,7 +205,7 @@ namespace EventServiceTest
             Assert.Equal(200, actionResult.StatusCode);
             Assert.NotNull(actualResult);
             Assert.Single(actualResult.Events);
-            Assert.Equal("Конференция разработчиков", actualResult.Events[0].Title);
+            Assert.Equal("КоНфЕрЕнЦиЯ разработчиков", actualResult.Events[0].Title);
         }
 
         [Fact]

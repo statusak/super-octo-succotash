@@ -94,8 +94,7 @@ dotnet test
 │   ├── Middlewares/          # Middleware-компоненты (например, GlobalExceptionHandlingMiddleware.cs)
 │   ├── Models/               # Модели данных (Event.cs, EventDto.cs и др.)
 │   ├── Properties/           # Настройки запуска приложения (launchSettings.json)
-│   ├── Services/             # Бизнес‑логика: интерфейсы и реализации сервисов (IEventService.cs, EventMemoryService.cs)
-│   └── Validators/           # Валидаторы данных (например, DateTimeValidator.cs)
+│   └── Services/             # Бизнес‑логика: интерфейсы и реализации сервисов (IEventService.cs, EventMemoryService.cs)
 └── EventServiceTest/         # Проект с юнит‑тестами
 
 ```

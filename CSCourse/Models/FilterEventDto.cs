@@ -1,4 +1,4 @@
-﻿using CSCourse.Validators;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace CSCourse.Models
 {
@@ -6,7 +6,7 @@ namespace CSCourse.Models
     /// DTO (Data Transfer Object) для передачи параметров фильтрации мероприятий от клиента.
     /// Используется в запросах API для указания критериев отбора событий.
     /// </summary>
-    public class FilterEventDto
+    public class FilterEventDto : IValidatableObject
     {
         /// <summary>
         /// Частичное или полное название мероприятия для поиска (необязательный параметр).
@@ -36,7 +36,19 @@ namespace CSCourse.Models
         /// Должна быть позже, чем StartAt (проверяется валидатором).
         /// Если параметр не указан, ограничение по конечной дате не применяется.
         /// </remarks>
-        [DateTimeValidator(ErrorMessage = "EndAt must be later than StartAt.")]
         public DateTime? EndAt { get; set; }
+
+        /// <summary>
+        /// Выполняет дополнительную валидацию правил для мероприятия.
+        /// https://stackoverflow.com/a/38894695:
+        /// </summary>
+        public IEnumerable<ValidationResult> Validate(ValidationContext context)
+        {
+            if (EndAt < StartAt)
+            {
+                yield return new ValidationResult("EndAt must be later than StartAt.");
+            }
+        }
+
     }
 }
