@@ -3,6 +3,7 @@ using CSCourse.Models;
 using CSCourse.Services;
 using CSCourse.Validators;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using System.ComponentModel.DataAnnotations;
 
 namespace EventServiceTest
@@ -237,15 +238,17 @@ namespace EventServiceTest
             {
                 _service.DeleteEvent(@event.Id);
             }
-            int expectedId = _service.CreateEvent(allEvents[0]);
-            foreach (var @event in allEvents[1..])
-            {
-                _service.CreateEvent(@event);
-            }
+            int[] expectedIds = new int[2];
+            int[] notExpectedIds = new int[3];
+            expectedIds[0] = _service.CreateEvent(allEvents[0]);
+            expectedIds[1] = _service.CreateEvent(allEvents[3]);
+
+            notExpectedIds[0] = _service.CreateEvent(allEvents[1]);
+            notExpectedIds[1] = _service.CreateEvent(allEvents[2]);
 
             var filterDto = new FilterEventDto
             {
-                StartAt = new DateTime(2026, 12, 1, 11, 0, 0),  
+                StartAt = new DateTime(2026, 12, 1, 8, 0, 0),  
                 EndAt = new DateTime(2026, 12, 1, 12, 0, 0)
             };
 
@@ -257,19 +260,17 @@ namespace EventServiceTest
             Assert.NotNull(actualResult);
 
             Assert.Equal(allEvents.Count, actualResult.CountEvents);
-            Assert.Single(actualResult.Events);
 
             var returnedIds = actualResult.Events.Select(e => e.Id).ToArray();
-            Assert.Contains(expectedId, returnedIds); 
+            foreach ( var expectedId in expectedIds)
+            {
+                Assert.Contains(expectedId, returnedIds);
+            }
 
-            Assert.DoesNotContain(++expectedId, returnedIds); 
-            Assert.DoesNotContain(++expectedId, returnedIds);
-            Assert.DoesNotContain(++expectedId, returnedIds); 
-
-            var firstEvent = actualResult.Events[0];
-            Assert.Equal("Конференция утром", firstEvent.Title);
-            Assert.True(firstEvent.StartAt <= filterDto.StartAt);
-            Assert.True(firstEvent.EndAt >= filterDto.EndAt);
+            foreach (var notExpectedId in notExpectedIds)
+            {
+                Assert.DoesNotContain(notExpectedId, returnedIds);
+            }
         }
 
         [Fact]

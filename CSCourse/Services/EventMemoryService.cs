@@ -22,12 +22,12 @@ namespace CSCourse.Services
 
             if (filterEvent.StartAt != null)
             {
-                filteredEvents = filteredEvents.Where(e => filterEvent.StartAt >= e.StartAt);
+                filteredEvents = filteredEvents.Where(e => e.StartAt >= filterEvent.StartAt);
             }
 
             if (filterEvent.EndAt != null)
             {
-                filteredEvents = filteredEvents.Where(e => filterEvent.EndAt <= e.EndAt);
+                filteredEvents = filteredEvents.Where(e => e.EndAt <= filterEvent.EndAt);
             }
 
             return new PaginatedResult
