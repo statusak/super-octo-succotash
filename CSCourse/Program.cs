@@ -1,8 +1,9 @@
-﻿using CSCourse.Services;
+﻿using CSCourse.Middlewares;
+using CSCourse.Services;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddScoped<IEventService, EventMemoryService>();
+builder.Services.AddSingleton<IEventService, EventMemoryService>();
 
 builder.Services.AddSwaggerGen(options =>
 {
@@ -16,6 +17,8 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {

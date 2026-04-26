@@ -1,12 +1,11 @@
-﻿using CSCourse.Validators;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace CSCourse.Models
 {
     /// <summary>
     /// Класс Dto, содержащий информацию о мероприятии.
     /// </summary>
-    public class EventDto
+    public class EventDto : IValidatableObject
     {
         /// <summary>
         /// Название мероприятия.
@@ -29,7 +28,18 @@ namespace CSCourse.Models
         /// Дата и время окончания мероприятия.
         /// </summary>
         [Required(ErrorMessage = "EndAt is required.")]
-        [DateTimeValidator(ErrorMessage = "EndAt must be later than StartAt.")]
         public required DateTime EndAt { get; set; }
+
+        /// <summary>
+        /// Выполняет дополнительную валидацию правил для мероприятия.
+        /// https://stackoverflow.com/a/38894695:
+        /// </summary>
+        public IEnumerable<ValidationResult> Validate(ValidationContext context)
+        {
+            if (EndAt <= StartAt)
+            {
+                yield return new ValidationResult("EndAt must be later than StartAt.");
+            }
+        }
     }
 }

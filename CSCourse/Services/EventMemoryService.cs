@@ -1,0 +1,70 @@
+﻿using CSCourse.Models;
+
+namespace CSCourse.Services
+{
+    public class EventMemoryService : IEventService
+    {
+        private int _ID = 1;
+        private readonly List<Event> Events = [];
+
+        public PaginatedResult GetAll(int page, int pageSize)
+        {
+            return new PaginatedResult
+            {
+                CountEvents = Events.Count,
+                Events = Events.Skip((page - 1) * pageSize).Take(pageSize).ToList()
+            }; 
+        }
+
+        public PaginatedResult GetAll(FilterEvent filterEvent, int page, int pageSize)
+        {
+            var filteredEvents = Events.Where(e => e.Title.Contains(filterEvent.Title, StringComparison.CurrentCultureIgnoreCase));
+
+            if (filterEvent.StartAt != null)
+            {
+                filteredEvents = filteredEvents.Where(e => e.StartAt >= filterEvent.StartAt);
+            }
+
+            if (filterEvent.EndAt != null)
+            {
+                filteredEvents = filteredEvents.Where(e => e.EndAt <= filterEvent.EndAt);
+            }
+
+            return new PaginatedResult
+            {
+                CountEvents = Events.Count,
+                Events = filteredEvents.Skip((page - 1) * pageSize).Take(pageSize).ToList()
+            };
+        }
+
+        public Event? GetEventById(int id)
+        {
+            return Events.First(x => x.Id == id);
+        }
+        public int CreateEvent(Event @event)
+        {
+            @event.Id = _ID++;
+            Events.Add(@event);
+            return @event.Id;
+        }
+
+        public void UpdateEvent(int id, Event @event)
+        {
+            var @event_old = Events.First(x => x.Id == id);
+            if (@event_old != null)
+            {
+                @event_old.Title = @event.Title;
+                @event_old.Description = @event.Description;
+                @event_old.StartAt = @event.StartAt;
+                @event_old.EndAt = @event.EndAt;
+            }
+        }
+        public void DeleteEvent(int id)
+        {
+            var @event = Events.First(x => x.Id == id);
+            if (@event != null) {
+                Events.Remove(@event);
+            }
+        }
+    }
+}

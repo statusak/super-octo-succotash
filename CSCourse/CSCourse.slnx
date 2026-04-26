@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="../.gitignore" />
+    <File Path="../LICENSE" />
+    <File Path="../README.md" />
+  </Folder>
+  <Project Path="../EventServiceTest/EventServiceTest.csproj" Id="c5c7a51a-f296-4ada-bdf1-5a495a7ceb6c" />
+  <Project Path="CSCourse.csproj" />
+</Solution>
