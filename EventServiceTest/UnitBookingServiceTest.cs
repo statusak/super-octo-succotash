@@ -186,5 +186,18 @@ namespace EventServiceTest
             Assert.Equal(bookingCreate.CreatedAt, bookingInfo.CreatedAt);
             Assert.True(bookingInfo.ProcessedAt < bookingCreate.CreatedAt);
         }
+
+        [Fact]
+        public async Task BookingService_CreateBookingForNotExistsEvent_ReturnsNotFound()
+        {
+            var actionResult = (await _eventsController.CreateBooking(Guid.Empty)) as NotFoundObjectResult;
+
+            Assert.NotNull(actionResult);
+            Assert.Equal(404, actionResult.StatusCode);
+
+            Assert.NotNull(actionResult.Value);
+            Assert.Contains($"Event with index {Guid.Empty} not found", actionResult.Value.ToString());
+        }
+
     }
 }
