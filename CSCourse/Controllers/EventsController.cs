@@ -123,9 +123,11 @@ namespace CSCourse.Controllers
         /// }
         /// </code>
         /// </remarks>
-        /// <response code="201">Мероприятие успешно создано (HTTP 201 Created)</response>
+        /// <response code="202">Мероприятие успешно создано. Возвращается объект мероприятия и ссылка на ресурс (Location header).</response>
         /// <response code="400">Ошибка валидации или некорректные данные (HTTP 400 Bad Request)</response>
         [HttpPost]
+        [ProducesResponseType(StatusCodes.Status202Accepted, Type = typeof(Event))]
+        [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(string))]
         public ActionResult<Event> Post([FromBody] EventDto eventDto)
         {
             if (!ModelState.IsValid)
