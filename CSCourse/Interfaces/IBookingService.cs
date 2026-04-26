@@ -6,5 +6,6 @@ namespace CSCourse.Interfaces
     {
         Task<Booking> CreateBookingAsync(Guid eventId);
         Task<Booking?> GetBookingByIdAsync(Guid bookingId);
+        Task<Booking?> UpdateProcessedBookingByIdAsync(Guid bookingId, BookingProcessedDto booking);
     }
 }

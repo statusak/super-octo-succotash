@@ -33,5 +33,16 @@ namespace CSCourse.Services
                 return cached;
             return null;
         }
+        public async Task<Booking?> UpdateProcessedBookingByIdAsync(Guid bookingId, BookingProcessedDto booking)
+        {
+            if (Booking.TryGetValue(bookingId, out var cached))
+            {
+                cached.Status = booking.Status;
+                cached.ProcessedAt = booking.ProcessedAt;
+
+                return cached;
+            }
+            return null;
+        }
     }
 }

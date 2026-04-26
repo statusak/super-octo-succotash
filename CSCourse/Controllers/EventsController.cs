@@ -9,8 +9,26 @@ namespace CSCourse.Controllers
     /// </summary>
     [ApiController]
     [Route("/[controller]")]
-    public class EventsController(IEventService _eventService, IBookingService _bookingService) : ControllerBase
+    public class EventsController : ControllerBase
     {
+
+        private readonly IEventService _eventService;
+        private readonly IBookingService _bookingService;
+        private readonly IBookingTaskQueue _bookingTaskQueue;
+        private readonly ILogger<EventsController> _logger;
+
+        public EventsController(
+            IEventService eventService,
+            IBookingService bookingService,
+            IBookingTaskQueue bookingTaskQueue,
+            ILogger<EventsController> logger)
+        {
+            _eventService = eventService;
+            _bookingService = bookingService;
+            _bookingTaskQueue = bookingTaskQueue;
+            _logger = logger;
+        }
+
         /// <summary>
         /// Получает список мероприятий с возможностью фильтрации и пагинации.
         /// </summary>
@@ -217,6 +235,7 @@ namespace CSCourse.Controllers
             {
                 _eventService.GetEventById(eventId);
                 var created = await _bookingService.CreateBookingAsync(eventId);
+                _bookingTaskQueue.Enqueue(created);
 
                 return AcceptedAtAction(
                         actionName: nameof(BookingsController.GetById),
