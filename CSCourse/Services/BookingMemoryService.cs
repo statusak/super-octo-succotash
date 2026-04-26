@@ -1,7 +1,6 @@
-﻿using CSCourse.Models;
-using Microsoft.AspNetCore.Http.HttpResults;
+﻿using CSCourse.Interfaces;
+using CSCourse.Models;
 using System.Collections.Concurrent;
-using System.Net.NetworkInformation;
 
 namespace CSCourse.Services
 {

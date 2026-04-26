@@ -1,6 +1,6 @@
 ﻿using CSCourse.Models;
 
-namespace CSCourse.Services
+namespace CSCourse.Interfaces
 {
     public interface IBookingService
     {

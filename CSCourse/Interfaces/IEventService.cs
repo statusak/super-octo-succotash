@@ -1,7 +1,7 @@
 ﻿using CSCourse.Models;
 using System.ComponentModel.DataAnnotations;
 
-namespace CSCourse.Services
+namespace CSCourse.Interfaces
 {
     /// <summary>
     /// Сервис для работы с мероприятиями (Events). Предоставляет бизнес‑логику для управления событиями:

@@ -1,4 +1,5 @@
-﻿using CSCourse.Middlewares;
+﻿using CSCourse.Interfaces;
+using CSCourse.Middlewares;
 using CSCourse.Services;
 using System.Reflection;
 

@@ -1,5 +1,5 @@
-﻿using CSCourse.Models;
-using CSCourse.Services;
+﻿using CSCourse.Interfaces;
+using CSCourse.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CSCourse.Controllers
