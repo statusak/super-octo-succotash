@@ -38,8 +38,6 @@ namespace EventServiceTest
             Assert.Equal(201, result.StatusCode);
         }
 
-        
-
         [Fact]
         public void GetAll_WithValidData_ReturnsOkResultWithPaginatedEvents()
         {

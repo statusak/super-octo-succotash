@@ -149,9 +149,6 @@ namespace CSCourse.Controllers
                 routeValues: new { index = @event.Id },
                 value: @event
             );
-            //var locationUri = Url.Action(nameof(GetById), new { index = @event.Id });
-
-            //return Created(locationUri, @event);
         }
 
         /// <summary>

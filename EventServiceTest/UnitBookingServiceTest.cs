@@ -1,0 +1,56 @@
+﻿using CSCourse.Controllers;
+using CSCourse.Interfaces;
+using CSCourse.Models;
+using CSCourse.Services;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
+using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace EventServiceTest
+{
+    public class UnitBookingServiceTest
+    {
+        private readonly EventMemoryService _eventService;
+        private readonly EventsController _controller;
+
+        public UnitBookingServiceTest()
+        {
+            _eventService = new EventMemoryService();
+            var bookingService = new BookingMemoryService();
+            var bookingTaskQueue = new InMemoryBookingTaskQueue();
+            var logger = NullLogger<EventsController>.Instance;
+            _controller = new EventsController(_eventService, bookingService, bookingTaskQueue, logger);
+        }
+
+        [Fact]
+        public async Task BookingService_CreateBooking_Success()
+        {
+            var validDto = new EventDto
+            {
+                Title = "Тестовая конференция",
+                Description = "Описание мероприятия",
+                StartAt = DateTime.Now.AddHours(1),
+                EndAt = DateTime.Now.AddHours(2)
+            };
+
+            var resultCreateEvent = _controller.Post(validDto).Result as CreatedAtActionResult;
+            
+            Assert.NotNull(resultCreateEvent);
+            Assert.Equal(201, resultCreateEvent.StatusCode);
+
+            var @event = resultCreateEvent.Value as Event;
+            Assert.NotNull(@event);
+
+            var resultCreateBooking = (await _controller.CreateBooking(@event.Id)) as AcceptedAtActionResult;
+
+            Assert.NotNull(resultCreateBooking);
+            Assert.Equal(202, resultCreateBooking.StatusCode);
+
+            var booking = resultCreateBooking.Value as Booking;
+            Assert.NotNull(booking);
+            Assert.Equal(BookingStatus.Pending, booking.Status);
+        }
+    }
+}
