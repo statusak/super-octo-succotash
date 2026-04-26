@@ -12,24 +12,21 @@ namespace CSCourse.Services
         public async Task<Booking?> CreateBookingAsync(Guid eventId)
         {
             Guid bookingId;
-            do {
+            Booking newBooking;
+
+            do
+            {
                 bookingId = Guid.NewGuid();
-            } while (Booking.ContainsKey(bookingId));
-            
-            Booking newBooking = new Booking
-            {
-                Id = bookingId,
-                EventId = eventId,
-                Status = BookingStatus.Pending,
-                CreatedAt = DateTime.UtcNow,
-            };
+                newBooking = new Booking
+                {
+                    Id = bookingId,
+                    EventId = eventId,
+                    Status = BookingStatus.Pending,
+                    CreatedAt = DateTime.UtcNow,
+                };
+            } while (!Booking.TryAdd(bookingId, newBooking));
 
-            if(Booking.TryAdd(bookingId, newBooking))
-            {
-                return newBooking;
-            }
-
-            return null;
+            return newBooking;
         }
         public async Task<Booking?> GetBookingByIdAsync(Guid bookingId)
         {
