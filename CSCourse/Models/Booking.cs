@@ -12,6 +12,6 @@
         public required Guid EventId { get; set; }
         public required BookingStatus Status { get; set; }
         public required DateTime CreatedAt { get; set; }
-        public required DateTime? ProcessedAt { get; set; }
+        public DateTime? ProcessedAt { get; set; }
     }
 }
