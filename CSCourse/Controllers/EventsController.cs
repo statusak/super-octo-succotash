@@ -73,7 +73,7 @@ namespace CSCourse.Controllers
         /// </remarks>
         /// <response code="200">Успешный ответ: информация о мероприятии (HTTP 200 OK)</response>
         /// <response code="404">Мероприятие с указанным ID не найдено (HTTP 404 Not Found)</response>
-        [HttpGet("{index:int}")]
+        [HttpGet("{index:guid}")]
         public ActionResult<Event> GetById(Guid index)
         {
             try
@@ -125,9 +125,15 @@ namespace CSCourse.Controllers
             };
 
             @event.Id = _eventService.CreateEvent(@event);
-            var locationUri = Url.Action(nameof(GetById), new { index = @event.Id });
 
-            return Created(locationUri, @event);
+            return CreatedAtAction(
+                actionName: nameof(GetById),
+                routeValues: new { index = @event.Id },
+                value: @event
+            );
+            //var locationUri = Url.Action(nameof(GetById), new { index = @event.Id });
+
+            //return Created(locationUri, @event);
         }
 
         /// <summary>
@@ -204,11 +210,26 @@ namespace CSCourse.Controllers
         }
 
 
-        [HttpPost("/{eventId:Guid}/book")]
+        [HttpPost("{eventId:Guid}/book")]
         public async Task<ActionResult> CreateBooking(Guid eventId)
         {
-            var created = await _bookingService.CreateBookingAsync(eventId);
-            return CreatedAtAction(nameof(eventId), created);
+            try
+            {
+                _eventService.GetEventById(eventId);
+                var created = await _bookingService.CreateBookingAsync(eventId);
+
+                return AcceptedAtAction(
+                        actionName: nameof(BookingsController.GetById),
+                        controllerName: "Bookings", // TODO: Убрать хардкодинг
+                        routeValues: new { index = created.Id },
+                        value: created
+                    );
+
+            }
+            catch (InvalidOperationException)
+            {
+                return NotFound($"Event with index {eventId} not found");
+            }
         }
     }
 }

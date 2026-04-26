@@ -8,7 +8,7 @@ namespace CSCourse.Services
     {
         private readonly ConcurrentDictionary<Guid, Booking> Booking = [];
 
-        public async Task<Booking?> CreateBookingAsync(Guid eventId)
+        public async Task<Booking> CreateBookingAsync(Guid eventId)
         {
             Guid bookingId;
             Booking newBooking;
