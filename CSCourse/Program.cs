@@ -5,6 +5,7 @@ using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton<IEventService, EventMemoryService>();
+builder.Services.AddSingleton<IBookingService, BookingMemoryService>();
 
 builder.Services.AddSwaggerGen(options =>
 {
