@@ -1,7 +1,10 @@
 ﻿using CSCourse.Controllers;
+using CSCourse.Interfaces;
 using CSCourse.Models;
 using CSCourse.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace EventServiceTest
 {
@@ -12,7 +15,9 @@ namespace EventServiceTest
         {
             var eventService = new EventMemoryService();
             var bookingService = new BookingMemoryService();
-            var controller = new EventsController(eventService, bookingService);
+            var bookingTaskQueue = new InMemoryBookingTaskQueue();
+            var logger = NullLogger<EventsController>.Instance;
+            var controller = new EventsController(eventService, bookingService, bookingTaskQueue, logger);
 
             var validDto = new EventDto
             {
@@ -35,7 +40,9 @@ namespace EventServiceTest
         {
             var eventService = new EventMemoryService();
             var bookingService = new BookingMemoryService();
-            var controller = new EventsController(eventService, bookingService);
+            var bookingTaskQueue = new InMemoryBookingTaskQueue();
+            var logger = NullLogger<EventsController>.Instance;
+            var controller = new EventsController(eventService, bookingService, bookingTaskQueue, logger);
 
             var testEvents = new List<Event>
             {
@@ -86,7 +93,9 @@ namespace EventServiceTest
         {
             var eventService = new EventMemoryService();
             var bookingService = new BookingMemoryService();
-            var controller = new EventsController(eventService, bookingService);
+            var bookingTaskQueue = new InMemoryBookingTaskQueue();
+            var logger = NullLogger<EventsController>.Instance;
+            var controller = new EventsController(eventService, bookingService, bookingTaskQueue, logger);
 
             var allEvents = new List<Event>
             {
@@ -134,7 +143,9 @@ namespace EventServiceTest
         {
             var eventService = new EventMemoryService();
             var bookingService = new BookingMemoryService();
-            var controller = new EventsController(eventService, bookingService);
+            var bookingTaskQueue = new InMemoryBookingTaskQueue();
+            var logger = NullLogger<EventsController>.Instance;
+            var controller = new EventsController(eventService, bookingService, bookingTaskQueue, logger);
 
             var allEvents = new List<Event>
             {
@@ -212,7 +223,9 @@ namespace EventServiceTest
         {
             var eventService = new EventMemoryService();
             var bookingService = new BookingMemoryService();
-            var controller = new EventsController(eventService, bookingService);
+            var bookingTaskQueue = new InMemoryBookingTaskQueue();
+            var logger = NullLogger<EventsController>.Instance;
+            var controller = new EventsController(eventService, bookingService, bookingTaskQueue, logger);
 
             var testEvent = new Event
             {
@@ -244,7 +257,9 @@ namespace EventServiceTest
         {
             var eventService = new EventMemoryService();
             var bookingService = new BookingMemoryService();
-            var controller = new EventsController(eventService, bookingService);
+            var bookingTaskQueue = new InMemoryBookingTaskQueue();
+            var logger = NullLogger<EventsController>.Instance;
+            var controller = new EventsController(eventService, bookingService, bookingTaskQueue, logger);
 
             Guid nonExistsGuid = Guid.NewGuid();
             var actionResult = controller.GetById(nonExistsGuid).Result as NotFoundObjectResult;
@@ -262,7 +277,9 @@ namespace EventServiceTest
         {
             var eventService = new EventMemoryService();
             var bookingService = new BookingMemoryService();
-            var controller = new EventsController(eventService, bookingService);
+            var bookingTaskQueue = new InMemoryBookingTaskQueue();
+            var logger = NullLogger<EventsController>.Instance;
+            var controller = new EventsController(eventService, bookingService, bookingTaskQueue, logger);
 
             var originalEvent = new Event
             {
@@ -300,7 +317,9 @@ namespace EventServiceTest
         {
             var eventService = new EventMemoryService();
             var bookingService = new BookingMemoryService();
-            var controller = new EventsController(eventService, bookingService);
+            var bookingTaskQueue = new InMemoryBookingTaskQueue();
+            var logger = NullLogger<EventsController>.Instance;
+            var controller = new EventsController(eventService, bookingService, bookingTaskQueue, logger);
 
             var updateDto = new EventDto
             {
@@ -326,7 +345,9 @@ namespace EventServiceTest
         {
             var eventService = new EventMemoryService();
             var bookingService = new BookingMemoryService();
-            var controller = new EventsController(eventService, bookingService);
+            var bookingTaskQueue = new InMemoryBookingTaskQueue();
+            var logger = NullLogger<EventsController>.Instance;
+            var controller = new EventsController(eventService, bookingService, bookingTaskQueue, logger);
 
             var testEvent = new Event
             {
@@ -355,7 +376,9 @@ namespace EventServiceTest
         {
             var eventService = new EventMemoryService();
             var bookingService = new BookingMemoryService();
-            var controller = new EventsController(eventService, bookingService);
+            var bookingTaskQueue = new InMemoryBookingTaskQueue();
+            var logger = NullLogger<EventsController>.Instance;
+            var controller = new EventsController(eventService, bookingService, bookingTaskQueue, logger);
 
             Guid nonExistsGuid = Guid.NewGuid();
 
