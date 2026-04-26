@@ -3,22 +3,27 @@ using CSCourse.Interfaces;
 using CSCourse.Models;
 using CSCourse.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace EventServiceTest
 {
     public class UnitEventServiceTest
     {
-        [Fact]
-        public void EventService_CreateEvent_Success()
+        private readonly EventMemoryService _eventService;
+        private readonly EventsController _controller;
+
+        public UnitEventServiceTest()
         {
-            var eventService = new EventMemoryService();
+            _eventService = new EventMemoryService();
             var bookingService = new BookingMemoryService();
             var bookingTaskQueue = new InMemoryBookingTaskQueue();
             var logger = NullLogger<EventsController>.Instance;
-            var controller = new EventsController(eventService, bookingService, bookingTaskQueue, logger);
+            _controller = new EventsController(_eventService, bookingService, bookingTaskQueue, logger);
+        }
 
+        [Fact]
+        public void EventService_CreateEvent_Success()
+        {
             var validDto = new EventDto
             {
                 Title = "Тестовая конференция",
@@ -27,7 +32,7 @@ namespace EventServiceTest
                 EndAt = DateTime.Now.AddHours(2)
             };
 
-            var result = controller.Post(validDto).Result as CreatedAtActionResult;
+            var result = _controller.Post(validDto).Result as CreatedAtActionResult;
 
             Assert.NotNull(result);
             Assert.Equal(201, result.StatusCode);
@@ -38,12 +43,6 @@ namespace EventServiceTest
         [Fact]
         public void GetAll_WithValidData_ReturnsOkResultWithPaginatedEvents()
         {
-            var eventService = new EventMemoryService();
-            var bookingService = new BookingMemoryService();
-            var bookingTaskQueue = new InMemoryBookingTaskQueue();
-            var logger = NullLogger<EventsController>.Instance;
-            var controller = new EventsController(eventService, bookingService, bookingTaskQueue, logger);
-
             var testEvents = new List<Event>
             {
                 new Event
@@ -66,11 +65,11 @@ namespace EventServiceTest
 
             foreach (var @event in testEvents)
             {
-                eventService.CreateEvent(@event);
+                _eventService.CreateEvent(@event);
             }
 
 
-            var actionResult = controller.GetAll(null, null, null).Result as OkObjectResult;
+            var actionResult = _controller.GetAll(null, null, null).Result as OkObjectResult;
             var actualResult = actionResult?.Value as PaginatedResult;
 
             Assert.NotNull(actionResult);
@@ -91,12 +90,6 @@ namespace EventServiceTest
         [Fact]
         public void GetAll_WithFilter_ReturnsFilteredResults()
         {
-            var eventService = new EventMemoryService();
-            var bookingService = new BookingMemoryService();
-            var bookingTaskQueue = new InMemoryBookingTaskQueue();
-            var logger = NullLogger<EventsController>.Instance;
-            var controller = new EventsController(eventService, bookingService, bookingTaskQueue, logger);
-
             var allEvents = new List<Event>
             {
                 new Event
@@ -119,7 +112,7 @@ namespace EventServiceTest
 
             foreach (var @event in allEvents)
             {
-                eventService.CreateEvent(@event);
+                _eventService.CreateEvent(@event);
             }
 
             var filterDto = new FilterEventDto
@@ -128,7 +121,7 @@ namespace EventServiceTest
             };
 
 
-            var actionResult = controller.GetAll(filterDto, 1, 10).Result as OkObjectResult;
+            var actionResult = _controller.GetAll(filterDto, 1, 10).Result as OkObjectResult;
             var actualResult = actionResult?.Value as PaginatedResult;
 
             Assert.NotNull(actionResult);
@@ -141,12 +134,6 @@ namespace EventServiceTest
         [Fact]
         public void GetAll_WithDateFilter_ReturnsFilteredByDateResults()
         {
-            var eventService = new EventMemoryService();
-            var bookingService = new BookingMemoryService();
-            var bookingTaskQueue = new InMemoryBookingTaskQueue();
-            var logger = NullLogger<EventsController>.Instance;
-            var controller = new EventsController(eventService, bookingService, bookingTaskQueue, logger);
-
             var allEvents = new List<Event>
             {
                 new Event
@@ -185,11 +172,11 @@ namespace EventServiceTest
 
             Guid[] expectedIds = new Guid[2];
             Guid[] notExpectedIds = new Guid[3];
-            expectedIds[0] = eventService.CreateEvent(allEvents[0]);
-            expectedIds[1] = eventService.CreateEvent(allEvents[3]);
+            expectedIds[0] = _eventService.CreateEvent(allEvents[0]);
+            expectedIds[1] = _eventService.CreateEvent(allEvents[3]);
 
-            notExpectedIds[0] = eventService.CreateEvent(allEvents[1]);
-            notExpectedIds[1] = eventService.CreateEvent(allEvents[2]);
+            notExpectedIds[0] = _eventService.CreateEvent(allEvents[1]);
+            notExpectedIds[1] = _eventService.CreateEvent(allEvents[2]);
 
             var filterDto = new FilterEventDto
             {
@@ -197,7 +184,7 @@ namespace EventServiceTest
                 EndAt = new DateTime(2026, 12, 1, 12, 0, 0)
             };
 
-            var actionResult = controller.GetAll(filterDto, 1, 10).Result as OkObjectResult;
+            var actionResult = _controller.GetAll(filterDto, 1, 10).Result as OkObjectResult;
             var actualResult = actionResult?.Value as PaginatedResult;
 
             Assert.NotNull(actionResult);
@@ -221,12 +208,6 @@ namespace EventServiceTest
         [Fact]
         public void GetById_ExistingEvent_ReturnsOkResultWithEvent()
         {
-            var eventService = new EventMemoryService();
-            var bookingService = new BookingMemoryService();
-            var bookingTaskQueue = new InMemoryBookingTaskQueue();
-            var logger = NullLogger<EventsController>.Instance;
-            var controller = new EventsController(eventService, bookingService, bookingTaskQueue, logger);
-
             var testEvent = new Event
             {
                 Id = Guid.Empty,
@@ -236,9 +217,9 @@ namespace EventServiceTest
                 EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
             };
 
-            Guid createdId = eventService.CreateEvent(testEvent);
+            Guid createdId = _eventService.CreateEvent(testEvent);
 
-            var actionResult = controller.GetById(createdId).Result as OkObjectResult;
+            var actionResult = _controller.GetById(createdId).Result as OkObjectResult;
             var actualEvent = actionResult?.Value as Event;
 
             Assert.NotNull(actionResult);
@@ -255,14 +236,8 @@ namespace EventServiceTest
         [Fact]
         public void GetById_NonExistingEvent_ReturnsNotFound()
         {
-            var eventService = new EventMemoryService();
-            var bookingService = new BookingMemoryService();
-            var bookingTaskQueue = new InMemoryBookingTaskQueue();
-            var logger = NullLogger<EventsController>.Instance;
-            var controller = new EventsController(eventService, bookingService, bookingTaskQueue, logger);
-
             Guid nonExistsGuid = Guid.NewGuid();
-            var actionResult = controller.GetById(nonExistsGuid).Result as NotFoundObjectResult;
+            var actionResult = _controller.GetById(nonExistsGuid).Result as NotFoundObjectResult;
 
             Assert.NotNull(actionResult);
             Assert.Equal(404, actionResult.StatusCode);
@@ -275,12 +250,6 @@ namespace EventServiceTest
         [Fact]
         public void Put_UpdateExistingEvent_ReturnsNoContent()
         {
-            var eventService = new EventMemoryService();
-            var bookingService = new BookingMemoryService();
-            var bookingTaskQueue = new InMemoryBookingTaskQueue();
-            var logger = NullLogger<EventsController>.Instance;
-            var controller = new EventsController(eventService, bookingService, bookingTaskQueue, logger);
-
             var originalEvent = new Event
             {
                 Id = Guid.Empty,
@@ -290,7 +259,7 @@ namespace EventServiceTest
                 EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
             };
 
-            Guid id = eventService.CreateEvent(originalEvent);
+            Guid id = _eventService.CreateEvent(originalEvent);
 
             var updateDto = new EventDto
             {
@@ -300,12 +269,12 @@ namespace EventServiceTest
                 EndAt = new DateTime(2026, 12, 2, 17, 0, 0)
             };
 
-            var actionResult = controller.Put(id, updateDto) as NoContentResult;
+            var actionResult = _controller.Put(id, updateDto) as NoContentResult;
 
             Assert.NotNull(actionResult);
             Assert.Equal(204, actionResult.StatusCode);
 
-            var updatedEvent = eventService.GetEventById(id);
+            var updatedEvent = _eventService.GetEventById(id);
             Assert.Equal(updateDto.Title, updatedEvent?.Title);
             Assert.Equal(updateDto.Description, updatedEvent?.Description);
             Assert.Equal(updateDto.StartAt, updatedEvent?.StartAt);
@@ -315,12 +284,6 @@ namespace EventServiceTest
         [Fact]
         public void Put_UpdateNonExistingEvent_ReturnsNotFound()
         {
-            var eventService = new EventMemoryService();
-            var bookingService = new BookingMemoryService();
-            var bookingTaskQueue = new InMemoryBookingTaskQueue();
-            var logger = NullLogger<EventsController>.Instance;
-            var controller = new EventsController(eventService, bookingService, bookingTaskQueue, logger);
-
             var updateDto = new EventDto
             {
                 Title = "Попытка обновления",
@@ -331,7 +294,7 @@ namespace EventServiceTest
 
             Guid nonExistsGuid = Guid.NewGuid();
 
-            var actionResult = controller.Put(nonExistsGuid, updateDto) as NotFoundObjectResult;
+            var actionResult = _controller.Put(nonExistsGuid, updateDto) as NotFoundObjectResult;
 
             Assert.NotNull(actionResult);
             Assert.Equal(404, actionResult.StatusCode);
@@ -343,12 +306,6 @@ namespace EventServiceTest
         [Fact]
         public void Delete_DeleteExistingEvent_ReturnsOk()
         {
-            var eventService = new EventMemoryService();
-            var bookingService = new BookingMemoryService();
-            var bookingTaskQueue = new InMemoryBookingTaskQueue();
-            var logger = NullLogger<EventsController>.Instance;
-            var controller = new EventsController(eventService, bookingService, bookingTaskQueue, logger);
-
             var testEvent = new Event
             {
                 Id = Guid.Empty,
@@ -358,14 +315,14 @@ namespace EventServiceTest
                 EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
             };
 
-            Guid createdId = eventService.CreateEvent(testEvent);
+            Guid createdId = _eventService.CreateEvent(testEvent);
 
-            var actionResult = controller.Delete(createdId) as OkResult;
+            var actionResult = _controller.Delete(createdId) as OkResult;
 
             Assert.NotNull(actionResult);
             Assert.Equal(200, actionResult.StatusCode);
 
-            var allEvents = eventService.GetAll(1, int.MaxValue).Events;
+            var allEvents = _eventService.GetAll(1, int.MaxValue).Events;
             Assert.DoesNotContain(testEvent, allEvents);
             Console.WriteLine(allEvents);
             Assert.Empty(allEvents);
@@ -374,15 +331,9 @@ namespace EventServiceTest
         [Fact]
         public void Delete_DeleteNonExistingEvent_ReturnsNotFound()
         {
-            var eventService = new EventMemoryService();
-            var bookingService = new BookingMemoryService();
-            var bookingTaskQueue = new InMemoryBookingTaskQueue();
-            var logger = NullLogger<EventsController>.Instance;
-            var controller = new EventsController(eventService, bookingService, bookingTaskQueue, logger);
-
             Guid nonExistsGuid = Guid.NewGuid();
 
-            var actionResult = controller.Delete(nonExistsGuid) as NotFoundObjectResult;
+            var actionResult = _controller.Delete(nonExistsGuid) as NotFoundObjectResult;
 
             Assert.NotNull(actionResult);
             Assert.Equal(404, actionResult.StatusCode);
@@ -390,7 +341,7 @@ namespace EventServiceTest
             Assert.NotNull(actionResult.Value);
             Assert.Contains($"Event with index {nonExistsGuid} not found", actionResult.Value.ToString());
 
-            var remainingEvents = eventService.GetAll(1, int.MaxValue).Events;
+            var remainingEvents = _eventService.GetAll(1, int.MaxValue).Events;
             Assert.All(remainingEvents, e => Assert.NotEqual(nonExistsGuid, e.Id));
         }
     }
