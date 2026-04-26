@@ -127,12 +127,12 @@ namespace EventServiceTest
             Assert.Equal(BookingStatus.Pending, bookingCreate.Status);
             Assert.Equal(@event.Id, bookingCreate.EventId);
 
-            var resultInfoBooking = (await _bookingsController.GetById(bookingCreate.Id)) as AcceptedAtActionResult;
+            var resultInfoBooking = (await _bookingsController.GetById(bookingCreate.Id)) as OkObjectResult;
 
-            Assert.NotNull(resultCreateBooking);
-            Assert.Equal(202, resultCreateBooking.StatusCode);
+            Assert.NotNull(resultInfoBooking);
+            Assert.Equal(200, resultInfoBooking.StatusCode);
 
-            var bookingInfo = resultCreateBooking.Value as Booking;
+            var bookingInfo = resultInfoBooking.Value as Booking;
             Assert.NotNull(bookingInfo);
             Assert.Equal(bookingCreate, bookingInfo);
         }
@@ -171,12 +171,12 @@ namespace EventServiceTest
             await Task.Delay(3000, TestContext.Current.CancellationToken);
             await _backgroundService.StopAsync(cts.Token);
 
-            var resultInfoBooking = (await _bookingsController.GetById(bookingCreate.Id)) as AcceptedAtActionResult;
+            var resultInfoBooking = (await _bookingsController.GetById(bookingCreate.Id)) as OkObjectResult;
 
-            Assert.NotNull(resultCreateBooking);
-            Assert.Equal(202, resultCreateBooking.StatusCode);
+            Assert.NotNull(resultInfoBooking);
+            Assert.Equal(200, resultInfoBooking.StatusCode);
 
-            var bookingInfo = resultCreateBooking.Value as Booking;
+            var bookingInfo = resultInfoBooking.Value as Booking;
             Assert.NotNull(bookingInfo);
             Assert.Equal(BookingStatus.Confirmed, bookingInfo.Status);
             Assert.Equal(@event.Id, bookingCreate.EventId);
