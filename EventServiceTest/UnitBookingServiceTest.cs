@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 
 namespace EventServiceTest
@@ -131,7 +132,7 @@ namespace EventServiceTest
             Assert.Equal(BookingStatus.Pending, bookingCreate.Status);
             Assert.Equal(@event.Id, bookingCreate.EventId);
 
-            var resultInfoBooking = (await _bookingsController.GetById(@event.Id)) as AcceptedAtActionResult;
+            var resultInfoBooking = (await _bookingsController.GetById(bookingCreate.Id)) as AcceptedAtActionResult;
 
             Assert.NotNull(resultCreateBooking);
             Assert.Equal(202, resultCreateBooking.StatusCode);
@@ -175,7 +176,7 @@ namespace EventServiceTest
             await Task.Delay(3000, TestContext.Current.CancellationToken);
             await _backgroundService.StopAsync(cts.Token);
 
-            var resultInfoBooking = (await _bookingsController.GetById(@event.Id)) as AcceptedAtActionResult;
+            var resultInfoBooking = (await _bookingsController.GetById(bookingCreate.Id)) as AcceptedAtActionResult;
 
             Assert.NotNull(resultCreateBooking);
             Assert.Equal(202, resultCreateBooking.StatusCode);
@@ -234,6 +235,18 @@ namespace EventServiceTest
 
             Assert.NotNull(actionResultCreateBooking.Value);
             Assert.Contains($"Event with index {Guid.Empty} not found", actionResultCreateBooking.Value.ToString());
+        }
+
+        [Fact]
+        public async Task BookingService_CheckInfoDontExistsBooking_ReturnsNotFound()
+        {
+            var actionResult = (await _bookingsController.GetById(Guid.Empty)) as NotFoundObjectResult;
+
+            Assert.NotNull(actionResult);
+            Assert.Equal(404, actionResult.StatusCode);
+
+            Assert.NotNull(actionResult.Value);
+            Assert.Contains($"Booking with index {Guid.Empty} not found", actionResult.Value.ToString());
         }
     }
 }
