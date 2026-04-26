@@ -225,7 +225,20 @@ namespace CSCourse.Controllers
         }
 
 
+        /// <summary>
+        /// Создаёт новое бронирование для указанного мероприятия.
+        /// </summary>
+        /// <param name="eventId">Уникальный идентификатор (GUID) мероприятия, для которого создаётся бронирование.</param>
+        /// <returns>
+        /// Возвращает <see cref="ActionResult"/> со статусом 202 Accepted и данными созданного бронирования,
+        /// включая URL для получения информации о бронировании;
+        /// в случае ошибки возвращает ответ 404 Not Found с текстовым сообщением.
+        /// </returns>
+        /// <response code="202">Бронирование успешно создано. Возвращается объект бронирования и ссылка на ресурс (Location header).</response>
+        /// <response code="404">Мероприятие с указанным идентификатором не найдено.</response>
         [HttpPost("{eventId:Guid}/book")]
+        [ProducesResponseType(StatusCodes.Status202Accepted, Type = typeof(Booking))]
+        [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(string))]
         public async Task<ActionResult> CreateBooking(Guid eventId)
         {
             try
@@ -235,12 +248,11 @@ namespace CSCourse.Controllers
                 _bookingTaskQueue.Enqueue(created);
 
                 return AcceptedAtAction(
-                        actionName: nameof(BookingsController.GetById),
-                        controllerName: "Bookings", // TODO: Убрать хардкодинг
-                        routeValues: new { index = created.Id },
-                        value: created
-                    );
-
+                    actionName: nameof(BookingsController.GetById),
+                    controllerName: "Bookings", // TODO: Убрать хардкодинг
+                    routeValues: new { index = created.Id },
+                    value: created
+                );
             }
             catch (InvalidOperationException)
             {
