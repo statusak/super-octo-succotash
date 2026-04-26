@@ -39,22 +39,21 @@ namespace CSCourse.Interfaces
         /// <summary>
         /// Получает детальную информацию о мероприятии по его уникальному идентификатору.
         /// </summary>
-        /// <param name="id">Уникальный идентификатор мероприятия (целое положительное число).</param>
+        /// <param name="id">Уникальный идентификатор мероприятия.</param>
         /// <returns>Объект Event, если мероприятие найдено; null — если мероприятие с указанным ID отсутствует.</returns>
         /// <remarks>
         /// Возвращает полную информацию о мероприятии, включая все поля модели Event.
         /// </remarks>
-        Event? GetEventById(int id);
+        Event? GetEventById(Guid id);
 
         /// <summary>
         /// Создаёт новое мероприятие в системе.
         /// </summary>
         /// <param name="event">Объект Event с данными для создания мероприятия.
-        /// Поле Id должно быть равно 0 (автоматически генерируется в БД).</param>
         /// <returns>Уникальный идентификатор (ID) созданного мероприятия.</returns>
         /// <exception cref="ValidationException">Выбрасывается при нарушении правил валидации данных.</exception>
         /// <exception cref="ArgumentNullException">Выбрасывается, если переданный объект event равен null.</exception>
-        int CreateEvent(Event @event);
+        Guid CreateEvent(Event @event);
 
         /// <summary>
         /// Полностью обновляет данные существующего мероприятия.
@@ -65,7 +64,7 @@ namespace CSCourse.Interfaces
         /// <exception cref="InvalidOperationException">Выбрасывается, если мероприятие с указанным ID не найдено.</exception>
         /// <exception cref="ValidationException">Выбрасывается при нарушении правил валидации данных.</exception>
         /// <exception cref="ArgumentNullException">Выбрасывается, если переданный объект event равен null.</exception>
-        void UpdateEvent(int id, Event @event);
+        void UpdateEvent(Guid id, Event @event);
 
         /// <summary>
         /// Удаляет мероприятие из системы по его уникальному идентификатору.
@@ -76,6 +75,6 @@ namespace CSCourse.Interfaces
         /// Операция необратима. Все связанные данные (например, регистрации участников) также могут быть удалены
         /// в соответствии с бизнес‑правилами системы.
         /// </remarks>
-        void DeleteEvent(int id);
+        void DeleteEvent(Guid id);
     }
 }

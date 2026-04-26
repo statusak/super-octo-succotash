@@ -9,7 +9,7 @@ namespace CSCourse.Controllers
     /// </summary>
     [ApiController]
     [Route("/[controller]")]
-    public class EventsController(IEventService _eventService) : ControllerBase
+    public class EventsController(IEventService _eventService, IBookingService _bookingService) : ControllerBase
     {
         /// <summary>
         /// Получает список мероприятий с возможностью фильтрации и пагинации.
@@ -29,7 +29,7 @@ namespace CSCourse.Controllers
         /// {
         ///   "events": [
         ///     {
-        ///       "id": 1,
+        ///       "id": "AC58C946-D175-4F39-A81A-7F6A0E970B3B",
         ///       "title": "Конференция разработчиков",
         ///       "description": "Ежегодная конференция...",
         ///       "startAt": "2023-12-01T10:00:00",
@@ -74,7 +74,7 @@ namespace CSCourse.Controllers
         /// <response code="200">Успешный ответ: информация о мероприятии (HTTP 200 OK)</response>
         /// <response code="404">Мероприятие с указанным ID не найдено (HTTP 404 Not Found)</response>
         [HttpGet("{index:int}")]
-        public ActionResult<Event> GetById(int index)
+        public ActionResult<Event> GetById(Guid index)
         {
             try
             {
@@ -117,7 +117,7 @@ namespace CSCourse.Controllers
 
             var @event = new Event
             {
-                Id = 0,
+                Id = Guid.Empty,
                 Title = eventDto.Title,
                 Description = eventDto.Description,
                 StartAt = eventDto.StartAt,
@@ -146,7 +146,7 @@ namespace CSCourse.Controllers
         /// <response code="400">Некорректные данные или ошибки валидации (HTTP 400 Bad Request)</response>
         /// <response code="404">Мероприятие не найдено (HTTP 404 Not Found)</response>
         [HttpPut("{index:int}")]
-        public ActionResult Put(int index, [FromBody] EventDto eventDto)
+        public ActionResult Put(Guid index, [FromBody] EventDto eventDto)
         {
             if (!ModelState.IsValid)
             {
@@ -188,7 +188,7 @@ namespace CSCourse.Controllers
         /// <response code="200">Мероприятие успешно удалено (HTTP 200 OK)</response>
         /// <response code="404">Мероприятие не найдено в системе (HTTP 404 Not Found)</response>
         [HttpDelete("{index:int}")]
-        public ActionResult Delete(int index)
+        public ActionResult Delete(Guid index)
         {
             try
             {
@@ -199,6 +199,14 @@ namespace CSCourse.Controllers
             {
                 return NotFound($"Event with index {index} not found");
             }
+        }
+
+
+        [HttpPost("/{eventId:Guid}/book")]
+        public async Task<ActionResult> CreateBooking(Guid eventId)
+        {
+            var created = await _bookingService.CreateBookingAsync(eventId);
+            return CreatedAtAction(nameof(eventId), created);
         }
     }
 }

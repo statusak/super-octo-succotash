@@ -5,8 +5,8 @@ namespace CSCourse.Services
 {
     public class EventMemoryService : IEventService
     {
-        private int _ID = 1;
         private readonly List<Event> Events = [];
+        private readonly object _lockCreateEvent = new object();
 
         public PaginatedResult GetAll(int page, int pageSize)
         {
@@ -38,18 +38,30 @@ namespace CSCourse.Services
             };
         }
 
-        public Event? GetEventById(int id)
+        public Event? GetEventById(Guid id)
         {
             return Events.First(x => x.Id == id);
         }
-        public int CreateEvent(Event @event)
+        public Guid CreateEvent(Event @event)
         {
-            @event.Id = _ID++;
-            Events.Add(@event);
-            return @event.Id;
+            Guid eventId;
+
+            lock (_lockCreateEvent)
+            {
+                do
+                {
+                    eventId = Guid.NewGuid();
+                }
+                while (Events.Any(e => e.Id == eventId));
+
+                @event.Id = eventId;
+                Events.Add(@event);
+            }
+
+            return eventId;
         }
 
-        public void UpdateEvent(int id, Event @event)
+        public void UpdateEvent(Guid id, Event @event)
         {
             var @event_old = Events.First(x => x.Id == id);
             if (@event_old != null)
@@ -60,7 +72,7 @@ namespace CSCourse.Services
                 @event_old.EndAt = @event.EndAt;
             }
         }
-        public void DeleteEvent(int id)
+        public void DeleteEvent(Guid id)
         {
             var @event = Events.First(x => x.Id == id);
             if (@event != null) {
