@@ -2,13 +2,8 @@
 using CSCourse.Interfaces;
 using CSCourse.Models;
 using CSCourse.Services;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
-using System;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Text;
 
 namespace EventServiceTest
 {
