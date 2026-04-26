@@ -49,7 +49,7 @@ namespace CSCourse.Interfaces
         /// <summary>
         /// Создаёт новое мероприятие в системе.
         /// </summary>
-        /// <param name="event">Объект Event с данными для создания мероприятия.
+        /// <param name="event">Объект Event с данными для создания мероприятия.</param>
         /// <returns>Уникальный идентификатор (ID) созданного мероприятия.</returns>
         /// <exception cref="ValidationException">Выбрасывается при нарушении правил валидации данных.</exception>
         /// <exception cref="ArgumentNullException">Выбрасывается, если переданный объект event равен null.</exception>
