@@ -7,6 +7,7 @@ namespace CSCourse.Controllers
     [Route("/[controller]")]
     public class BookingsController : ControllerBase
     {
+        [HttpGet]
         public ActionResult Index()
         {
             return Ok();

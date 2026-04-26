@@ -2,6 +2,8 @@
 using CSCourse.Models;
 using CSCourse.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Routing;
+using Moq;
 
 namespace EventServiceTest
 {
@@ -14,6 +16,13 @@ namespace EventServiceTest
             var bookingService = new BookingMemoryService();
             var controller = new EventsController(eventService, bookingService);
 
+            var urlHelperMock = new Mock<IUrlHelper>();
+            urlHelperMock
+                .Setup(x => x.Action(It.IsAny<UrlActionContext>()))
+                .Returns("https://localhost/mocked-url");
+
+            controller.Url = urlHelperMock.Object;
+
             var validDto = new EventDto
             {
                 Title = "Тестовая конференция",
@@ -22,7 +31,7 @@ namespace EventServiceTest
                 EndAt = DateTime.Now.AddHours(2)
             };
 
-            var result = controller.Post(validDto) as CreatedResult;
+            var result = controller.Post(validDto).Result as CreatedResult;
 
             Assert.NotNull(result);
             Assert.Equal(201, result.StatusCode);

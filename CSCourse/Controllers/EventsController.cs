@@ -29,7 +29,7 @@ namespace CSCourse.Controllers
         /// {
         ///   "events": [
         ///     {
-        ///       "id": "AC58C946-D175-4F39-A81A-7F6A0E970B3B",
+        ///       "id": "308dd020-a855-4e80-b29e-b3582b6de65c",
         ///       "title": "Конференция разработчиков",
         ///       "description": "Ежегодная конференция...",
         ///       "startAt": "2023-12-01T10:00:00",
@@ -108,7 +108,7 @@ namespace CSCourse.Controllers
         /// <response code="201">Мероприятие успешно создано (HTTP 201 Created)</response>
         /// <response code="400">Ошибка валидации или некорректные данные (HTTP 400 Bad Request)</response>
         [HttpPost]
-        public ActionResult Post([FromBody] EventDto eventDto)
+        public ActionResult<Event> Post([FromBody] EventDto eventDto)
         {
             if (!ModelState.IsValid)
             {
@@ -124,8 +124,10 @@ namespace CSCourse.Controllers
                 EndAt = eventDto.EndAt,
             };
 
-            _eventService.CreateEvent(@event);
-            return Created();
+            @event.Id = _eventService.CreateEvent(@event);
+            var locationUri = Url.Action(nameof(GetById), new { index = @event.Id });
+
+            return Created(locationUri, @event);
         }
 
         /// <summary>
