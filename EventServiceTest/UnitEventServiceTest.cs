@@ -322,7 +322,6 @@ namespace EventServiceTest
 
             var allEvents = _eventService.GetAll(1, int.MaxValue).Events;
             Assert.DoesNotContain(testEvent, allEvents);
-            Console.WriteLine(allEvents);
             Assert.Empty(allEvents);
         }
 

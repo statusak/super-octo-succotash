@@ -2,6 +2,7 @@
 using CSCourse.Interfaces;
 using CSCourse.Models;
 using CSCourse.Services;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using System;
@@ -199,5 +200,40 @@ namespace EventServiceTest
             Assert.Contains($"Event with index {Guid.Empty} not found", actionResult.Value.ToString());
         }
 
+        [Fact]
+        public async Task BookingService_CreateBookingForDeletedEvent_ReturnsNotFound()
+        {
+            var validDto = new EventDto
+            {
+                Title = "Тестовая конференция",
+                Description = "Описание мероприятия",
+                StartAt = DateTime.Now.AddHours(1),
+                EndAt = DateTime.Now.AddHours(2)
+            };
+
+            var resultCreateEvent = _eventsController.Post(validDto).Result as CreatedAtActionResult;
+
+            Assert.NotNull(resultCreateEvent);
+            Assert.Equal(201, resultCreateEvent.StatusCode);
+
+            var @event = resultCreateEvent.Value as Event;
+            Assert.NotNull(@event);
+
+            var actionResult = _eventsController.Delete(@event.Id) as OkResult;
+
+            Assert.NotNull(actionResult);
+            Assert.Equal(200, actionResult.StatusCode);
+
+            var allEvents = _eventService.GetAll(1, int.MaxValue).Events;
+            Assert.Empty(allEvents);
+
+            var actionResultCreateBooking = (await _eventsController.CreateBooking(Guid.Empty)) as NotFoundObjectResult;
+
+            Assert.NotNull(actionResultCreateBooking);
+            Assert.Equal(404, actionResultCreateBooking.StatusCode);
+
+            Assert.NotNull(actionResultCreateBooking.Value);
+            Assert.Contains($"Event with index {Guid.Empty} not found", actionResultCreateBooking.Value.ToString());
+        }
     }
 }
