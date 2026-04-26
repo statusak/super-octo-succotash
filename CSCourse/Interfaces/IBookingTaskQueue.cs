@@ -6,7 +6,7 @@ namespace CSCourse.Interfaces
     public interface IBookingTaskQueue
     {
         void Enqueue(Booking task);
-        bool TryDequeue(out Booking task);
+        bool TryDequeue(out Booking? task);
     }
 
     public class InMemoryBookingTaskQueue : IBookingTaskQueue
@@ -18,7 +18,7 @@ namespace CSCourse.Interfaces
             _queue.Enqueue(task);
         }
 
-        public bool TryDequeue(out Booking task)
+        public bool TryDequeue(out Booking? task)
         {
             return _queue.TryDequeue(out task);
         }

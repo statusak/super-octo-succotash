@@ -29,6 +29,9 @@ namespace CSCourse.Services
                 {
                     if (_bookingTaskQueue.TryDequeue(out var task))
                     {
+                        if(task == null)
+                            continue;
+
                         _logger.LogInformation(
                             "Processing bookingId {TaskId} for eventId {EventId}, whitch created at {CreatedAt}",
                             task.Id, task.EventId, task.CreatedAt);
