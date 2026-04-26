@@ -51,6 +51,44 @@ namespace EventServiceTest
             var booking = resultCreateBooking.Value as Booking;
             Assert.NotNull(booking);
             Assert.Equal(BookingStatus.Pending, booking.Status);
+            Assert.Equal(@event.Id, booking.EventId);
+        }
+
+        [Fact]
+        public async Task BookingService_CreateMultiplyBooking_Success()
+        {
+            var validDto = new EventDto
+            {
+                Title = "Тестовая конференция",
+                Description = "Описание мероприятия",
+                StartAt = DateTime.Now.AddHours(1),
+                EndAt = DateTime.Now.AddHours(2)
+            };
+
+            var resultCreateEvent = _controller.Post(validDto).Result as CreatedAtActionResult;
+
+            Assert.NotNull(resultCreateEvent);
+            Assert.Equal(201, resultCreateEvent.StatusCode);
+
+            var @event = resultCreateEvent.Value as Event;
+            Assert.NotNull(@event);
+
+            List<Guid> CreatedBookings = [];
+
+            for (int i = 0; i < 10; i++)
+            {
+                var resultCreateBooking = (await _controller.CreateBooking(@event.Id)) as AcceptedAtActionResult;
+
+                Assert.NotNull(resultCreateBooking);
+                Assert.Equal(202, resultCreateBooking.StatusCode);
+
+                var booking = resultCreateBooking.Value as Booking;
+                Assert.NotNull(booking);
+                Assert.Equal(BookingStatus.Pending, booking.Status);
+                Assert.Equal(@event.Id, booking.EventId);
+                Assert.DoesNotContain(booking.Id, CreatedBookings);
+                CreatedBookings.Add(booking.Id);
+            }
         }
     }
 }
