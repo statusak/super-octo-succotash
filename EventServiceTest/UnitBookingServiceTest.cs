@@ -181,7 +181,7 @@ namespace EventServiceTest
             Assert.Equal(BookingStatus.Confirmed, bookingInfo.Status);
             Assert.Equal(@event.Id, bookingCreate.EventId);
             Assert.Equal(bookingCreate.CreatedAt, bookingInfo.CreatedAt);
-            Assert.True(bookingInfo.ProcessedAt < bookingCreate.CreatedAt);
+            Assert.True(bookingInfo.ProcessedAt >= bookingCreate.CreatedAt);
         }
 
         [Fact]

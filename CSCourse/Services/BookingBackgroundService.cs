@@ -38,7 +38,7 @@ namespace CSCourse.Services
 
                         await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
 
-                        await _bookingService.UpdateProcessedBookingByIdAsync(task.Id, new BookingProcessedDto { Status = BookingStatus.Confirmed, ProcessedAt = DateTime.Now });
+                        await _bookingService.UpdateProcessedBookingByIdAsync(task.Id, new BookingProcessedDto { Status = BookingStatus.Confirmed, ProcessedAt = DateTime.UtcNow });
 
                         _logger.LogInformation(
                             "Booking {TaskId} success processed", task.Id);
