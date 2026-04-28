@@ -7,14 +7,14 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace EventServiceTest
 {
-    public class UnitBookingServiceTest
+    public class UnitBookingControllerTest
     {
         private readonly EventMemoryService _eventService;
         private readonly EventsController _eventsController;
         private readonly BookingsController _bookingsController;
         private readonly BookingBackgroundService _backgroundService;
 
-        public UnitBookingServiceTest()
+        public UnitBookingControllerTest()
         {
             _eventService = new EventMemoryService();
             var bookingService = new BookingMemoryService();
@@ -33,7 +33,7 @@ namespace EventServiceTest
         }
 
         [Fact]
-        public async Task BookingService_CreateBooking_Success()
+        public async Task BookingController_CreateBooking_Success()
         {
             var validDto = new EventDto
             {
@@ -63,7 +63,7 @@ namespace EventServiceTest
         }
 
         [Fact]
-        public async Task BookingService_CreateMultiplyBooking_Success()
+        public async Task BookingController_CreateMultiplyBooking_Success()
         {
             var validDto = new EventDto
             {
@@ -100,7 +100,7 @@ namespace EventServiceTest
         }
 
         [Fact]
-        public async Task BookingService_CheckInfoBooking_Success()
+        public async Task BookingController_CheckInfoBooking_Success()
         {
             var validDto = new EventDto
             {
@@ -142,7 +142,7 @@ namespace EventServiceTest
         }
 
         [Fact]
-        public async Task BookingService_CheckInfoAfterProcessingBooking_Success()
+        public async Task BookingController_CheckInfoAfterProcessingBooking_Success()
         {
             var validDto = new EventDto
             {
@@ -189,7 +189,7 @@ namespace EventServiceTest
         }
 
         [Fact]
-        public async Task BookingService_CreateBookingForNotExistsEvent_ReturnsNotFound()
+        public async Task BookingController_CreateBookingForNotExistsEvent_ReturnsNotFound()
         {
             var actionResult = (await _eventsController.CreateBooking(Guid.Empty)) as NotFoundObjectResult;
 
@@ -201,7 +201,7 @@ namespace EventServiceTest
         }
 
         [Fact]
-        public async Task BookingService_CreateBookingForDeletedEvent_ReturnsNotFound()
+        public async Task BookingController_CreateBookingForDeletedEvent_ReturnsNotFound()
         {
             var validDto = new EventDto
             {
@@ -237,7 +237,7 @@ namespace EventServiceTest
         }
 
         [Fact]
-        public async Task BookingService_CheckInfoDontExistsBooking_ReturnsNotFound()
+        public async Task BookingController_CheckInfoDontExistsBooking_ReturnsNotFound()
         {
             var actionResult = (await _bookingsController.GetById(Guid.Empty)) as NotFoundObjectResult;
 
