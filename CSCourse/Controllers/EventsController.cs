@@ -170,7 +170,7 @@ namespace CSCourse.Controllers
         /// <response code="204">Данные мероприятия успешно обновлены (HTTP 204 No Content)</response>
         /// <response code="400">Некорректные данные или ошибки валидации (HTTP 400 Bad Request)</response>
         /// <response code="404">Мероприятие не найдено (HTTP 404 Not Found)</response>
-        [HttpPut("{index:int}")]
+        [HttpPut("{index:guid}")]
         public ActionResult Put(Guid index, [FromBody] EventDto eventDto)
         {
             if (!ModelState.IsValid)
@@ -212,7 +212,7 @@ namespace CSCourse.Controllers
         /// </remarks>
         /// <response code="200">Мероприятие успешно удалено (HTTP 200 OK)</response>
         /// <response code="404">Мероприятие не найдено в системе (HTTP 404 Not Found)</response>
-        [HttpDelete("{index:int}")]
+        [HttpDelete("{index:guid}")]
         public ActionResult Delete(Guid index)
         {
             try
