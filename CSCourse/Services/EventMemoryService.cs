@@ -42,6 +42,11 @@ namespace CSCourse.Services
         {
             return Events.First(x => x.Id == id);
         }
+
+        public bool IsEventExists(Guid id)
+        {
+            return Events.Any(x => x.Id == id);
+        }
         public Guid CreateEvent(Event @event)
         {
             Guid eventId;

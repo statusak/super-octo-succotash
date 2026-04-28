@@ -6,15 +6,18 @@ namespace CSCourse.Services
     public class BookingBackgroundService : BackgroundService
     {
         private readonly IBookingService _bookingService;
+        private readonly IEventService _eventService;
         private readonly IBookingTaskQueue _bookingTaskQueue;
         private readonly ILogger<BookingBackgroundService> _logger;
 
         public BookingBackgroundService(
             IBookingService bookingService,
+            IEventService eventService,
             IBookingTaskQueue bookingTaskQueue,
             ILogger<BookingBackgroundService> logger)
         {
             _bookingService = bookingService;
+            _eventService = eventService;
             _bookingTaskQueue = bookingTaskQueue;
             _logger = logger;
         }
@@ -31,6 +34,14 @@ namespace CSCourse.Services
                     {
                         if(task == null)
                             continue;
+
+                        // Add check, that EventId exists
+                        if (!_eventService.IsEventExists(task.EventId))
+                        {
+                            _logger.LogInformation("EventId {EventId} did not exists", task.EventId);
+                            await _bookingService.UpdateProcessedBookingByIdAsync(task.Id, new BookingProcessedDto { Status = BookingStatus.Rejected, ProcessedAt = DateTime.UtcNow });
+                            continue;
+                        }
 
                         _logger.LogInformation(
                             "Processing bookingId {TaskId} for eventId {EventId}, whitch created at {CreatedAt}",

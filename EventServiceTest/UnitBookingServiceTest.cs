@@ -26,6 +26,7 @@ namespace EventServiceTest
             var backgroundLogger = NullLogger<BookingBackgroundService>.Instance;
             _backgroundService = new BookingBackgroundService(
                 bookingService,
+                _eventService,
                 bookingTaskQueue,
                 backgroundLogger
             );
