@@ -30,7 +30,15 @@ namespace CSCourse.Controllers
             Booking? booking = await _bookingService.GetBookingByIdAsync(index);
             if (booking != null)
             {
-                return Ok(booking);
+                BookingResponseDto response =
+                new BookingResponseDto{
+                    Id = booking.Id,
+                    EventId = booking.EventId,
+                    CreatedAt = booking.CreatedAt,
+                    ProcessedAt = booking.ProcessedAt,
+                    Status = booking.Status,
+                };
+                return Ok(response);
             }
             return NotFound($"Booking with index {index} not found");
         }

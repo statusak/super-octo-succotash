@@ -55,7 +55,7 @@ namespace EventServiceTest
             Assert.NotNull(resultCreateBooking);
             Assert.Equal(202, resultCreateBooking.StatusCode);
 
-            var booking = resultCreateBooking.Value as Booking;
+            var booking = resultCreateBooking.Value as BookingResponseDto;
             Assert.NotNull(booking);
             Assert.Equal(BookingStatus.Pending, booking.Status);
             Assert.Equal(@event.Id, booking.EventId);
@@ -89,7 +89,7 @@ namespace EventServiceTest
                 Assert.NotNull(resultCreateBooking);
                 Assert.Equal(202, resultCreateBooking.StatusCode);
 
-                var booking = resultCreateBooking.Value as Booking;
+                var booking = resultCreateBooking.Value as BookingResponseDto;
                 Assert.NotNull(booking);
                 Assert.Equal(BookingStatus.Pending, booking.Status);
                 Assert.Equal(@event.Id, booking.EventId);
@@ -122,7 +122,7 @@ namespace EventServiceTest
             Assert.NotNull(resultCreateBooking);
             Assert.Equal(202, resultCreateBooking.StatusCode);
 
-            var bookingCreate = resultCreateBooking.Value as Booking;
+            var bookingCreate = resultCreateBooking.Value as BookingResponseDto;
             Assert.NotNull(bookingCreate);
             Assert.Equal(BookingStatus.Pending, bookingCreate.Status);
             Assert.Equal(@event.Id, bookingCreate.EventId);
@@ -132,9 +132,12 @@ namespace EventServiceTest
             Assert.NotNull(resultInfoBooking);
             Assert.Equal(200, resultInfoBooking.StatusCode);
 
-            var bookingInfo = resultInfoBooking.Value as Booking;
+            var bookingInfo = resultInfoBooking.Value as BookingResponseDto;
             Assert.NotNull(bookingInfo);
-            Assert.Equal(bookingCreate, bookingInfo);
+            Assert.Equal(bookingCreate.Id, bookingInfo.Id);
+            Assert.Equal(bookingCreate.EventId, bookingInfo.EventId);
+            Assert.Equal(bookingCreate.Status, bookingInfo.Status);
+            Assert.Equal(bookingCreate.CreatedAt, bookingInfo.CreatedAt);
         }
 
         [Fact]
@@ -161,7 +164,7 @@ namespace EventServiceTest
             Assert.NotNull(resultCreateBooking);
             Assert.Equal(202, resultCreateBooking.StatusCode);
 
-            var bookingCreate = resultCreateBooking.Value as Booking;
+            var bookingCreate = resultCreateBooking.Value as BookingResponseDto;
             Assert.NotNull(bookingCreate);
             Assert.Equal(BookingStatus.Pending, bookingCreate.Status);
             Assert.Equal(@event.Id, bookingCreate.EventId);
@@ -176,7 +179,7 @@ namespace EventServiceTest
             Assert.NotNull(resultInfoBooking);
             Assert.Equal(200, resultInfoBooking.StatusCode);
 
-            var bookingInfo = resultInfoBooking.Value as Booking;
+            var bookingInfo = resultInfoBooking.Value as BookingResponseDto;
             Assert.NotNull(bookingInfo);
             Assert.Equal(BookingStatus.Confirmed, bookingInfo.Status);
             Assert.Equal(@event.Id, bookingCreate.EventId);

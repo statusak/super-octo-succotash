@@ -249,11 +249,20 @@ namespace CSCourse.Controllers
                 var created = await _bookingService.CreateBookingAsync(eventId);
                 _bookingTaskQueue.Enqueue(created);
 
+                BookingResponseDto response =
+                new BookingResponseDto
+                {
+                    Id = created.Id,
+                    EventId = created.EventId,
+                    CreatedAt = created.CreatedAt,
+                    Status = created.Status,
+                };
+
                 return AcceptedAtAction(
                     actionName: nameof(BookingsController.GetById),
                     controllerName: "Bookings", // TODO: Убрать хардкодинг
                     routeValues: new { index = created.Id },
-                    value: created
+                    value: response
                 );
             }
             catch (InvalidOperationException)
