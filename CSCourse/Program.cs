@@ -1,9 +1,13 @@
-﻿using CSCourse.Middlewares;
+﻿using CSCourse.Interfaces;
+using CSCourse.Middlewares;
 using CSCourse.Services;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton<IEventService, EventMemoryService>();
+builder.Services.AddSingleton<IBookingService, BookingMemoryService>();
+builder.Services.AddSingleton<IBookingTaskQueue, InMemoryBookingTaskQueue>();
+builder.Services.AddHostedService<BookingBackgroundService>();
 
 builder.Services.AddSwaggerGen(options =>
 {

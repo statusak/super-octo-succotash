@@ -1,7 +1,7 @@
 ﻿using CSCourse.Models;
 using System.ComponentModel.DataAnnotations;
 
-namespace CSCourse.Services
+namespace CSCourse.Interfaces
 {
     /// <summary>
     /// Сервис для работы с мероприятиями (Events). Предоставляет бизнес‑логику для управления событиями:
@@ -39,22 +39,34 @@ namespace CSCourse.Services
         /// <summary>
         /// Получает детальную информацию о мероприятии по его уникальному идентификатору.
         /// </summary>
-        /// <param name="id">Уникальный идентификатор мероприятия (целое положительное число).</param>
+        /// <param name="id">Уникальный идентификатор мероприятия.</param>
         /// <returns>Объект Event, если мероприятие найдено; null — если мероприятие с указанным ID отсутствует.</returns>
         /// <remarks>
         /// Возвращает полную информацию о мероприятии, включая все поля модели Event.
         /// </remarks>
-        Event? GetEventById(int id);
+        Event? GetEventById(Guid id);
+
+        /// <summary>
+        /// Проверяет, существует ли мероприятие с указанным уникальным идентификатором.
+        /// </summary>
+        /// <param name="id">Уникальный идентификатор мероприятия.</param>
+        /// <returns>
+        /// true, если мероприятие с указанным ID существует; false — если мероприятие не найдено.
+        /// </returns>
+        /// <remarks>
+        /// Метод выполняет проверку наличия мероприятия в хранилище без получения детальной информации.
+        /// В отличие от методов, возвращающих объект Event, данный метод оптимизирован для быстрых проверок существования.
+        /// </remarks>
+        bool IsEventExists(Guid id);
 
         /// <summary>
         /// Создаёт новое мероприятие в системе.
         /// </summary>
-        /// <param name="event">Объект Event с данными для создания мероприятия.
-        /// Поле Id должно быть равно 0 (автоматически генерируется в БД).</param>
+        /// <param name="event">Объект Event с данными для создания мероприятия.</param>
         /// <returns>Уникальный идентификатор (ID) созданного мероприятия.</returns>
         /// <exception cref="ValidationException">Выбрасывается при нарушении правил валидации данных.</exception>
         /// <exception cref="ArgumentNullException">Выбрасывается, если переданный объект event равен null.</exception>
-        int CreateEvent(Event @event);
+        Guid CreateEvent(Event @event);
 
         /// <summary>
         /// Полностью обновляет данные существующего мероприятия.
@@ -65,7 +77,7 @@ namespace CSCourse.Services
         /// <exception cref="InvalidOperationException">Выбрасывается, если мероприятие с указанным ID не найдено.</exception>
         /// <exception cref="ValidationException">Выбрасывается при нарушении правил валидации данных.</exception>
         /// <exception cref="ArgumentNullException">Выбрасывается, если переданный объект event равен null.</exception>
-        void UpdateEvent(int id, Event @event);
+        void UpdateEvent(Guid id, Event @event);
 
         /// <summary>
         /// Удаляет мероприятие из системы по его уникальному идентификатору.
@@ -76,6 +88,6 @@ namespace CSCourse.Services
         /// Операция необратима. Все связанные данные (например, регистрации участников) также могут быть удалены
         /// в соответствии с бизнес‑правилами системы.
         /// </remarks>
-        void DeleteEvent(int id);
+        void DeleteEvent(Guid id);
     }
 }

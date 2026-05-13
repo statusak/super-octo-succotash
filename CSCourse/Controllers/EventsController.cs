@@ -1,5 +1,5 @@
-﻿using CSCourse.Models;
-using CSCourse.Services;
+﻿using CSCourse.Interfaces;
+using CSCourse.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CSCourse.Controllers
@@ -9,8 +9,26 @@ namespace CSCourse.Controllers
     /// </summary>
     [ApiController]
     [Route("/[controller]")]
-    public class EventsController(IEventService _eventService) : ControllerBase
+    public class EventsController : ControllerBase
     {
+
+        private readonly IEventService _eventService;
+        private readonly IBookingService _bookingService;
+        private readonly IBookingTaskQueue _bookingTaskQueue;
+        private readonly ILogger<EventsController> _logger;
+
+        public EventsController(
+            IEventService eventService,
+            IBookingService bookingService,
+            IBookingTaskQueue bookingTaskQueue,
+            ILogger<EventsController> logger)
+        {
+            _eventService = eventService;
+            _bookingService = bookingService;
+            _bookingTaskQueue = bookingTaskQueue;
+            _logger = logger;
+        }
+
         /// <summary>
         /// Получает список мероприятий с возможностью фильтрации и пагинации.
         /// </summary>
@@ -29,7 +47,7 @@ namespace CSCourse.Controllers
         /// {
         ///   "events": [
         ///     {
-        ///       "id": 1,
+        ///       "id": "308dd020-a855-4e80-b29e-b3582b6de65c",
         ///       "title": "Конференция разработчиков",
         ///       "description": "Ежегодная конференция...",
         ///       "startAt": "2023-12-01T10:00:00",
@@ -73,8 +91,8 @@ namespace CSCourse.Controllers
         /// </remarks>
         /// <response code="200">Успешный ответ: информация о мероприятии (HTTP 200 OK)</response>
         /// <response code="404">Мероприятие с указанным ID не найдено (HTTP 404 Not Found)</response>
-        [HttpGet("{index:int}")]
-        public ActionResult<Event> GetById(int index)
+        [HttpGet("{index:guid}")]
+        public ActionResult<Event> GetById(Guid index)
         {
             try
             {
@@ -105,10 +123,12 @@ namespace CSCourse.Controllers
         /// }
         /// </code>
         /// </remarks>
-        /// <response code="201">Мероприятие успешно создано (HTTP 201 Created)</response>
+        /// <response code="202">Мероприятие успешно создано. Возвращается объект мероприятия и ссылка на ресурс (Location header).</response>
         /// <response code="400">Ошибка валидации или некорректные данные (HTTP 400 Bad Request)</response>
         [HttpPost]
-        public ActionResult Post([FromBody] EventDto eventDto)
+        [ProducesResponseType(StatusCodes.Status202Accepted, Type = typeof(Event))]
+        [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(string))]
+        public ActionResult<Event> Post([FromBody] EventDto eventDto)
         {
             if (!ModelState.IsValid)
             {
@@ -117,15 +137,20 @@ namespace CSCourse.Controllers
 
             var @event = new Event
             {
-                Id = 0,
+                Id = Guid.Empty,
                 Title = eventDto.Title,
                 Description = eventDto.Description,
                 StartAt = eventDto.StartAt,
                 EndAt = eventDto.EndAt,
             };
 
-            _eventService.CreateEvent(@event);
-            return Created();
+            @event.Id = _eventService.CreateEvent(@event);
+
+            return CreatedAtAction(
+                actionName: nameof(GetById),
+                routeValues: new { index = @event.Id },
+                value: @event
+            );
         }
 
         /// <summary>
@@ -145,8 +170,8 @@ namespace CSCourse.Controllers
         /// <response code="204">Данные мероприятия успешно обновлены (HTTP 204 No Content)</response>
         /// <response code="400">Некорректные данные или ошибки валидации (HTTP 400 Bad Request)</response>
         /// <response code="404">Мероприятие не найдено (HTTP 404 Not Found)</response>
-        [HttpPut("{index:int}")]
-        public ActionResult Put(int index, [FromBody] EventDto eventDto)
+        [HttpPut("{index:guid}")]
+        public ActionResult Put(Guid index, [FromBody] EventDto eventDto)
         {
             if (!ModelState.IsValid)
             {
@@ -187,8 +212,8 @@ namespace CSCourse.Controllers
         /// </remarks>
         /// <response code="200">Мероприятие успешно удалено (HTTP 200 OK)</response>
         /// <response code="404">Мероприятие не найдено в системе (HTTP 404 Not Found)</response>
-        [HttpDelete("{index:int}")]
-        public ActionResult Delete(int index)
+        [HttpDelete("{index:guid}")]
+        public ActionResult Delete(Guid index)
         {
             try
             {
@@ -198,6 +223,51 @@ namespace CSCourse.Controllers
             catch (InvalidOperationException)
             {
                 return NotFound($"Event with index {index} not found");
+            }
+        }
+
+
+        /// <summary>
+        /// Создаёт новое бронирование для указанного мероприятия.
+        /// </summary>
+        /// <param name="eventId">Уникальный идентификатор (GUID) мероприятия, для которого создаётся бронирование.</param>
+        /// <returns>
+        /// Возвращает <see cref="ActionResult"/> со статусом 202 Accepted и данными созданного бронирования,
+        /// включая URL для получения информации о бронировании;
+        /// в случае ошибки возвращает ответ 404 Not Found с текстовым сообщением.
+        /// </returns>
+        /// <response code="202">Бронирование успешно создано. Возвращается объект бронирования и ссылка на ресурс (Location header).</response>
+        /// <response code="404">Мероприятие с указанным идентификатором не найдено.</response>
+        [HttpPost("{eventId:Guid}/book")]
+        [ProducesResponseType(StatusCodes.Status202Accepted, Type = typeof(Booking))]
+        [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(string))]
+        public async Task<ActionResult> CreateBooking(Guid eventId)
+        {
+            try
+            {
+                _eventService.GetEventById(eventId);
+                var created = await _bookingService.CreateBookingAsync(eventId);
+                _bookingTaskQueue.Enqueue(created);
+
+                BookingResponseDto response =
+                new BookingResponseDto
+                {
+                    Id = created.Id,
+                    EventId = created.EventId,
+                    CreatedAt = created.CreatedAt,
+                    Status = created.Status,
+                };
+
+                return AcceptedAtAction(
+                    actionName: nameof(BookingsController.GetById),
+                    controllerName: "Bookings", // TODO: Убрать хардкодинг
+                    routeValues: new { index = created.Id },
+                    value: response
+                );
+            }
+            catch (InvalidOperationException)
+            {
+                return NotFound($"Event with index {eventId} not found");
             }
         }
     }

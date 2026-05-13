@@ -1,18 +1,29 @@
 ﻿using CSCourse.Controllers;
+using CSCourse.Interfaces;
 using CSCourse.Models;
 using CSCourse.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace EventServiceTest
 {
     public class UnitEventServiceTest
     {
+        private readonly EventMemoryService _eventService;
+        private readonly EventsController _controller;
+
+        public UnitEventServiceTest()
+        {
+            _eventService = new EventMemoryService();
+            var bookingService = new BookingMemoryService();
+            var bookingTaskQueue = new InMemoryBookingTaskQueue();
+            var logger = NullLogger<EventsController>.Instance;
+            _controller = new EventsController(_eventService, bookingService, bookingTaskQueue, logger);
+        }
+
         [Fact]
         public void EventService_CreateEvent_Success()
         {
-            var service = new EventMemoryService();
-            var controller = new EventsController(service);
-
             var validDto = new EventDto
             {
                 Title = "Тестовая конференция",
@@ -21,25 +32,20 @@ namespace EventServiceTest
                 EndAt = DateTime.Now.AddHours(2)
             };
 
-            var result = controller.Post(validDto) as CreatedResult;
+            var result = _controller.Post(validDto).Result as CreatedAtActionResult;
 
             Assert.NotNull(result);
             Assert.Equal(201, result.StatusCode);
         }
 
-        
-
         [Fact]
         public void GetAll_WithValidData_ReturnsOkResultWithPaginatedEvents()
         {
-            var service = new EventMemoryService();
-            var controller = new EventsController(service);
-
             var testEvents = new List<Event>
             {
                 new Event
                 {
-                    Id = 1,
+                    Id = Guid.NewGuid(),
                     Title = "Конференция разработчиков",
                     Description = "Ежегодная конференция...",
                     StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
@@ -47,7 +53,7 @@ namespace EventServiceTest
                 },
                 new Event
                 {
-                    Id = 2,
+                    Id = Guid.NewGuid(),
                     Title = "Митап по C#",
                     Description = "Обсуждение новых возможностей языка",
                     StartAt = new DateTime(2026, 12, 5, 14, 0, 0),
@@ -57,11 +63,11 @@ namespace EventServiceTest
 
             foreach (var @event in testEvents)
             {
-                service.CreateEvent(@event);
+                _eventService.CreateEvent(@event);
             }
 
 
-            var actionResult = controller.GetAll(null, null, null).Result as OkObjectResult;
+            var actionResult = _controller.GetAll(null, null, null).Result as OkObjectResult;
             var actualResult = actionResult?.Value as PaginatedResult;
 
             Assert.NotNull(actionResult);
@@ -82,14 +88,11 @@ namespace EventServiceTest
         [Fact]
         public void GetAll_WithFilter_ReturnsFilteredResults()
         {
-            var service = new EventMemoryService();
-            var controller = new EventsController(service);
-
             var allEvents = new List<Event>
             {
                 new Event
                 {
-                    Id = 1,
+                    Id = Guid.NewGuid(),
                     Title = "КоНфЕрЕнЦиЯ разработчиков",
                     Description = "Ежегодная конференция...",
                     StartAt = DateTime.Now,
@@ -97,7 +100,7 @@ namespace EventServiceTest
                 },
                 new Event
                 {
-                    Id = 2,
+                    Id = Guid.NewGuid(),
                     Title = "Встреча команды",
                     Description = "Планерка",
                     StartAt = DateTime.Now.AddDays(1),
@@ -107,7 +110,7 @@ namespace EventServiceTest
 
             foreach (var @event in allEvents)
             {
-                service.CreateEvent(@event);
+                _eventService.CreateEvent(@event);
             }
 
             var filterDto = new FilterEventDto
@@ -116,7 +119,7 @@ namespace EventServiceTest
             };
 
 
-            var actionResult = controller.GetAll(filterDto, 1, 10).Result as OkObjectResult;
+            var actionResult = _controller.GetAll(filterDto, 1, 10).Result as OkObjectResult;
             var actualResult = actionResult?.Value as PaginatedResult;
 
             Assert.NotNull(actionResult);
@@ -129,14 +132,11 @@ namespace EventServiceTest
         [Fact]
         public void GetAll_WithDateFilter_ReturnsFilteredByDateResults()
         {
-            var service = new EventMemoryService();
-            var controller = new EventsController(service);
-
             var allEvents = new List<Event>
             {
                 new Event
                 {
-                    Id = 1,
+                    Id = Guid.NewGuid(),
                     Title = "Конференция утром",
                     Description = "Утренняя конференция",
                     StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
@@ -144,7 +144,7 @@ namespace EventServiceTest
                 },
                 new Event
                 {
-                    Id = 2,
+                    Id = Guid.NewGuid(),
                     Title = "Встреча днём",
                     Description = "Дневная встреча",
                     StartAt = new DateTime(2026, 12, 1, 14, 0, 0),
@@ -152,7 +152,7 @@ namespace EventServiceTest
                 },
                 new Event
                 {
-                    Id = 3,
+                    Id = Guid.NewGuid(),
                     Title = "Вечернее собрание",
                     Description = "Собрание вечером",
                     StartAt = new DateTime(2026, 12, 1, 18, 0, 0),
@@ -160,7 +160,7 @@ namespace EventServiceTest
                 },
                 new Event
                 {
-                    Id = 4,
+                    Id = Guid.NewGuid(),
                     Title = "Ранняя планерка",
                     Description = "Утренняя планерка",
                     StartAt = new DateTime(2026, 12, 1, 8, 0, 0),
@@ -168,13 +168,13 @@ namespace EventServiceTest
                 }
             };
 
-            int[] expectedIds = new int[2];
-            int[] notExpectedIds = new int[3];
-            expectedIds[0] = service.CreateEvent(allEvents[0]);
-            expectedIds[1] = service.CreateEvent(allEvents[3]);
+            Guid[] expectedIds = new Guid[2];
+            Guid[] notExpectedIds = new Guid[3];
+            expectedIds[0] = _eventService.CreateEvent(allEvents[0]);
+            expectedIds[1] = _eventService.CreateEvent(allEvents[3]);
 
-            notExpectedIds[0] = service.CreateEvent(allEvents[1]);
-            notExpectedIds[1] = service.CreateEvent(allEvents[2]);
+            notExpectedIds[0] = _eventService.CreateEvent(allEvents[1]);
+            notExpectedIds[1] = _eventService.CreateEvent(allEvents[2]);
 
             var filterDto = new FilterEventDto
             {
@@ -182,7 +182,7 @@ namespace EventServiceTest
                 EndAt = new DateTime(2026, 12, 1, 12, 0, 0)
             };
 
-            var actionResult = controller.GetAll(filterDto, 1, 10).Result as OkObjectResult;
+            var actionResult = _controller.GetAll(filterDto, 1, 10).Result as OkObjectResult;
             var actualResult = actionResult?.Value as PaginatedResult;
 
             Assert.NotNull(actionResult);
@@ -206,21 +206,18 @@ namespace EventServiceTest
         [Fact]
         public void GetById_ExistingEvent_ReturnsOkResultWithEvent()
         {
-            var service = new EventMemoryService();
-            var controller = new EventsController(service);
-
             var testEvent = new Event
             {
-                Id = 1,
+                Id = Guid.Empty,
                 Title = "Конференция разработчиков",
                 Description = "Ежегодная конференция...",
                 StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
                 EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
             };
 
-            int createdId = service.CreateEvent(testEvent);
+            Guid createdId = _eventService.CreateEvent(testEvent);
 
-            var actionResult = controller.GetById(createdId).Result as OkObjectResult;
+            var actionResult = _controller.GetById(createdId).Result as OkObjectResult;
             var actualEvent = actionResult?.Value as Event;
 
             Assert.NotNull(actionResult);
@@ -237,35 +234,30 @@ namespace EventServiceTest
         [Fact]
         public void GetById_NonExistingEvent_ReturnsNotFound()
         {
-            var service = new EventMemoryService();
-            var controller = new EventsController(service);
-
-            var actionResult = controller.GetById(999).Result as NotFoundObjectResult;
+            Guid nonExistsGuid = Guid.NewGuid();
+            var actionResult = _controller.GetById(nonExistsGuid).Result as NotFoundObjectResult;
 
             Assert.NotNull(actionResult);
             Assert.Equal(404, actionResult.StatusCode);
 
             Assert.NotNull(actionResult.Value);
-            Assert.Contains("Event with index 999 not found", actionResult.Value.ToString());
+            Assert.Contains($"Event with index {nonExistsGuid} not found", actionResult.Value.ToString());
         }
 
 
         [Fact]
         public void Put_UpdateExistingEvent_ReturnsNoContent()
         {
-            var service = new EventMemoryService();
-            var controller = new EventsController(service);
-
             var originalEvent = new Event
             {
-                Id = 1,
+                Id = Guid.Empty,
                 Title = "Конференция разработчиков",
                 Description = "Ежегодная конференция...",
                 StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
                 EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
             };
 
-            service.CreateEvent(originalEvent);
+            Guid id = _eventService.CreateEvent(originalEvent);
 
             var updateDto = new EventDto
             {
@@ -275,12 +267,12 @@ namespace EventServiceTest
                 EndAt = new DateTime(2026, 12, 2, 17, 0, 0)
             };
 
-            var actionResult = controller.Put(1, updateDto) as NoContentResult;
+            var actionResult = _controller.Put(id, updateDto) as NoContentResult;
 
             Assert.NotNull(actionResult);
             Assert.Equal(204, actionResult.StatusCode);
 
-            var updatedEvent = service.GetEventById(1);
+            var updatedEvent = _eventService.GetEventById(id);
             Assert.Equal(updateDto.Title, updatedEvent?.Title);
             Assert.Equal(updateDto.Description, updatedEvent?.Description);
             Assert.Equal(updateDto.StartAt, updatedEvent?.StartAt);
@@ -290,9 +282,6 @@ namespace EventServiceTest
         [Fact]
         public void Put_UpdateNonExistingEvent_ReturnsNotFound()
         {
-            var service = new EventMemoryService();
-            var controller = new EventsController(service);
-
             var updateDto = new EventDto
             {
                 Title = "Попытка обновления",
@@ -301,59 +290,56 @@ namespace EventServiceTest
                 EndAt = DateTime.Now.AddHours(2)
             };
 
-            var actionResult = controller.Put(999, updateDto) as NotFoundObjectResult;
+            Guid nonExistsGuid = Guid.NewGuid();
+
+            var actionResult = _controller.Put(nonExistsGuid, updateDto) as NotFoundObjectResult;
 
             Assert.NotNull(actionResult);
             Assert.Equal(404, actionResult.StatusCode);
 
             Assert.NotNull(actionResult.Value);
-            Assert.Contains("Event with index 999 not found", actionResult.Value.ToString());
+            Assert.Contains($"Event with index {nonExistsGuid} not found", actionResult.Value.ToString());
         }
 
         [Fact]
         public void Delete_DeleteExistingEvent_ReturnsOk()
         {
-            var service = new EventMemoryService();
-            var controller = new EventsController(service);
-
             var testEvent = new Event
             {
-                Id = 1,
+                Id = Guid.Empty,
                 Title = "Конференция разработчиков",
                 Description = "Ежегодная конференция...",
                 StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
                 EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
             };
 
-            int createdId = service.CreateEvent(testEvent);
+            Guid createdId = _eventService.CreateEvent(testEvent);
 
-            var actionResult = controller.Delete(createdId) as OkResult;
+            var actionResult = _controller.Delete(createdId) as OkResult;
 
             Assert.NotNull(actionResult);
             Assert.Equal(200, actionResult.StatusCode);
 
-            var allEvents = service.GetAll(1, int.MaxValue).Events;
+            var allEvents = _eventService.GetAll(1, int.MaxValue).Events;
             Assert.DoesNotContain(testEvent, allEvents);
-            Console.WriteLine(allEvents);
             Assert.Empty(allEvents);
         }
 
         [Fact]
         public void Delete_DeleteNonExistingEvent_ReturnsNotFound()
         {
-            var service = new EventMemoryService();
+            Guid nonExistsGuid = Guid.NewGuid();
 
-            var controller = new EventsController(service);
-            var actionResult = controller.Delete(999) as NotFoundObjectResult;
+            var actionResult = _controller.Delete(nonExistsGuid) as NotFoundObjectResult;
 
             Assert.NotNull(actionResult);
             Assert.Equal(404, actionResult.StatusCode);
 
             Assert.NotNull(actionResult.Value);
-            Assert.Contains("Event with index 999 not found", actionResult.Value.ToString());
+            Assert.Contains($"Event with index {nonExistsGuid} not found", actionResult.Value.ToString());
 
-            var remainingEvents = service.GetAll(1, int.MaxValue).Events;
-            Assert.All(remainingEvents, e => Assert.NotEqual(999, e.Id));
+            var remainingEvents = _eventService.GetAll(1, int.MaxValue).Events;
+            Assert.All(remainingEvents, e => Assert.NotEqual(nonExistsGuid, e.Id));
         }
     }
 }
