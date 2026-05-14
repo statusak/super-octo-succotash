@@ -5,7 +5,7 @@ namespace CSCourse.Models
     /// <summary>
     /// Класс Dto, содержащий информацию о мероприятии.
     /// </summary>
-    public class EventDto : IValidatableObject
+    public class EventCreateDto : IValidatableObject
     {
         /// <summary>
         /// Название мероприятия.
@@ -17,6 +17,12 @@ namespace CSCourse.Models
         /// Описание мероприятия (может быть пустым).
         /// </summary>
         public string? Description { get; set; }
+
+        [Required(ErrorMessage = "TotalSeats is required.")]
+        [Range(1, int.MaxValue, ErrorMessage = "TotalSeats must be at least 1.")]
+        public required int TotalSeats { get; set; }
+
+        public int AvailableSeats { get; set; }
 
         /// <summary>
         /// Дата и время начала мероприятия.

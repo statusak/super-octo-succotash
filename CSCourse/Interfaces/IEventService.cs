@@ -1,5 +1,6 @@
 ﻿using CSCourse.Models;
 using System.ComponentModel.DataAnnotations;
+using static System.Net.WebRequestMethods;
 
 namespace CSCourse.Interfaces
 {
@@ -46,6 +47,9 @@ namespace CSCourse.Interfaces
         /// </remarks>
         Event? GetEventById(Guid id);
 
+        bool TryReserveSeats(int count = 1);
+        bool ReleaseSeats(int count = 1);
+
         /// <summary>
         /// Проверяет, существует ли мероприятие с указанным уникальным идентификатором.
         /// </summary>
@@ -68,6 +72,8 @@ namespace CSCourse.Interfaces
         /// <exception cref="ArgumentNullException">Выбрасывается, если переданный объект event равен null.</exception>
         Guid CreateEvent(Event @event);
 
+        Task<Guid> CreateEventAsync(Event @event);
+
         /// <summary>
         /// Полностью обновляет данные существующего мероприятия.
         /// </summary>
@@ -78,6 +84,8 @@ namespace CSCourse.Interfaces
         /// <exception cref="ValidationException">Выбрасывается при нарушении правил валидации данных.</exception>
         /// <exception cref="ArgumentNullException">Выбрасывается, если переданный объект event равен null.</exception>
         void UpdateEvent(Guid id, Event @event);
+
+        void UpdateEvent(Guid id, string Title, string? Description, DateTime StartAt, DateTime EndAt);
 
         /// <summary>
         /// Удаляет мероприятие из системы по его уникальному идентификатору.

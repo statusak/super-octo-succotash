@@ -35,7 +35,7 @@ namespace EventServiceTest
         [Fact]
         public async Task BookingController_CreateBooking_Success()
         {
-            var validDto = new EventDto
+            var validDto = new EventCreateDto
             {
                 Title = "Тестовая конференция",
                 Description = "Описание мероприятия",
@@ -65,7 +65,7 @@ namespace EventServiceTest
         [Fact]
         public async Task BookingController_CreateMultiplyBooking_Success()
         {
-            var validDto = new EventDto
+            var validDto = new EventCreateDto
             {
                 Title = "Тестовая конференция",
                 Description = "Описание мероприятия",
@@ -102,7 +102,7 @@ namespace EventServiceTest
         [Fact]
         public async Task BookingController_CheckInfoBooking_Success()
         {
-            var validDto = new EventDto
+            var validDto = new EventCreateDto
             {
                 Title = "Тестовая конференция",
                 Description = "Описание мероприятия",
@@ -144,7 +144,7 @@ namespace EventServiceTest
         [Fact]
         public async Task BookingController_CheckInfoAfterProcessingBooking_Success()
         {
-            var validDto = new EventDto
+            var validDto = new EventCreateDto
             {
                 Title = "Тестовая конференция",
                 Description = "Описание мероприятия",
@@ -203,7 +203,7 @@ namespace EventServiceTest
         [Fact]
         public async Task BookingController_CreateBookingForDeletedEvent_ReturnsNotFound()
         {
-            var validDto = new EventDto
+            var validDto = new EventCreateDto
             {
                 Title = "Тестовая конференция",
                 Description = "Описание мероприятия",

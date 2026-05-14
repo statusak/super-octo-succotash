@@ -128,7 +128,7 @@ namespace CSCourse.Controllers
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status202Accepted, Type = typeof(Event))]
         [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(string))]
-        public ActionResult<Event> Post([FromBody] EventDto eventDto)
+        public ActionResult<Event> Post([FromBody] EventCreateDto eventDto)
         {
             if (!ModelState.IsValid)
             {
@@ -139,6 +139,8 @@ namespace CSCourse.Controllers
             {
                 Id = Guid.Empty,
                 Title = eventDto.Title,
+                TotalSeats = eventDto.TotalSeats,
+                AvailableSeats = eventDto.AvailableSeats,
                 Description = eventDto.Description,
                 StartAt = eventDto.StartAt,
                 EndAt = eventDto.EndAt,
@@ -171,25 +173,16 @@ namespace CSCourse.Controllers
         /// <response code="400">Некорректные данные или ошибки валидации (HTTP 400 Bad Request)</response>
         /// <response code="404">Мероприятие не найдено (HTTP 404 Not Found)</response>
         [HttpPut("{index:guid}")]
-        public ActionResult Put(Guid index, [FromBody] EventDto eventDto)
+        public ActionResult Put(Guid index, [FromBody] EventUpdateDto eventDto)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            var @event = new Event
-            {
-                Id = index,
-                Title = eventDto.Title,
-                Description = eventDto.Description,
-                StartAt = eventDto.StartAt,
-                EndAt = eventDto.EndAt,
-            };
-
             try
             {
-                _eventService.UpdateEvent(index, @event);
+                _eventService.UpdateEvent(index, eventDto.Title, eventDto.Description, eventDto.StartAt, eventDto.EndAt);
                 return NoContent();
             }
             catch (InvalidOperationException)

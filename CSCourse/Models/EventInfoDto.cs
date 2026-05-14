@@ -3,7 +3,7 @@
     /// <summary>
     /// Класс, содержащий информацию о мероприятии.
     /// </summary>
-    public class Event
+    public class EventInfoDto
     {
         /// <summary>
         /// Уникальный идентификатор мероприятия.

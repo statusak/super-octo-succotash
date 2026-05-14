@@ -1,5 +1,6 @@
 ﻿using CSCourse.Interfaces;
 using CSCourse.Models;
+using System.ComponentModel.DataAnnotations;
 
 namespace CSCourse.Services
 {
@@ -49,6 +50,11 @@ namespace CSCourse.Services
         }
         public Guid CreateEvent(Event @event)
         {
+            if (@event.TotalSeats <= 0)
+            {
+                throw new ValidationException("@event.TotalSeats <= 0");
+            }
+
             Guid eventId;
 
             lock (_lockCreateEvent)

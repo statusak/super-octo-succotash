@@ -24,7 +24,7 @@ namespace EventServiceTest
         [Fact]
         public void EventService_CreateEvent_Success()
         {
-            var validDto = new EventDto
+            var validDto = new EventCreateDto
             {
                 Title = "Тестовая конференция",
                 Description = "Описание мероприятия",
@@ -259,7 +259,7 @@ namespace EventServiceTest
 
             Guid id = _eventService.CreateEvent(originalEvent);
 
-            var updateDto = new EventDto
+            var updateDto = new EventCreateDto
             {
                 Title = "Обновлённая конференция",
                 Description = "Описание после обновления",
@@ -282,7 +282,7 @@ namespace EventServiceTest
         [Fact]
         public void Put_UpdateNonExistingEvent_ReturnsNotFound()
         {
-            var updateDto = new EventDto
+            var updateDto = new EventCreateDto
             {
                 Title = "Попытка обновления",
                 Description = "Это событие не существует",

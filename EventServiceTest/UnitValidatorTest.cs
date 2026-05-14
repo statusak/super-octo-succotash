@@ -8,7 +8,7 @@ namespace EventServiceTest
         [Fact]
         public void DateTimeValidator_EndBeforeStart_ReturnsError()
         {
-            var invalidDto = new EventDto
+            var invalidDto = new EventCreateDto
             {
                 Title = "Тестовая конференция",
                 Description = "Описание мероприятия",
@@ -36,7 +36,7 @@ namespace EventServiceTest
         [Fact]
         public void DateTimeValidator_StartBeforeEnd_ReturnsSuccess()
         {
-            var invalidDto = new EventDto
+            var invalidDto = new EventCreateDto
             {
                 Title = "Тестовая конференция",
                 Description = "Описание мероприятия",
