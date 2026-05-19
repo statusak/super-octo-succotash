@@ -61,6 +61,20 @@ namespace CSCourse.Services
                 return true;
             }
         }
+
+        bool ReleaseSeats(Guid id, int count = 1)
+        {
+            lock (_lockCreateEvent)
+            {
+                var @event = Events.First(x => x.Id == id);
+                if (@event.AvailableSeats + count > @event.TotalSeats)
+                {
+                    return false;
+                }
+                @event.AvailableSeats += count;
+                return true;
+            }
+        }
         public Guid CreateEvent(Event @event)
         {
             if (@event.TotalSeats <= 0)
