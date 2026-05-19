@@ -10,6 +10,8 @@ namespace CSCourse.Services
         private readonly IBookingTaskQueue _bookingTaskQueue;
         private readonly ILogger<BookingBackgroundService> _logger;
 
+        private readonly SemaphoreSlim _processingSemaphore = new(1, 1);
+
         public BookingBackgroundService(
             IBookingService bookingService,
             IEventService eventService,
@@ -30,6 +32,10 @@ namespace CSCourse.Services
             {
                 try
                 {
+                    List<Booking> pendingBookings = _bookingService.GetPending().ToList();
+                    var tasks = pendingBookings.Select(booking => ProcessBookingAsync(booking, stoppingToken));    
+                    await Task.WhenAll(tasks);
+
                     if (_bookingTaskQueue.TryDequeue(out var task))
                     {
                         if(task == null)
@@ -47,7 +53,6 @@ namespace CSCourse.Services
                             "Processing bookingId {TaskId} for eventId {EventId}, whitch created at {CreatedAt}",
                             task.Id, task.EventId, task.CreatedAt);
 
-                        await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
 
                         await _bookingService.UpdateProcessedBookingByIdAsync(task.Id, new BookingProcessedDto { Status = BookingStatus.Confirmed, ProcessedAt = DateTime.UtcNow });
 
@@ -69,5 +74,10 @@ namespace CSCourse.Services
             _logger.LogInformation("BookingBackgroundService stop");
         }
 
+        async Task ProcessBookingAsync(Booking booking, CancellationToken stoppingToken)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
+
+        }
     }
 }

@@ -43,6 +43,8 @@ namespace CSCourse.Interfaces
         /// Метод предназначен для обновления бронирований после их обработки системой.
         /// </remarks>
         Task<Booking?> UpdateProcessedBookingByIdAsync(Guid bookingId, BookingProcessedDto booking);
+
+        IEnumerable<Booking> GetPending();
     }
 
 }

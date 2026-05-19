@@ -1,5 +1,6 @@
 ﻿using CSCourse.Interfaces;
 using CSCourse.Models;
+using System.Collections;
 using System.Collections.Concurrent;
 
 namespace CSCourse.Services
@@ -54,6 +55,14 @@ namespace CSCourse.Services
 
             return null;
         }
+
+        public IEnumerable<Booking> GetPending()
+        {
+            var allBooking = Booking.Values;
+            var pendingBooking = allBooking.Where(x => x.Status == BookingStatus.Pending);
+            return pendingBooking;
+        }
+
         public async Task<Booking?> GetBookingByIdAsync(Guid bookingId)
         {
             if (Booking.TryGetValue(bookingId, out var cached))
