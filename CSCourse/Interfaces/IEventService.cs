@@ -47,8 +47,8 @@ namespace CSCourse.Interfaces
         /// </remarks>
         Event? GetEventById(Guid id);
 
-        bool TryReserveSeats(int count = 1);
-        bool ReleaseSeats(int count = 1);
+        bool TryReserveSeats(Guid id, int count = 1);
+        bool ReleaseSeats(Guid id, int count = 1);
 
         /// <summary>
         /// Проверяет, существует ли мероприятие с указанным уникальным идентификатором.

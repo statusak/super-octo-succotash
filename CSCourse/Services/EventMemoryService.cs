@@ -48,6 +48,19 @@ namespace CSCourse.Services
         {
             return Events.Any(x => x.Id == id);
         }
+
+        bool TryReserveSeats(Guid id, int count = 1)
+        {
+            lock (_lockCreateEvent)
+            {
+                var @event = Events.First(x => x.Id == id);
+                if (@event.AvailableSeats - count < 0) {
+                    return false;
+                }
+                @event.AvailableSeats -= count;
+                return true;
+            }
+        }
         public Guid CreateEvent(Event @event)
         {
             if (@event.TotalSeats <= 0)
