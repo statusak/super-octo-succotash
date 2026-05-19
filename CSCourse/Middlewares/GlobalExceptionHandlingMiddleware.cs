@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using CSCourse.Services;
+using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
 
 namespace CSCourse.Middlewares
@@ -82,6 +83,7 @@ namespace CSCourse.Middlewares
             {
                 ValidationException ve => StatusCodes.Status400BadRequest,
                 NotFoundException nfe => StatusCodes.Status404NotFound,
+                NoAvailableSeatsException nase => StatusCodes.Status409Conflict,
                 _ => StatusCodes.Status500InternalServerError
             };
 

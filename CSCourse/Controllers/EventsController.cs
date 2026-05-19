@@ -140,7 +140,7 @@ namespace CSCourse.Controllers
                 Id = Guid.Empty,
                 Title = eventDto.Title,
                 TotalSeats = eventDto.TotalSeats,
-                AvailableSeats = eventDto.AvailableSeats,
+                AvailableSeats = eventDto.TotalSeats,
                 Description = eventDto.Description,
                 StartAt = eventDto.StartAt,
                 EndAt = eventDto.EndAt,

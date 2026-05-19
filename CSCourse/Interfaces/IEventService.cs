@@ -72,8 +72,6 @@ namespace CSCourse.Interfaces
         /// <exception cref="ArgumentNullException">Выбрасывается, если переданный объект event равен null.</exception>
         Guid CreateEvent(Event @event);
 
-        Task<Guid> CreateEventAsync(Event @event);
-
         /// <summary>
         /// Полностью обновляет данные существующего мероприятия.
         /// </summary>

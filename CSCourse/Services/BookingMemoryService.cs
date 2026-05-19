@@ -4,28 +4,55 @@ using System.Collections.Concurrent;
 
 namespace CSCourse.Services
 {
+    public class NoAvailableSeatsException : Exception
+    {
+        public NoAvailableSeatsException(string message) : base(message) { }
+    }
+
     public class BookingMemoryService : IBookingService
     {
-        private readonly ConcurrentDictionary<Guid, Booking> Booking = [];
+        private readonly IEventService _eventService;
 
-        public async Task<Booking> CreateBookingAsync(Guid eventId)
+        private readonly ConcurrentDictionary<Guid, Booking> Booking = [];
+        private readonly object _bookingLock = new();
+
+        public BookingMemoryService(
+            IEventService eventService)
+        {
+            _eventService = eventService;
+        }
+        public async Task<Booking?> CreateBookingAsync(Guid eventId)
         {
             Guid bookingId;
             Booking newBooking;
-
-            do
+            bool canReserveSeats;
+            lock (_bookingLock)
             {
-                bookingId = Guid.NewGuid();
-                newBooking = new Booking
+                canReserveSeats = _eventService.TryReserveSeats(eventId);
+                if (canReserveSeats)
                 {
-                    Id = bookingId,
-                    EventId = eventId,
-                    Status = BookingStatus.Pending,
-                    CreatedAt = DateTime.UtcNow,
-                };
-            } while (!Booking.TryAdd(bookingId, newBooking));
+                    do
+                    {
+                        bookingId = Guid.NewGuid();
+                        newBooking = new Booking
+                        {
+                            Id = bookingId,
+                            EventId = eventId,
+                            Status = BookingStatus.Pending,
+                            CreatedAt = DateTime.UtcNow,
+                        };
+                    } while (!Booking.TryAdd(bookingId, newBooking));
+                    
+                    return newBooking;
+                }
+            }
 
-            return newBooking;
+            if(!canReserveSeats)
+            {
+                throw new NoAvailableSeatsException("No available seats for this event");
+            }
+
+            return null;
         }
         public async Task<Booking?> GetBookingByIdAsync(Guid bookingId)
         {

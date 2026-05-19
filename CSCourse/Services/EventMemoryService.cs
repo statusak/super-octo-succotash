@@ -49,7 +49,7 @@ namespace CSCourse.Services
             return Events.Any(x => x.Id == id);
         }
 
-        bool TryReserveSeats(Guid id, int count = 1)
+        public bool TryReserveSeats(Guid id, int count = 1)
         {
             lock (_lockCreateEvent)
             {
@@ -62,7 +62,7 @@ namespace CSCourse.Services
             }
         }
 
-        bool ReleaseSeats(Guid id, int count = 1)
+        public bool ReleaseSeats(Guid id, int count = 1)
         {
             lock (_lockCreateEvent)
             {
@@ -108,6 +108,18 @@ namespace CSCourse.Services
                 @event_old.Description = @event.Description;
                 @event_old.StartAt = @event.StartAt;
                 @event_old.EndAt = @event.EndAt;
+            }
+        }
+
+        public void UpdateEvent(Guid id, string Title, string? Description, DateTime StartAt, DateTime EndAt)
+        {
+            var @event_old = Events.First(x => x.Id == id);
+            if (@event_old != null)
+            {
+                @event_old.Title = Title;
+                @event_old.Description = Description;
+                @event_old.StartAt = StartAt;
+                @event_old.EndAt = EndAt;
             }
         }
         public void DeleteEvent(Guid id)

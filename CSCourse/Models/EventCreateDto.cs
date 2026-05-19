@@ -22,8 +22,6 @@ namespace CSCourse.Models
         [Range(1, int.MaxValue, ErrorMessage = "TotalSeats must be at least 1.")]
         public required int TotalSeats { get; set; }
 
-        public int AvailableSeats { get; set; }
-
         /// <summary>
         /// Дата и время начала мероприятия.
         /// </summary>
