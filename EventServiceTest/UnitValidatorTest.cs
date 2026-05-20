@@ -12,6 +12,7 @@ namespace EventServiceTest
             {
                 Title = "Тестовая конференция",
                 Description = "Описание мероприятия",
+                TotalSeats = 100,
                 StartAt = DateTime.Now.AddHours(2),
                 EndAt = DateTime.Now.AddHours(1)
             };
@@ -40,6 +41,7 @@ namespace EventServiceTest
             {
                 Title = "Тестовая конференция",
                 Description = "Описание мероприятия",
+                TotalSeats = 100,
                 StartAt = DateTime.Now.AddHours(1),
                 EndAt = DateTime.Now.AddHours(2)
             };

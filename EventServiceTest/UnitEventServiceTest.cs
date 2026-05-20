@@ -15,7 +15,7 @@ namespace EventServiceTest
         public UnitEventServiceTest()
         {
             _eventService = new EventMemoryService();
-            var bookingService = new BookingMemoryService();
+            var bookingService = new BookingMemoryService(_eventService);
             var bookingTaskQueue = new InMemoryBookingTaskQueue();
             var logger = NullLogger<EventsController>.Instance;
             _controller = new EventsController(_eventService, bookingService, bookingTaskQueue, logger);
@@ -28,6 +28,7 @@ namespace EventServiceTest
             {
                 Title = "Тестовая конференция",
                 Description = "Описание мероприятия",
+                TotalSeats = 100,
                 StartAt = DateTime.Now.AddHours(1),
                 EndAt = DateTime.Now.AddHours(2)
             };
@@ -48,6 +49,8 @@ namespace EventServiceTest
                     Id = Guid.NewGuid(),
                     Title = "Конференция разработчиков",
                     Description = "Ежегодная конференция...",
+                    TotalSeats = 100,
+                    AvailableSeats = 100,
                     StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
                     EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
                 },
@@ -56,6 +59,8 @@ namespace EventServiceTest
                     Id = Guid.NewGuid(),
                     Title = "Митап по C#",
                     Description = "Обсуждение новых возможностей языка",
+                    TotalSeats = 100,
+                    AvailableSeats = 100,
                     StartAt = new DateTime(2026, 12, 5, 14, 0, 0),
                     EndAt = new DateTime(2026, 12, 5, 17, 0, 0)
                 }
@@ -95,6 +100,8 @@ namespace EventServiceTest
                     Id = Guid.NewGuid(),
                     Title = "КоНфЕрЕнЦиЯ разработчиков",
                     Description = "Ежегодная конференция...",
+                    TotalSeats = 100,
+                    AvailableSeats = 100,
                     StartAt = DateTime.Now,
                     EndAt = DateTime.Now.AddHours(8)
                 },
@@ -103,6 +110,8 @@ namespace EventServiceTest
                     Id = Guid.NewGuid(),
                     Title = "Встреча команды",
                     Description = "Планерка",
+                    TotalSeats = 100,
+                    AvailableSeats = 100,
                     StartAt = DateTime.Now.AddDays(1),
                     EndAt = DateTime.Now.AddDays(1).AddHours(2)
                 }
@@ -139,6 +148,8 @@ namespace EventServiceTest
                     Id = Guid.NewGuid(),
                     Title = "Конференция утром",
                     Description = "Утренняя конференция",
+                    TotalSeats = 100,
+                    AvailableSeats = 100,
                     StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
                     EndAt = new DateTime(2026, 12, 1, 12, 0, 0)
                 },
@@ -147,6 +158,8 @@ namespace EventServiceTest
                     Id = Guid.NewGuid(),
                     Title = "Встреча днём",
                     Description = "Дневная встреча",
+                    TotalSeats = 100,
+                    AvailableSeats = 100,
                     StartAt = new DateTime(2026, 12, 1, 14, 0, 0),
                     EndAt = new DateTime(2026, 12, 1, 16, 0, 0)
                 },
@@ -155,6 +168,8 @@ namespace EventServiceTest
                     Id = Guid.NewGuid(),
                     Title = "Вечернее собрание",
                     Description = "Собрание вечером",
+                    TotalSeats = 100,
+                    AvailableSeats = 100,
                     StartAt = new DateTime(2026, 12, 1, 18, 0, 0),
                     EndAt = new DateTime(2026, 12, 1, 20, 0, 0)
                 },
@@ -163,6 +178,8 @@ namespace EventServiceTest
                     Id = Guid.NewGuid(),
                     Title = "Ранняя планерка",
                     Description = "Утренняя планерка",
+                    TotalSeats = 100,
+                    AvailableSeats = 100,
                     StartAt = new DateTime(2026, 12, 1, 8, 0, 0),
                     EndAt = new DateTime(2026, 12, 1, 9, 0, 0)
                 }
@@ -211,6 +228,8 @@ namespace EventServiceTest
                 Id = Guid.Empty,
                 Title = "Конференция разработчиков",
                 Description = "Ежегодная конференция...",
+                TotalSeats = 100,
+                AvailableSeats = 100,
                 StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
                 EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
             };
@@ -253,13 +272,15 @@ namespace EventServiceTest
                 Id = Guid.Empty,
                 Title = "Конференция разработчиков",
                 Description = "Ежегодная конференция...",
+                TotalSeats = 100,
+                AvailableSeats = 100,
                 StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
                 EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
             };
 
             Guid id = _eventService.CreateEvent(originalEvent);
 
-            var updateDto = new EventCreateDto
+            var updateDto = new EventUpdateDto
             {
                 Title = "Обновлённая конференция",
                 Description = "Описание после обновления",
@@ -275,6 +296,8 @@ namespace EventServiceTest
             var updatedEvent = _eventService.GetEventById(id);
             Assert.Equal(updateDto.Title, updatedEvent?.Title);
             Assert.Equal(updateDto.Description, updatedEvent?.Description);
+            Assert.Equal(originalEvent.TotalSeats, updatedEvent?.TotalSeats);
+            Assert.Equal(originalEvent.AvailableSeats, updatedEvent?.AvailableSeats);
             Assert.Equal(updateDto.StartAt, updatedEvent?.StartAt);
             Assert.Equal(updateDto.EndAt, updatedEvent?.EndAt);
         }
@@ -282,7 +305,7 @@ namespace EventServiceTest
         [Fact]
         public void Put_UpdateNonExistingEvent_ReturnsNotFound()
         {
-            var updateDto = new EventCreateDto
+            var updateDto = new EventUpdateDto
             {
                 Title = "Попытка обновления",
                 Description = "Это событие не существует",
@@ -309,6 +332,8 @@ namespace EventServiceTest
                 Id = Guid.Empty,
                 Title = "Конференция разработчиков",
                 Description = "Ежегодная конференция...",
+                TotalSeats = 100,
+                AvailableSeats = 100,
                 StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
                 EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
             };

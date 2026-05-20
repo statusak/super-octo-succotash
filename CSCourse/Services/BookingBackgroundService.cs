@@ -26,7 +26,7 @@ namespace CSCourse.Services
             _eventService = eventService;
             _bookingTaskQueue = bookingTaskQueue;
             _logger = logger;
-            _periodicTimer = periodicTimer ?? TimeSpan.FromSeconds(5    );
+            _periodicTimer = periodicTimer ?? TimeSpan.FromSeconds(5);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)

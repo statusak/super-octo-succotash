@@ -8,7 +8,8 @@ namespace EventServiceTest
     {
         protected override IBookingService CreateBookingService()
         {
-            return new BookingMemoryService();
+            IEventService _eventService = new EventMemoryService();
+            return new BookingMemoryService(_eventService);
         }
     }
 
