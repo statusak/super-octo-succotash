@@ -35,30 +35,6 @@ namespace CSCourse.Services
                     List<Booking> pendingBookings = _bookingService.GetPending().ToList();
                     var tasks = pendingBookings.Select(booking => ProcessBookingAsync(booking, stoppingToken));    
                     await Task.WhenAll(tasks);
-
-                    if (_bookingTaskQueue.TryDequeue(out var task))
-                    {
-                        if(task == null)
-                            continue;
-
-                        // Add check, that EventId exists
-                        if (!_eventService.IsEventExists(task.EventId))
-                        {
-                            _logger.LogInformation("EventId {EventId} did not exists", task.EventId);
-                            await _bookingService.UpdateProcessedBookingByIdAsync(task.Id, new BookingProcessedDto { Status = BookingStatus.Rejected, ProcessedAt = DateTime.UtcNow });
-                            continue;
-                        }
-
-                        _logger.LogInformation(
-                            "Processing bookingId {TaskId} for eventId {EventId}, whitch created at {CreatedAt}",
-                            task.Id, task.EventId, task.CreatedAt);
-
-
-                        await _bookingService.UpdateProcessedBookingByIdAsync(task.Id, new BookingProcessedDto { Status = BookingStatus.Confirmed, ProcessedAt = DateTime.UtcNow });
-
-                        _logger.LogInformation(
-                            "Booking {TaskId} success processed", task.Id);
-                    }
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {
@@ -77,7 +53,36 @@ namespace CSCourse.Services
         async Task ProcessBookingAsync(Booking booking, CancellationToken stoppingToken)
         {
             await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
+            await _processingSemaphore.WaitAsync(stoppingToken);
 
+            try
+            {
+                if (!_eventService.IsEventExists(booking.EventId))
+                {
+                    _logger.LogInformation("EventId {EventId} did not exists", booking.EventId);
+                    await _bookingService.UpdateProcessedBookingByIdAsync(booking.Id, new BookingProcessedDto { Status = BookingStatus.Rejected, ProcessedAt = DateTime.UtcNow });
+                    return;
+                }
+
+                if (!_eventService.TryReserveSeats(booking.EventId))
+                {
+                    _logger.LogInformation("EventId {EventId} did not exists needed seats", booking.EventId);
+                    await _bookingService.UpdateProcessedBookingByIdAsync(booking.Id, new BookingProcessedDto { Status = BookingStatus.Rejected, ProcessedAt = DateTime.UtcNow });
+                    return;
+                }
+
+                _logger.LogInformation(
+                            "Processing bookingId {TaskId} for eventId {EventId}, whitch created at {CreatedAt}",
+                            booking.Id, booking.EventId, booking.CreatedAt);
+
+                await _bookingService.UpdateProcessedBookingByIdAsync(booking.Id, new BookingProcessedDto { Status = BookingStatus.Confirmed, ProcessedAt = DateTime.UtcNow });
+                _logger.LogInformation(
+                    "Booking {TaskId} success processed", booking.Id);
+            }
+            finally
+            {
+                _processingSemaphore.Release();
+            }
         }
     }
 }
