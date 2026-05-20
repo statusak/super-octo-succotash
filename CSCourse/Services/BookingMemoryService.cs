@@ -22,7 +22,7 @@ namespace CSCourse.Services
         {
             _eventService = eventService;
         }
-        public async Task<Booking?> CreateBookingAsync(Guid eventId)
+        public async Task<Booking> CreateBookingAsync(Guid eventId)
         {
             Guid bookingId;
             Booking newBooking;
@@ -46,14 +46,9 @@ namespace CSCourse.Services
                     
                     return newBooking;
                 }
-            }
 
-            if(!canReserveSeats)
-            {
                 throw new NoAvailableSeatsException("No available seats for this event");
             }
-
-            return null;
         }
 
         public IEnumerable<Booking> GetPending()

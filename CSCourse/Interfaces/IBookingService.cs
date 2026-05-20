@@ -18,7 +18,7 @@ namespace CSCourse.Interfaces
         /// <exception cref="InvalidOperationException">
         /// Выбрасывается, если мероприятие с указанным идентификатором не найдено.
         /// </exception>
-        Task<Booking?> CreateBookingAsync(Guid eventId);
+        Task<Booking> CreateBookingAsync(Guid eventId);
 
         /// <summary>
         /// Получает информацию о бронировании по его уникальному идентификатору.
