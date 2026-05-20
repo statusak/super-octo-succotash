@@ -28,7 +28,8 @@ namespace EventServiceTest
                 bookingService,
                 _eventService,
                 bookingTaskQueue,
-                backgroundLogger
+                backgroundLogger,
+                TimeSpan.FromSeconds(1)
             );
         }
 
@@ -176,7 +177,7 @@ namespace EventServiceTest
 
             var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             await _backgroundService.StartAsync(cts.Token);
-            await Task.Delay(3000, TestContext.Current.CancellationToken);
+            await Task.Delay(5000, TestContext.Current.CancellationToken);
             await _backgroundService.StopAsync(cts.Token);
 
             var resultInfoBooking = (await _bookingsController.GetById(bookingCreate.Id)) as OkObjectResult;

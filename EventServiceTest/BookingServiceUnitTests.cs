@@ -6,22 +6,36 @@ namespace EventServiceTest
 {
     public class BookingMemoryServiceTests : BookingServiceTestsBase
     {
-        protected override IBookingService CreateBookingService()
+        
+        protected override IBookingService CreateBookingService(IEventService eventService)
         {
-            IEventService _eventService = new EventMemoryService();
-            return new BookingMemoryService(_eventService);
+            return new BookingMemoryService(eventService);
         }
     }
 
     public abstract class BookingServiceTestsBase
     {
-        protected abstract IBookingService CreateBookingService();
+        private readonly EventMemoryService _eventService;
+        public BookingServiceTestsBase()
+        {
+            _eventService = new EventMemoryService();
+        }
+        protected abstract IBookingService CreateBookingService(IEventService eventService);
 
         [Fact]
         public async Task CreateBookingAsync_ForExistingEvent_ReturnsBookingWithPendingStatus()
         {
-            var bookingService = CreateBookingService();
-            var eventId = Guid.NewGuid();
+            var bookingService = CreateBookingService(_eventService);
+            var eventId = _eventService.CreateEvent(new Event
+            {
+                Id = Guid.Empty,
+                Title = "Конференция разработчиков",
+                Description = "Ежегодная конференция...",
+                TotalSeats = 100,
+                AvailableSeats = 100,
+                StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
+                EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
+            });
 
             var result = await bookingService.CreateBookingAsync(eventId);
 
@@ -34,8 +48,19 @@ namespace EventServiceTest
         [Fact]
         public async Task CreateBookingAsync_MultipleBookingsForSameEvent_AllHaveUniqueIds()
         {
-            var bookingService = CreateBookingService();
-            var eventId = Guid.NewGuid();
+            var bookingService = CreateBookingService(_eventService);
+
+            var eventId = _eventService.CreateEvent(new Event
+            {
+                Id = Guid.Empty,
+                Title = "Конференция разработчиков",
+                Description = "Ежегодная конференция...",
+                TotalSeats = 100,
+                AvailableSeats = 100,
+                StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
+                EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
+            });
+            
             var createdBookingIds = new HashSet<Guid>();
 
             for (int i = 0; i < 10; i++)
@@ -53,8 +78,19 @@ namespace EventServiceTest
         [Fact]
         public async Task GetBookingByIdAsync_ExistingBooking_ReturnsCorrectInformation()
         {
-            var bookingService = CreateBookingService();
-            var eventId = Guid.NewGuid();
+            var bookingService = CreateBookingService(_eventService);
+
+            var eventId = _eventService.CreateEvent(new Event
+            {
+                Id = Guid.Empty,
+                Title = "Конференция разработчиков",
+                Description = "Ежегодная конференция...",
+                TotalSeats = 100,
+                AvailableSeats = 100,
+                StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
+                EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
+            });
+
             var expectedBooking = await bookingService.CreateBookingAsync(eventId);
 
             var result = await bookingService.GetBookingByIdAsync(expectedBooking.Id);
@@ -69,8 +105,19 @@ namespace EventServiceTest
         [Fact]
         public async Task UpdateProcessedBookingByIdAsync_AfterProcessing_StatusReflectsInGetBooking()
         {
-            var bookingService = CreateBookingService();
-            var eventId = Guid.NewGuid();
+            var bookingService = CreateBookingService(_eventService);
+
+            var eventId = _eventService.CreateEvent(new Event
+            {
+                Id = Guid.Empty,
+                Title = "Конференция разработчиков",
+                Description = "Ежегодная конференция...",
+                TotalSeats = 100,
+                AvailableSeats = 100,
+                StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
+                EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
+            });
+
             var booking = await bookingService.CreateBookingAsync(eventId);
 
             var processedDto = new BookingProcessedDto
@@ -91,7 +138,7 @@ namespace EventServiceTest
         [Fact]
         public async Task GetBookingByIdAsync_NonExistingBookingId_ReturnsNull()
         {
-            var bookingService = CreateBookingService();
+            var bookingService = CreateBookingService(_eventService);
             var nonExistingBookingId = Guid.Empty;
 
             var result = await bookingService.GetBookingByIdAsync(nonExistingBookingId);
@@ -102,7 +149,7 @@ namespace EventServiceTest
         [Fact]
         public async Task UpdateProcessedBookingByIdAsync_NonExistingBooking_ReturnsNull()
         {
-            var bookingService = CreateBookingService();
+            var bookingService = CreateBookingService(_eventService);
             var nonExistingBookingId = Guid.NewGuid();
             var processedDto = new BookingProcessedDto
             {
