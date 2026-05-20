@@ -10,31 +10,40 @@ namespace CSCourse.Services
         private readonly IBookingTaskQueue _bookingTaskQueue;
         private readonly ILogger<BookingBackgroundService> _logger;
 
+        private readonly TimeSpan _periodicTimer;
+
         private readonly SemaphoreSlim _processingSemaphore = new(1, 1);
 
         public BookingBackgroundService(
             IBookingService bookingService,
             IEventService eventService,
             IBookingTaskQueue bookingTaskQueue,
-            ILogger<BookingBackgroundService> logger)
+            ILogger<BookingBackgroundService> logger,
+            TimeSpan? periodicTimer = null
+            )
         {
             _bookingService = bookingService;
             _eventService = eventService;
             _bookingTaskQueue = bookingTaskQueue;
             _logger = logger;
+            _periodicTimer = periodicTimer ?? TimeSpan.FromMinutes(1);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _logger.LogInformation("BookingBackgroundService startup");
+            using var timer = new PeriodicTimer(_periodicTimer);
 
-            while (!stoppingToken.IsCancellationRequested)
+            while (await timer.WaitForNextTickAsync(stoppingToken))
             {
                 try
                 {
                     List<Booking> pendingBookings = _bookingService.GetPending().ToList();
-                    var tasks = pendingBookings.Select(booking => ProcessBookingAsync(booking, stoppingToken));    
-                    await Task.WhenAll(tasks);
+                    if (pendingBookings.Any())
+                    {
+                        var tasks = pendingBookings.Select(booking => ProcessBookingAsync(booking, stoppingToken));
+                        await Task.WhenAll(tasks);
+                    }
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {
