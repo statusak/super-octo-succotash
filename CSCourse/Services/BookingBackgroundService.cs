@@ -26,7 +26,7 @@ namespace CSCourse.Services
             _eventService = eventService;
             _bookingTaskQueue = bookingTaskQueue;
             _logger = logger;
-            _periodicTimer = periodicTimer ?? TimeSpan.FromMinutes(1);
+            _periodicTimer = periodicTimer ?? TimeSpan.FromSeconds(5    );
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -34,19 +34,24 @@ namespace CSCourse.Services
             _logger.LogInformation("BookingBackgroundService startup");
             using var timer = new PeriodicTimer(_periodicTimer);
 
-            while (await timer.WaitForNextTickAsync(stoppingToken))
+            while (true)
             {
                 try
                 {
-                    List<Booking> pendingBookings = _bookingService.GetPending().ToList();
-                    if (pendingBookings.Any())
+                    while (await timer.WaitForNextTickAsync(stoppingToken))
                     {
-                        var tasks = pendingBookings.Select(booking => ProcessBookingAsync(booking, stoppingToken));
-                        await Task.WhenAll(tasks);
+                        stoppingToken.ThrowIfCancellationRequested();
+                        List<Booking> pendingBookings = _bookingService.GetPending().ToList();
+                        if (pendingBookings.Any())
+                        {
+                            var tasks = pendingBookings.Select(booking => ProcessBookingAsync(booking, stoppingToken));
+                            await Task.WhenAll(tasks);
+                        }
                     }
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {
+                    _logger.LogInformation("BookingBackgroundService catch interrupt");
                     break;
                 }
                 catch (Exception ex)
@@ -55,6 +60,7 @@ namespace CSCourse.Services
                         "Error while processing booking");
                 }
             }
+           
 
             _logger.LogInformation("BookingBackgroundService stop");
         }
@@ -68,14 +74,7 @@ namespace CSCourse.Services
             {
                 if (!_eventService.IsEventExists(booking.EventId))
                 {
-                    _logger.LogInformation("EventId {EventId} did not exists", booking.EventId);
-                    await _bookingService.UpdateProcessedBookingByIdAsync(booking.Id, new BookingProcessedDto { Status = BookingStatus.Rejected, ProcessedAt = DateTime.UtcNow });
-                    return;
-                }
-
-                if (!_eventService.TryReserveSeats(booking.EventId))
-                {
-                    _logger.LogInformation("EventId {EventId} did not exists needed seats", booking.EventId);
+                    _logger.LogError("EventId {EventId} did not exists", booking.EventId);
                     await _bookingService.UpdateProcessedBookingByIdAsync(booking.Id, new BookingProcessedDto { Status = BookingStatus.Rejected, ProcessedAt = DateTime.UtcNow });
                     return;
                 }
@@ -87,6 +86,19 @@ namespace CSCourse.Services
                 await _bookingService.UpdateProcessedBookingByIdAsync(booking.Id, new BookingProcessedDto { Status = BookingStatus.Confirmed, ProcessedAt = DateTime.UtcNow });
                 _logger.LogInformation(
                     "Booking {TaskId} success processed", booking.Id);
+            }
+            catch(Exception e)
+            {
+                _logger.LogError("EventId {EventId} for bookingId {TaskId} while processing have error {error}", booking.EventId, booking.Id, e.Message);
+                await _bookingService.UpdateProcessedBookingByIdAsync(booking.Id, new BookingProcessedDto { Status = BookingStatus.Rejected, ProcessedAt = DateTime.UtcNow });
+                if (_eventService.ReleaseSeats(booking.EventId))
+                {
+                    _logger.LogInformation("EventId {EventId} success release seats for bookingId {TaskId}", booking.EventId, booking.Id);
+                }
+                else
+                {
+                    _logger.LogError("EventId {EventId} error release seats for bookingId {TaskId}", booking.EventId, booking.Id);
+                }
             }
             finally
             {

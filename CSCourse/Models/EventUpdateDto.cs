@@ -18,11 +18,6 @@ namespace CSCourse.Models
         /// </summary>
         public string? Description { get; set; }
 
-        [Required(ErrorMessage = "TotalSeats is required.")]
-        public required int TotalSeats { get; set; }
-
-        public int AvailableSeats { get; set; }
-
         /// <summary>
         /// Дата и время начала мероприятия.
         /// </summary>
