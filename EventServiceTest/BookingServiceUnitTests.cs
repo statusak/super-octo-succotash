@@ -314,5 +314,85 @@ namespace EventServiceTest
             Assert.NotNull(finalEventState);
             Assert.Equal(0, finalEventState.AvailableSeats);
         }
+
+        private Guid CreateTestEvent(int totalSeats)
+        {
+            return _eventService.CreateEvent(new Event
+            {
+                Id = Guid.Empty,
+                Title = "Тестирование конкурентности",
+                Description = "Событие для проверки конкурентных запросов",
+                TotalSeats = totalSeats,
+                AvailableSeats = totalSeats,
+                StartAt = DateTime.UtcNow.AddDays(1),
+                EndAt = DateTime.UtcNow.AddDays(1).AddHours(2)
+            });
+        }
+
+        [Fact]
+        public async Task CreateBookingAsync_ConcurrentRequests_PreventsOverbooking()
+        {
+            var bookingService = CreateBookingService(_eventService);
+            var eventId = CreateTestEvent(5);
+
+            var tasks = Enumerable.Range(0, 20)
+                .Select(_ => Task.Run(async () =>
+                {
+                    try
+                    {
+                        var result = await bookingService.CreateBookingAsync(eventId);
+                        return (Success: true, Booking: result, Exception: (Exception)null);
+                    }
+                    catch (NoAvailableSeatsException ex)
+                    {
+                        return (Success: false, Booking: null, Exception: ex);
+                    }
+                }))
+                .ToArray();
+
+            var results = await Task.WhenAll(tasks);
+
+            var successfulBookings = results.Where(r => r.Success).ToList();
+            var failedBookings = results.Where(r => !r.Success).ToList();
+
+            Assert.Equal(5, successfulBookings.Count);
+            Assert.Equal(15, failedBookings.Count);
+
+            var eventState = _eventService.GetEventById(eventId);
+            Assert.NotNull(eventState);
+            Assert.Equal(0, eventState.AvailableSeats);
+
+            var bookingIds = successfulBookings.Select(r => r.Booking.Id).ToList();
+            Assert.Equal(bookingIds.Count, bookingIds.Distinct().Count());
+        }
+
+        [Fact]
+        public async Task CreateBookingAsync_ConcurrentRequests_AllHaveUniqueIds()
+        {
+            var bookingService = CreateBookingService(_eventService);
+            var eventId = CreateTestEvent(10);
+
+            var tasks = Enumerable.Range(0, 10)
+                .Select(_ => Task.Run(() => bookingService.CreateBookingAsync(eventId)))
+                .ToArray();
+
+            var results = await Task.WhenAll(tasks);
+
+            Assert.Equal(10, results.Length);
+
+            foreach (var result in results)
+            {
+                Assert.NotNull(result);
+                Assert.Equal(eventId, result.EventId);
+                Assert.Equal(BookingStatus.Pending, result.Status);
+            }
+
+            var bookingIds = results.Select(r => r.Id).ToList();
+            Assert.Equal(bookingIds.Count, bookingIds.Distinct().Count());
+
+            var eventState = _eventService.GetEventById(eventId);
+            Assert.NotNull(eventState);
+            Assert.Equal(0, eventState.AvailableSeats);
+        }
     }
 }
