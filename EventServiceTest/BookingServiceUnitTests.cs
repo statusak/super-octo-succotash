@@ -192,5 +192,42 @@ namespace EventServiceTest
             Assert.NotNull(updatedEvent);
             Assert.Equal(99, updatedEvent.AvailableSeats);
         }
+
+        [Fact]
+        public async Task CreateBookingAsync_MultipleBookingsUntilLimit_AllSucceedWithUniqueIds()
+        {
+            var bookingService = CreateBookingService(_eventService);
+
+            var eventId = _eventService.CreateEvent(new Event
+            {
+                Id = Guid.Empty,
+                Title = "Вебинар",
+                Description = "Онлайн-мероприятие",
+                TotalSeats = 5,
+                AvailableSeats = 5,
+                StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
+                EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
+            });
+
+            var createdBookingIds = new HashSet<Guid>();
+            var eventState = _eventService.GetEventById(eventId);
+            Assert.NotNull(eventState);
+            var totalSeats = eventState.TotalSeats;
+
+            for (int i = 0; i < totalSeats; i++)
+            {
+                var result = await bookingService.CreateBookingAsync(eventId);
+
+                Assert.NotNull(result);
+                Assert.Equal(eventId, result.EventId);
+                Assert.Equal(BookingStatus.Pending, result.Status);
+                Assert.DoesNotContain(result.Id, createdBookingIds);
+                createdBookingIds.Add(result.Id);
+
+                var updatedEvent = _eventService.GetEventById(eventId);
+                Assert.NotNull(updatedEvent);
+                Assert.Equal(totalSeats - i - 1, updatedEvent.AvailableSeats);
+            }
+        }
     }
 }
