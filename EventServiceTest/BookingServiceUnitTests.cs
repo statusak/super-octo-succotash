@@ -271,5 +271,48 @@ namespace EventServiceTest
                 async () => await bookingService.CreateBookingAsync(nonExistingEventId)
             );
         }
+
+        [Fact]
+        public async Task RejectBooking_ThenReleaseSeats_AllowsNewBooking()
+        {
+            var bookingService = CreateBookingService(_eventService);
+
+            var eventId = _eventService.CreateEvent(new Event
+            {
+                Id = Guid.Empty,
+                Title = "Семинар",
+                Description = "Обучающее мероприятие",
+                TotalSeats = 1,
+                AvailableSeats = 1,
+                StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
+                EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
+            });
+
+            var firstBooking = await bookingService.CreateBookingAsync(eventId);
+            var eventState = _eventService.GetEventById(eventId);
+            Assert.NotNull(eventState);
+            Assert.Equal(0, eventState.AvailableSeats);
+
+            var processedDto = new BookingProcessedDto
+            {
+                Status = BookingStatus.Rejected,
+                ProcessedAt = DateTime.UtcNow
+            };
+            await bookingService.UpdateProcessedBookingByIdAsync(firstBooking.Id, processedDto);
+            _eventService.ReleaseSeats(firstBooking.EventId);
+
+            var eventAfterRelease = _eventService.GetEventById(eventId);
+            Assert.NotNull(eventAfterRelease);
+            Assert.Equal(1, eventAfterRelease.AvailableSeats);
+
+            var secondBooking = await bookingService.CreateBookingAsync(eventId);
+            Assert.NotNull(secondBooking);
+            Assert.Equal(eventId, secondBooking.EventId);
+            Assert.Equal(BookingStatus.Pending, secondBooking.Status);
+
+            var finalEventState = _eventService.GetEventById(eventId);
+            Assert.NotNull(finalEventState);
+            Assert.Equal(0, finalEventState.AvailableSeats);
+        }
     }
 }
