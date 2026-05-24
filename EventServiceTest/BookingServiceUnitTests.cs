@@ -1,4 +1,5 @@
 ﻿using CSCourse.Interfaces;
+using CSCourse.Middlewares;
 using CSCourse.Models;
 using CSCourse.Services;
 
@@ -253,6 +254,17 @@ namespace EventServiceTest
 
             await Assert.ThrowsAsync<NoAvailableSeatsException>(
                 async () => await bookingService.CreateBookingAsync(eventId)
+            );
+        }
+
+        [Fact]
+        public async Task CreateBookingAsync_ForNonExistingEvent_ThrowsNotFoundException()
+        {
+            var bookingService = CreateBookingService(_eventService);
+            var nonExistingEventId = Guid.NewGuid();
+
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                async () => await bookingService.CreateBookingAsync(nonExistingEventId)
             );
         }
     }
