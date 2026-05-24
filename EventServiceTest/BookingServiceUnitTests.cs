@@ -341,11 +341,15 @@ namespace EventServiceTest
                     try
                     {
                         var result = await bookingService.CreateBookingAsync(eventId);
-                        return (Success: true, Booking: result, Exception: (Exception)null);
+                        (bool Success, Booking? Booking, Exception? Exception) successResult =
+                            (true, result, null);
+                        return successResult;
                     }
                     catch (NoAvailableSeatsException ex)
                     {
-                        return (Success: false, Booking: null, Exception: ex);
+                        (bool Success, Booking? Booking, Exception? Exception) errorResult =
+                            (false, null, ex);
+                        return errorResult;
                     }
                 }))
                 .ToArray();
@@ -362,7 +366,7 @@ namespace EventServiceTest
             Assert.NotNull(eventState);
             Assert.Equal(0, eventState.AvailableSeats);
 
-            var bookingIds = successfulBookings.Select(r => r.Booking.Id).ToList();
+            var bookingIds = successfulBookings.Select(r => r.Booking?.Id).ToList();
             Assert.Equal(bookingIds.Count, bookingIds.Distinct().Count());
         }
 

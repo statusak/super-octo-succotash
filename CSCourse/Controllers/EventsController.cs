@@ -14,18 +14,15 @@ namespace CSCourse.Controllers
 
         private readonly IEventService _eventService;
         private readonly IBookingService _bookingService;
-        private readonly IBookingTaskQueue _bookingTaskQueue;
         private readonly ILogger<EventsController> _logger;
 
         public EventsController(
             IEventService eventService,
             IBookingService bookingService,
-            IBookingTaskQueue bookingTaskQueue,
             ILogger<EventsController> logger)
         {
             _eventService = eventService;
             _bookingService = bookingService;
-            _bookingTaskQueue = bookingTaskQueue;
             _logger = logger;
         }
 
@@ -241,7 +238,6 @@ namespace CSCourse.Controllers
             {
                 _eventService.GetEventById(eventId);
                 var created = await _bookingService.CreateBookingAsync(eventId);
-                _bookingTaskQueue.Enqueue(created);
 
                 BookingResponseDto response =
                 new BookingResponseDto

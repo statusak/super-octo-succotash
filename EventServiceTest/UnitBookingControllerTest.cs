@@ -18,16 +18,14 @@ namespace EventServiceTest
         {
             _eventService = new EventMemoryService();
             var bookingService = new BookingMemoryService(_eventService);
-            var bookingTaskQueue = new InMemoryBookingTaskQueue();
             var logger = NullLogger<EventsController>.Instance;
-            _eventsController = new EventsController(_eventService, bookingService, bookingTaskQueue, logger);
+            _eventsController = new EventsController(_eventService, bookingService, logger);
             _bookingsController = new BookingsController(bookingService);
 
             var backgroundLogger = NullLogger<BookingBackgroundService>.Instance;
             _backgroundService = new BookingBackgroundService(
                 bookingService,
                 _eventService,
-                bookingTaskQueue,
                 backgroundLogger,
                 TimeSpan.FromSeconds(1)
             );

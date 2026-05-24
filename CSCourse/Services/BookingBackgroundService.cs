@@ -7,7 +7,6 @@ namespace CSCourse.Services
     {
         private readonly IBookingService _bookingService;
         private readonly IEventService _eventService;
-        private readonly IBookingTaskQueue _bookingTaskQueue;
         private readonly ILogger<BookingBackgroundService> _logger;
 
         private readonly TimeSpan _periodicTimer;
@@ -17,14 +16,12 @@ namespace CSCourse.Services
         public BookingBackgroundService(
             IBookingService bookingService,
             IEventService eventService,
-            IBookingTaskQueue bookingTaskQueue,
             ILogger<BookingBackgroundService> logger,
             TimeSpan? periodicTimer = null
             )
         {
             _bookingService = bookingService;
             _eventService = eventService;
-            _bookingTaskQueue = bookingTaskQueue;
             _logger = logger;
             _periodicTimer = periodicTimer ?? TimeSpan.FromSeconds(5);
         }
