@@ -164,5 +164,33 @@ namespace EventServiceTest
 
             Assert.Null(result);
         }
+
+        [Fact]
+        public async Task CreateBookingAsync_DecreasesAvailableSeatsByOne()
+        {
+            var bookingService = CreateBookingService(_eventService);
+
+            var eventId = _eventService.CreateEvent(new Event
+            {
+                Id = Guid.Empty,
+                Title = "Конференция разработчиков",
+                Description = "Ежегодная конференция...",
+                TotalSeats = 100,
+                AvailableSeats = 100,
+                StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
+                EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
+            });
+
+            var initialEvent = _eventService.GetEventById(eventId);
+            Assert.NotNull(initialEvent);
+            Assert.Equal(100, initialEvent.AvailableSeats);
+
+            var result = await bookingService.CreateBookingAsync(eventId);
+            Assert.NotNull(result);
+
+            var updatedEvent = _eventService.GetEventById(eventId);
+            Assert.NotNull(updatedEvent);
+            Assert.Equal(99, updatedEvent.AvailableSeats);
+        }
     }
 }
