@@ -229,6 +229,10 @@ namespace EventServiceTest
                 Assert.NotNull(updatedEvent);
                 Assert.Equal(totalSeats - i - 1, updatedEvent.AvailableSeats);
             }
+
+            await Assert.ThrowsAsync<NoAvailableSeatsException>(
+                async () => await bookingService.CreateBookingAsync(eventId)
+            );
         }
 
         [Fact]
