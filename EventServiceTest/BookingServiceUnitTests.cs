@@ -229,5 +229,31 @@ namespace EventServiceTest
                 Assert.Equal(totalSeats - i - 1, updatedEvent.AvailableSeats);
             }
         }
+
+        [Fact]
+        public async Task CreateBookingAsync_AfterSeatsExhausted_ThrowsNoAvailableSeatsException()
+        {
+            var bookingService = CreateBookingService(_eventService);
+
+            var eventId = _eventService.CreateEvent(new Event
+            {
+                Id = Guid.Empty,
+                Title = "Мастер-класс",
+                Description = "Практическое занятие",
+                TotalSeats = 1,
+                AvailableSeats = 1,
+                StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
+                EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
+            });
+            await bookingService.CreateBookingAsync(eventId);
+
+            var updatedEvent = _eventService.GetEventById(eventId);
+            Assert.NotNull(updatedEvent);
+            Assert.Equal(0, updatedEvent.AvailableSeats);
+
+            await Assert.ThrowsAsync<NoAvailableSeatsException>(
+                async () => await bookingService.CreateBookingAsync(eventId)
+            );
+        }
     }
 }
