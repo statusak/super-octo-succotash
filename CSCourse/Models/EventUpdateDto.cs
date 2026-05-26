@@ -5,7 +5,7 @@ namespace CSCourse.Models
     /// <summary>
     /// Класс Dto, содержащий информацию о мероприятии.
     /// </summary>
-    public class EventDto : IValidatableObject
+    public class EventUpdateDto : IValidatableObject
     {
         /// <summary>
         /// Название мероприятия.

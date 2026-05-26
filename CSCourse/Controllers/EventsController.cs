@@ -5,7 +5,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace CSCourse.Controllers
 {
     /// <summary>
-    /// Контроллер для управления мероприятиями (Events). Предоставляет REST API endpoints для получения, создания, обновления и удаления мероприятий.
+    /// Контроллер для управления мероприятиями (Events). Предоставляет REST API endpoints для получения, создания, обновления, удаления мероприятий,
+    /// а также для работы с бронированиями (создание бронирований для мероприятий).
     /// </summary>
     [ApiController]
     [Route("/[controller]")]
@@ -14,18 +15,15 @@ namespace CSCourse.Controllers
 
         private readonly IEventService _eventService;
         private readonly IBookingService _bookingService;
-        private readonly IBookingTaskQueue _bookingTaskQueue;
         private readonly ILogger<EventsController> _logger;
 
         public EventsController(
             IEventService eventService,
             IBookingService bookingService,
-            IBookingTaskQueue bookingTaskQueue,
             ILogger<EventsController> logger)
         {
             _eventService = eventService;
             _bookingService = bookingService;
-            _bookingTaskQueue = bookingTaskQueue;
             _logger = logger;
         }
 
@@ -50,6 +48,8 @@ namespace CSCourse.Controllers
         ///       "id": "308dd020-a855-4e80-b29e-b3582b6de65c",
         ///       "title": "Конференция разработчиков",
         ///       "description": "Ежегодная конференция...",
+        ///       "totalSeats": 10,
+        ///       "availableSeats": 10,
         ///       "startAt": "2023-12-01T10:00:00",
         ///       "endAt": "2023-12-01T18:00:00"
         ///     }
@@ -87,7 +87,7 @@ namespace CSCourse.Controllers
         /// В случае отсутствия мероприятия с указанным ID возвращается ошибка 404 (Not Found).
         ///
         /// Пример запроса:
-        /// GET /Events/1
+        /// GET /Events/308dd020-a855-4e80-b29e-b3582b6de65c
         /// </remarks>
         /// <response code="200">Успешный ответ: информация о мероприятии (HTTP 200 OK)</response>
         /// <response code="404">Мероприятие с указанным ID не найдено (HTTP 404 Not Found)</response>
@@ -108,27 +108,32 @@ namespace CSCourse.Controllers
         /// <summary>
         /// Создаёт новое мероприятие в системе.
         /// </summary>
-        /// <param name="eventDto">Модель данных для создания мероприятия (обязательный параметр, в формате JSON)</param>
+        /// <param name="eventDto">Модель данных для создания мероприятия (обязательный параметр, в формате JSON).
+        /// Должна содержать обязательные поля: <c>Title</c>, <c>StartAt</c>, <c>EndAt</c>. Поле <c>TotalSeats</c>
+        /// определяет общее количество мест на мероприятии, а <c>AvailableSeats</c> автоматически инициализируется равным <c>TotalSeats</c>.</param>
         /// <remarks>
         /// Добавляет новое мероприятие на основе переданных данных.
-        /// Для успешного создания требуется валидная модель EventDto с заполненными обязательными полями.
+        /// Для успешного создания требуется валидная модель <see cref="EventCreateDto"/> с заполненными обязательными полями.
+        /// При создании автоматически инициализирует начальное количество доступных мест равным общему количеству мест.
         ///
         /// Пример тела запроса (JSON):
         /// <code>
         /// {
         ///   "title": "Новая конференция",
         ///   "description": "Описание мероприятия",
+        ///   "totalSeats": 100,
         ///   "startAt": "2024-01-15T09:00:00",
         ///   "endAt": "2024-01-15T17:00:00"
         /// }
         /// </code>
         /// </remarks>
+        /// <returns>HTTP статус 202 Accepted с объектом мероприятия и заголовком Location, указывающим на URL созданного ресурса.</returns>
         /// <response code="202">Мероприятие успешно создано. Возвращается объект мероприятия и ссылка на ресурс (Location header).</response>
         /// <response code="400">Ошибка валидации или некорректные данные (HTTP 400 Bad Request)</response>
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status202Accepted, Type = typeof(Event))]
         [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(string))]
-        public ActionResult<Event> Post([FromBody] EventDto eventDto)
+        public ActionResult<Event> Post([FromBody] EventCreateDto eventDto)
         {
             if (!ModelState.IsValid)
             {
@@ -139,6 +144,8 @@ namespace CSCourse.Controllers
             {
                 Id = Guid.Empty,
                 Title = eventDto.Title,
+                TotalSeats = eventDto.TotalSeats,
+                AvailableSeats = eventDto.TotalSeats,
                 Description = eventDto.Description,
                 StartAt = eventDto.StartAt,
                 EndAt = eventDto.EndAt,
@@ -156,40 +163,42 @@ namespace CSCourse.Controllers
         /// <summary>
         /// Полностью обновляет существующее мероприятие.
         /// </summary>
-        /// <param name="index">Идентификатор мероприятия, которое необходимо обновить</param>
-        /// <param name="eventDto">Обновлённые данные мероприятия (в формате JSON)</param>
+        /// <param name="index">Идентификатор мероприятия, которое необходимо обновить (в формате GUID).</param>
+        /// <param name="eventDto">Обновлённые данные мероприятия (в формате JSON). Должны содержать поля:
+        /// <c>Title</c>, <c>Description</c> (может быть <c>null</c>), <c>StartAt</c>, <c>EndAt</c>.
+        /// Обратите внимание: поле <c>TotalSeats</c> не может быть изменено через этот метод — для работы с местами используйте специализированные операции.</param>
         /// <remarks>
-        /// Заменяет все данные существующего мероприятия на новые.
-        /// Требует валидной модели EventDto с заполненными полями.
+        /// Заменяет все данные существующего мероприятия на новые, кроме идентификатора и параметров, связанных с местами.
+        /// Требует валидной модели <see cref="EventUpdateDto"/> с заполненными полями.
         /// Если мероприятие с указанным ID не существует, возвращается ошибка 404.
         ///
         /// Пример запроса:
-        /// PUT /Events/1
-        /// С телом запроса (JSON), аналогичным методу POST.
+        /// PUT /Events/308dd020-a855-4e80-b29e-b3582b6de65c
+        /// С телом запроса (JSON):
+        /// <code>
+        /// {
+        ///   "title": "Обновлённое название",
+        ///   "description": "Новое описание",
+        ///   "startAt": "2024-02-15T10:00:00",
+        ///   "endAt": "2024-02-15T18:00:00"
+        /// }
+        /// </code>
         /// </remarks>
+        /// <returns>HTTP статус 204 No Content при успешном обновлении.</returns>
         /// <response code="204">Данные мероприятия успешно обновлены (HTTP 204 No Content)</response>
         /// <response code="400">Некорректные данные или ошибки валидации (HTTP 400 Bad Request)</response>
         /// <response code="404">Мероприятие не найдено (HTTP 404 Not Found)</response>
         [HttpPut("{index:guid}")]
-        public ActionResult Put(Guid index, [FromBody] EventDto eventDto)
+        public ActionResult Put(Guid index, [FromBody] EventUpdateDto eventDto)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            var @event = new Event
-            {
-                Id = index,
-                Title = eventDto.Title,
-                Description = eventDto.Description,
-                StartAt = eventDto.StartAt,
-                EndAt = eventDto.EndAt,
-            };
-
             try
             {
-                _eventService.UpdateEvent(index, @event);
+                _eventService.UpdateEvent(index, eventDto.Title, eventDto.Description, eventDto.StartAt, eventDto.EndAt);
                 return NoContent();
             }
             catch (InvalidOperationException)
@@ -208,7 +217,7 @@ namespace CSCourse.Controllers
         /// Если мероприятие не существует, возвращается ошибка 404.
         ///
         /// Пример запроса:
-        /// DELETE /Events/1
+        /// DELETE /Events/308dd020-a855-4e80-b29e-b3582b6de65c
         /// </remarks>
         /// <response code="200">Мероприятие успешно удалено (HTTP 200 OK)</response>
         /// <response code="404">Мероприятие не найдено в системе (HTTP 404 Not Found)</response>
@@ -231,23 +240,43 @@ namespace CSCourse.Controllers
         /// Создаёт новое бронирование для указанного мероприятия.
         /// </summary>
         /// <param name="eventId">Уникальный идентификатор (GUID) мероприятия, для которого создаётся бронирование.</param>
-        /// <returns>
-        /// Возвращает <see cref="ActionResult"/> со статусом 202 Accepted и данными созданного бронирования,
-        /// включая URL для получения информации о бронировании;
-        /// в случае ошибки возвращает ответ 404 Not Found с текстовым сообщением.
-        /// </returns>
+        /// <remarks>
+        /// Перед созданием бронирования проверяет существование мероприятия. Если мероприятие не найдено,
+        /// возвращается ошибка 404. При успешном создании бронирования возвращается статус 202 Accepted,
+        /// а в заголовке Location указывается URL для получения информации о бронировании.
+        /// Метод интегрируется с сервисом бронирований (<see cref="IBookingService"/>) и сервисом мероприятий
+        /// (<see cref="IEventService"/>) для обеспечения согласованности данных.
+        ///
+        /// Пример запроса:
+        /// POST /Events/15f7f414-52a3-429b-b4cc-5ddbae9d9455/book
+        ///
+        /// Пример ответа (HTTP 202 Accepted):
+        /// Заголовок Location: /Bookings/4c7cacdb-d6f3-45ed-a58d-02edf27cd889
+        /// Тело ответа:
+        /// <code>
+        /// {
+        ///  "id": "4c7cacdb-d6f3-45ed-a58d-02edf27cd889",
+        ///  "eventId": "15f7f414-52a3-429b-b4cc-5ddbae9d9455",
+        ///  "status": 0,
+        ///  "createdAt": "2026-05-24T17:04:28.828849Z",
+        ///  "processedAt": null
+        /// }
+        /// </code>
+        /// </remarks>
+        /// <returns>HTTP статус 202 Accepted с объектом бронирования и заголовком Location; в случае ошибки — 404 Not Found.</returns>
         /// <response code="202">Бронирование успешно создано. Возвращается объект бронирования и ссылка на ресурс (Location header).</response>
         /// <response code="404">Мероприятие с указанным идентификатором не найдено.</response>
+        /// <response code="409">Конфликт при создании бронирования (например, превышение доступных мест).</response>
         [HttpPost("{eventId:Guid}/book")]
         [ProducesResponseType(StatusCodes.Status202Accepted, Type = typeof(Booking))]
         [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(string))]
+        [ProducesResponseType(StatusCodes.Status409Conflict, Type = typeof(string))]
         public async Task<ActionResult> CreateBooking(Guid eventId)
         {
             try
             {
                 _eventService.GetEventById(eventId);
                 var created = await _bookingService.CreateBookingAsync(eventId);
-                _bookingTaskQueue.Enqueue(created);
 
                 BookingResponseDto response =
                 new BookingResponseDto

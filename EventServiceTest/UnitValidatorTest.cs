@@ -8,10 +8,11 @@ namespace EventServiceTest
         [Fact]
         public void DateTimeValidator_EndBeforeStart_ReturnsError()
         {
-            var invalidDto = new EventDto
+            var invalidDto = new EventCreateDto
             {
                 Title = "Тестовая конференция",
                 Description = "Описание мероприятия",
+                TotalSeats = 100,
                 StartAt = DateTime.Now.AddHours(2),
                 EndAt = DateTime.Now.AddHours(1)
             };
@@ -36,10 +37,11 @@ namespace EventServiceTest
         [Fact]
         public void DateTimeValidator_StartBeforeEnd_ReturnsSuccess()
         {
-            var invalidDto = new EventDto
+            var invalidDto = new EventCreateDto
             {
                 Title = "Тестовая конференция",
                 Description = "Описание мероприятия",
+                TotalSeats = 100,
                 StartAt = DateTime.Now.AddHours(1),
                 EndAt = DateTime.Now.AddHours(2)
             };

@@ -17,28 +17,28 @@ namespace EventServiceTest
         public UnitBookingControllerTest()
         {
             _eventService = new EventMemoryService();
-            var bookingService = new BookingMemoryService();
-            var bookingTaskQueue = new InMemoryBookingTaskQueue();
+            var bookingService = new BookingMemoryService(_eventService);
             var logger = NullLogger<EventsController>.Instance;
-            _eventsController = new EventsController(_eventService, bookingService, bookingTaskQueue, logger);
+            _eventsController = new EventsController(_eventService, bookingService, logger);
             _bookingsController = new BookingsController(bookingService);
 
             var backgroundLogger = NullLogger<BookingBackgroundService>.Instance;
             _backgroundService = new BookingBackgroundService(
                 bookingService,
                 _eventService,
-                bookingTaskQueue,
-                backgroundLogger
+                backgroundLogger,
+                TimeSpan.FromSeconds(1)
             );
         }
 
         [Fact]
         public async Task BookingController_CreateBooking_Success()
         {
-            var validDto = new EventDto
+            var validDto = new EventCreateDto
             {
                 Title = "Тестовая конференция",
                 Description = "Описание мероприятия",
+                TotalSeats = 100,
                 StartAt = DateTime.Now.AddHours(1),
                 EndAt = DateTime.Now.AddHours(2)
             };
@@ -65,10 +65,11 @@ namespace EventServiceTest
         [Fact]
         public async Task BookingController_CreateMultiplyBooking_Success()
         {
-            var validDto = new EventDto
+            var validDto = new EventCreateDto
             {
                 Title = "Тестовая конференция",
                 Description = "Описание мероприятия",
+                TotalSeats = 100,
                 StartAt = DateTime.Now.AddHours(1),
                 EndAt = DateTime.Now.AddHours(2)
             };
@@ -102,10 +103,11 @@ namespace EventServiceTest
         [Fact]
         public async Task BookingController_CheckInfoBooking_Success()
         {
-            var validDto = new EventDto
+            var validDto = new EventCreateDto
             {
                 Title = "Тестовая конференция",
                 Description = "Описание мероприятия",
+                TotalSeats = 100,
                 StartAt = DateTime.Now.AddHours(1),
                 EndAt = DateTime.Now.AddHours(2)
             };
@@ -144,10 +146,11 @@ namespace EventServiceTest
         [Fact]
         public async Task BookingController_CheckInfoAfterProcessingBooking_Success()
         {
-            var validDto = new EventDto
+            var validDto = new EventCreateDto
             {
                 Title = "Тестовая конференция",
                 Description = "Описание мероприятия",
+                TotalSeats = 100,
                 StartAt = DateTime.Now.AddHours(1),
                 EndAt = DateTime.Now.AddHours(2)
             };
@@ -172,7 +175,7 @@ namespace EventServiceTest
 
             var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             await _backgroundService.StartAsync(cts.Token);
-            await Task.Delay(3000, TestContext.Current.CancellationToken);
+            await Task.Delay(5000, TestContext.Current.CancellationToken);
             await _backgroundService.StopAsync(cts.Token);
 
             var resultInfoBooking = (await _bookingsController.GetById(bookingCreate.Id)) as OkObjectResult;
@@ -203,10 +206,11 @@ namespace EventServiceTest
         [Fact]
         public async Task BookingController_CreateBookingForDeletedEvent_ReturnsNotFound()
         {
-            var validDto = new EventDto
+            var validDto = new EventCreateDto
             {
                 Title = "Тестовая конференция",
                 Description = "Описание мероприятия",
+                TotalSeats = 100,
                 StartAt = DateTime.Now.AddHours(1),
                 EndAt = DateTime.Now.AddHours(2)
             };
