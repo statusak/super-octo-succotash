@@ -2,6 +2,7 @@
 using CSCourse.Middlewares;
 using CSCourse.Models;
 using CSCourse.Services;
+using Microsoft.Extensions.Logging;
 
 namespace EventServiceTest
 {
@@ -267,7 +268,7 @@ namespace EventServiceTest
             var bookingService = CreateBookingService(_eventService);
             var nonExistingEventId = Guid.NewGuid();
 
-            await Assert.ThrowsAsync<InvalidOperationException>(
+            await Assert.ThrowsAsync <NotFoundException> (
                 async () => await bookingService.CreateBookingAsync(nonExistingEventId)
             );
         }

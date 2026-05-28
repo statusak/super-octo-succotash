@@ -1,4 +1,5 @@
 ﻿using CSCourse.Interfaces;
+using CSCourse.Middlewares;
 using CSCourse.Models;
 using System.Collections.Concurrent;
 
@@ -28,7 +29,18 @@ namespace CSCourse.Services
             bool canReserveSeats;
             lock (_bookingLock)
             {
-                canReserveSeats = _eventService.TryReserveSeats(eventId);
+                try
+                {
+                    canReserveSeats = _eventService.TryReserveSeats(eventId);
+                }
+                catch (InvalidOperationException) 
+                {
+                    throw new NotFoundException($"not found event with id {eventId}");
+                }
+                catch
+                {
+                    throw;
+                }
                 if (canReserveSeats)
                 {
                     do
