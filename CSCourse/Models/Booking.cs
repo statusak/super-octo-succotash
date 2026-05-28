@@ -71,5 +71,8 @@
         /// Имеет значение <c>null</c>, если бронирование ещё не обработано (статус <c>Pending</c>).
         /// </remarks>
         public DateTime? ProcessedAt { get; set; }
+
+        public required Event Event { get; set; }
+
     }
 }
