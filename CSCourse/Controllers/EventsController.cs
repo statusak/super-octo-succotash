@@ -270,7 +270,7 @@ namespace CSCourse.Controllers
         [HttpPost("{eventId:Guid}/book")]
         [ProducesResponseType(StatusCodes.Status202Accepted, Type = typeof(Booking))]
         [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(string))]
-        [ProducesResponseType(StatusCodes.Status409Conflict, Type = typeof(string))]
+        [ProducesResponseType(StatusCodes.Status409Conflict, Type = typeof(ProblemDetails))]
         public async Task<ActionResult> CreateBooking(Guid eventId)
         {
             try
