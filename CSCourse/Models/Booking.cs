@@ -41,6 +41,8 @@
         /// <remarks>
         /// Связывает бронирование с конкретным мероприятием в системе.
         /// </remarks>
+        /// 
+        // TODO: Во Fluent API Указать, что это ForeignKey для EventID
         public required Guid EventId { get; set; }
 
         /// <summary>

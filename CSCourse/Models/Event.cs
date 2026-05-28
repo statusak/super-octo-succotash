@@ -46,5 +46,8 @@
         /// Фиксирует момент завершения события; должна быть позже StartAt, валидация выполняется на уровне бизнес-логики.
         /// </summary>
         public required DateTime EndAt { get; set; }
+
+        public List<Booking>? Bookings { get; set; }
+
     }
 }

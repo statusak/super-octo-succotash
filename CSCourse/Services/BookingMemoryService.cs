@@ -51,7 +51,7 @@ namespace CSCourse.Services
                             Id = bookingId,
                             EventId = eventId,
                             Status = BookingStatus.Pending,
-                            CreatedAt = DateTime.UtcNow,
+                            CreatedAt = DateTime.UtcNow
                         };
                     } while (!Booking.TryAdd(bookingId, newBooking));
                     
