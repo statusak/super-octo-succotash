@@ -84,7 +84,11 @@ namespace CSCourse.Services
                 _logger.LogInformation(
                     "Booking {TaskId} success processed", booking.Id);
             }
-            catch(Exception e)
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                _logger.LogInformation("BookingBackgroundService catch interrupt");
+            }
+            catch (Exception e)
             {
                 _logger.LogError("EventId {EventId} for bookingId {TaskId} while processing have error {error}", booking.EventId, booking.Id, e.Message);
                 await _bookingService.UpdateProcessedBookingByIdAsync(booking.Id, new BookingProcessedDto { Status = BookingStatus.Rejected, ProcessedAt = DateTime.UtcNow });
