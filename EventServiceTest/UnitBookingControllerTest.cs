@@ -13,6 +13,7 @@ namespace EventServiceTest
         private readonly EventsController _eventsController;
         private readonly BookingsController _bookingsController;
         private readonly BookingBackgroundService _backgroundService;
+        const int _backgroundServiceProcessingDelaySec = 2;
 
         public UnitBookingControllerTest()
         {
@@ -27,7 +28,7 @@ namespace EventServiceTest
                 bookingService,
                 _eventService,
                 backgroundLogger,
-                TimeSpan.FromSeconds(1)
+                TimeSpan.FromSeconds(_backgroundServiceProcessingDelaySec)
             );
         }
 

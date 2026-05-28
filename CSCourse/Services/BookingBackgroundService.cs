@@ -10,6 +10,7 @@ namespace CSCourse.Services
         private readonly ILogger<BookingBackgroundService> _logger;
 
         private readonly TimeSpan _periodicTimer;
+        private const int DefaultPollingIntervalSec = 5;
 
         private readonly SemaphoreSlim _processingSemaphore = new(1, 1);
 
@@ -23,7 +24,7 @@ namespace CSCourse.Services
             _bookingService = bookingService;
             _eventService = eventService;
             _logger = logger;
-            _periodicTimer = periodicTimer ?? TimeSpan.FromSeconds(5);
+            _periodicTimer = periodicTimer ?? TimeSpan.FromSeconds(DefaultPollingIntervalSec);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
