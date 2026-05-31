@@ -1,5 +1,6 @@
 ﻿using CSCourse.Controllers;
 using CSCourse.DataAccess;
+using CSCourse.Interfaces;
 using CSCourse.Models;
 using CSCourse.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -26,7 +27,11 @@ namespace EventServiceTest
             services.AddDbContext<AppDbContext>(options =>
                     options.UseInMemoryDatabase(dbName));
 
+            services.AddScoped<IBookingService, BookingService>();
+            services.AddScoped<IEventService, EventService>();
+
             var serviceProvider = services.BuildServiceProvider();
+
             _context = serviceProvider.GetRequiredService<AppDbContext>();
 
             _eventService = new EventService(_context);
@@ -190,6 +195,12 @@ namespace EventServiceTest
             await _backgroundService.StartAsync(cts.Token);
             await Task.Delay(5000, TestContext.Current.CancellationToken);
             await _backgroundService.StopAsync(cts.Token);
+
+
+            // Принудительно обновляем состояние брони в контексте контроллера
+            var bookingEntity = _context.Bookings.Find(bookingCreate.Id);
+            Assert.NotNull(bookingEntity);
+            _context.Entry(bookingEntity).Reload();
 
             var resultInfoBooking = (await _bookingsController.GetById(bookingCreate.Id)) as OkObjectResult;
 
