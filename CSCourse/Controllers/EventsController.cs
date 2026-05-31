@@ -60,7 +60,7 @@ namespace CSCourse.Controllers
         /// </remarks>
         /// <returns>Пагинированный результат с списком мероприятий</returns>
         [HttpGet]
-        public ActionResult<PaginatedResult> GetAll([FromQuery] FilterEventDto? filterEventDto, int? page, int? pageSize)
+        public async Task<ActionResult<PaginatedResult>> GetAll([FromQuery] FilterEventDto? filterEventDto, int? page, int? pageSize)
         {
             if (!ModelState.IsValid)
             {
@@ -74,7 +74,7 @@ namespace CSCourse.Controllers
                 EndAt = filterEventDto?.EndAt,
             };
 
-            return Ok(_eventService.GetAll(filterEvent, page ?? 1, pageSize ?? 10));
+            return Ok(await _eventService.GetAllAsync(filterEvent, page ?? 1, pageSize ?? 10));
         }
 
         /// <summary>
@@ -92,11 +92,11 @@ namespace CSCourse.Controllers
         /// <response code="200">Успешный ответ: информация о мероприятии (HTTP 200 OK)</response>
         /// <response code="404">Мероприятие с указанным ID не найдено (HTTP 404 Not Found)</response>
         [HttpGet("{index:guid}")]
-        public ActionResult<Event> GetById(Guid index)
+        public async Task<ActionResult<Event>> GetById(Guid index)
         {
             try
             {
-                var eventItem = _eventService.GetEventById(index);
+                var eventItem = await _eventService.GetEventByIdAsync(index);
                 return Ok(eventItem);
             }
             catch (InvalidOperationException)
@@ -133,7 +133,7 @@ namespace CSCourse.Controllers
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status202Accepted, Type = typeof(Event))]
         [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(string))]
-        public ActionResult<Event> Post([FromBody] EventCreateDto eventDto)
+        public async Task<ActionResult<Event>> Post([FromBody] EventCreateDto eventDto)
         {
             if (!ModelState.IsValid)
             {
@@ -151,7 +151,7 @@ namespace CSCourse.Controllers
                 EndAt = eventDto.EndAt,
             };
 
-            @event.Id = _eventService.CreateEvent(@event);
+            @event.Id = await _eventService.CreateEventAsync(@event);
 
             return CreatedAtAction(
                 actionName: nameof(GetById),
@@ -189,7 +189,7 @@ namespace CSCourse.Controllers
         /// <response code="400">Некорректные данные или ошибки валидации (HTTP 400 Bad Request)</response>
         /// <response code="404">Мероприятие не найдено (HTTP 404 Not Found)</response>
         [HttpPut("{index:guid}")]
-        public ActionResult Put(Guid index, [FromBody] EventUpdateDto eventDto)
+        public async Task<ActionResult> Put(Guid index, [FromBody] EventUpdateDto eventDto)
         {
             if (!ModelState.IsValid)
             {
@@ -198,7 +198,7 @@ namespace CSCourse.Controllers
 
             try
             {
-                _eventService.UpdateEvent(index, eventDto.Title, eventDto.Description, eventDto.StartAt, eventDto.EndAt);
+                await _eventService.UpdateEventAsync(index, eventDto.Title, eventDto.Description, eventDto.StartAt, eventDto.EndAt);
                 return NoContent();
             }
             catch (InvalidOperationException)
@@ -222,11 +222,11 @@ namespace CSCourse.Controllers
         /// <response code="200">Мероприятие успешно удалено (HTTP 200 OK)</response>
         /// <response code="404">Мероприятие не найдено в системе (HTTP 404 Not Found)</response>
         [HttpDelete("{index:guid}")]
-        public ActionResult Delete(Guid index)
+        public async Task<ActionResult> Delete(Guid index)
         {
             try
             {
-                _eventService.DeleteEvent(index);
+                await _eventService.DeleteEventAsync(index);
                 return Ok();
             }
             catch (InvalidOperationException)
@@ -275,7 +275,7 @@ namespace CSCourse.Controllers
         {
             try
             {
-                _eventService.GetEventById(eventId);
+                await _eventService.GetEventByIdAsync(eventId);
                 var created = await _bookingService.CreateBookingAsync(eventId);
 
                 BookingResponseDto response =

@@ -242,7 +242,7 @@ namespace CSCourse.Interfaces
         /// Альтернативный метод обновления, удобный для сценариев, где не требуется передавать полный объект <see cref="Event"/>.
         /// Позволяет гибко обновлять только необходимые поля.
         /// </remarks>
-        Task UpdateEventTask(Guid id, string Title, string? Description, DateTime StartAt, DateTime EndAt);
+        Task UpdateEventAsync(Guid id, string Title, string? Description, DateTime StartAt, DateTime EndAt);
 
         /// <summary>
         /// Удаляет мероприятие из системы по его уникальному идентификатору.
@@ -266,6 +266,6 @@ namespace CSCourse.Interfaces
         /// в соответствии с бизнес‑правилами системы. Рекомендуется предварительно проверять существование мероприятия
         /// с помощью метода <see cref="IsEventExists(Guid)"/>.
         /// </remarks>
-        Task DeleteEventAsyn(Guid id);
+        Task DeleteEventAsync(Guid id);
     }
 }
