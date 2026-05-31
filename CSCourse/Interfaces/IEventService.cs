@@ -266,6 +266,6 @@ namespace CSCourse.Interfaces
         /// в соответствии с бизнес‑правилами системы. Рекомендуется предварительно проверять существование мероприятия
         /// с помощью метода <see cref="IsEventExists(Guid)"/>.
         /// </remarks>
-        Task DeleteEventAsync(Guid id);
+        Task DeleteEventAsyn(Guid id);
     }
 }
