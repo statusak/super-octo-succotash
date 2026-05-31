@@ -1,33 +1,43 @@
-﻿using CSCourse.Interfaces;
+﻿using CSCourse.DataAccess;
+using CSCourse.Interfaces;
 using CSCourse.Middlewares;
 using CSCourse.Models;
 using CSCourse.Services;
-using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace EventServiceTest
 {
     public class BookingMemoryServiceTests : BookingServiceTestsBase
     {
         
-        protected override IBookingService CreateBookingService(IEventService eventService)
+        protected override IBookingService CreateBookingService(IEventService eventService, AppDbContext context)
         {
-            return new BookingService(eventService);
+            return new BookingService(eventService, context);
         }
     }
 
     public abstract class BookingServiceTestsBase
     {
         private readonly EventService _eventService;
+        private readonly AppDbContext _context;
         public BookingServiceTestsBase()
         {
-            _eventService = new EventService();
+            var dbName = Guid.NewGuid().ToString();
+            var services = new ServiceCollection();
+            services.AddDbContext<AppDbContext>(options =>
+                    options.UseInMemoryDatabase(dbName));
+
+            var serviceProvider = services.BuildServiceProvider();
+            _context = serviceProvider.GetRequiredService<AppDbContext>();
+            _eventService = new EventService(_context);
         }
-        protected abstract IBookingService CreateBookingService(IEventService eventService);
+        protected abstract IBookingService CreateBookingService(IEventService eventService, AppDbContext context);
 
         [Fact]
         public async Task CreateBookingAsync_ForExistingEvent_ReturnsBookingWithPendingStatus()
         {
-            var bookingService = CreateBookingService(_eventService);
+            var bookingService = CreateBookingService(_eventService, _context);
             var eventId = _eventService.CreateEvent(new Event
             {
                 Id = Guid.Empty,
@@ -50,7 +60,7 @@ namespace EventServiceTest
         [Fact]
         public async Task CreateBookingAsync_MultipleBookingsForSameEvent_AllHaveUniqueIds()
         {
-            var bookingService = CreateBookingService(_eventService);
+            var bookingService = CreateBookingService(_eventService, _context);
 
             var eventId = _eventService.CreateEvent(new Event
             {
@@ -80,7 +90,7 @@ namespace EventServiceTest
         [Fact]
         public async Task GetBookingByIdAsync_ExistingBooking_ReturnsCorrectInformation()
         {
-            var bookingService = CreateBookingService(_eventService);
+            var bookingService = CreateBookingService(_eventService, _context);
 
             var eventId = _eventService.CreateEvent(new Event
             {
@@ -107,7 +117,7 @@ namespace EventServiceTest
         [Fact]
         public async Task UpdateProcessedBookingByIdAsync_AfterProcessing_StatusReflectsInGetBooking()
         {
-            var bookingService = CreateBookingService(_eventService);
+            var bookingService = CreateBookingService(_eventService, _context);
 
             var eventId = _eventService.CreateEvent(new Event
             {
@@ -140,7 +150,7 @@ namespace EventServiceTest
         [Fact]
         public async Task GetBookingByIdAsync_NonExistingBookingId_ReturnsNull()
         {
-            var bookingService = CreateBookingService(_eventService);
+            var bookingService = CreateBookingService(_eventService, _context);
             var nonExistingBookingId = Guid.Empty;
 
             var result = await bookingService.GetBookingByIdAsync(nonExistingBookingId);
@@ -151,7 +161,7 @@ namespace EventServiceTest
         [Fact]
         public async Task UpdateProcessedBookingByIdAsync_NonExistingBooking_ReturnsNull()
         {
-            var bookingService = CreateBookingService(_eventService);
+            var bookingService = CreateBookingService(_eventService, _context);
             var nonExistingBookingId = Guid.NewGuid();
             var processedDto = new BookingProcessedDto
             {
@@ -170,7 +180,7 @@ namespace EventServiceTest
         [Fact]
         public async Task CreateBookingAsync_DecreasesAvailableSeatsByOne()
         {
-            var bookingService = CreateBookingService(_eventService);
+            var bookingService = CreateBookingService(_eventService, _context);
 
             var eventId = _eventService.CreateEvent(new Event
             {
@@ -198,7 +208,7 @@ namespace EventServiceTest
         [Fact]
         public async Task CreateBookingAsync_MultipleBookingsUntilLimit_AllSucceedWithUniqueIds()
         {
-            var bookingService = CreateBookingService(_eventService);
+            var bookingService = CreateBookingService(_eventService, _context);
 
             var eventId = _eventService.CreateEvent(new Event
             {
@@ -239,7 +249,7 @@ namespace EventServiceTest
         [Fact]
         public async Task CreateBookingAsync_AfterSeatsExhausted_ThrowsNoAvailableSeatsException()
         {
-            var bookingService = CreateBookingService(_eventService);
+            var bookingService = CreateBookingService(_eventService, _context);
 
             var eventId = _eventService.CreateEvent(new Event
             {
@@ -265,7 +275,7 @@ namespace EventServiceTest
         [Fact]
         public async Task CreateBookingAsync_ForNonExistingEvent_ThrowsNotFoundException()
         {
-            var bookingService = CreateBookingService(_eventService);
+            var bookingService = CreateBookingService(_eventService, _context);
             var nonExistingEventId = Guid.NewGuid();
 
             await Assert.ThrowsAsync <NotFoundException> (
@@ -276,7 +286,7 @@ namespace EventServiceTest
         [Fact]
         public async Task RejectBooking_ThenReleaseSeats_AllowsNewBooking()
         {
-            var bookingService = CreateBookingService(_eventService);
+            var bookingService = CreateBookingService(_eventService, _context);
 
             var eventId = _eventService.CreateEvent(new Event
             {
@@ -333,7 +343,7 @@ namespace EventServiceTest
         [Fact]
         public async Task CreateBookingAsync_ConcurrentRequests_PreventsOverbooking()
         {
-            var bookingService = CreateBookingService(_eventService);
+            var bookingService = CreateBookingService(_eventService, _context);
             var eventId = CreateTestEvent(5);
 
             var tasks = Enumerable.Range(0, 20)
@@ -374,7 +384,7 @@ namespace EventServiceTest
         [Fact]
         public async Task CreateBookingAsync_ConcurrentRequests_AllHaveUniqueIds()
         {
-            var bookingService = CreateBookingService(_eventService);
+            var bookingService = CreateBookingService(_eventService, _context);
             var eventId = CreateTestEvent(10);
 
             var tasks = Enumerable.Range(0, 10)
