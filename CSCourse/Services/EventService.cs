@@ -46,7 +46,13 @@ namespace CSCourse.Services
 
         public PaginatedResult GetAll(FilterEvent filterEvent, int page, int pageSize)
         {
-            var filteredEvents = _context.Events.Where(e => e.Title.Contains(filterEvent.Title, StringComparison.CurrentCultureIgnoreCase));
+            var filteredEvents = _context.Events.AsQueryable();
+
+            if (!string.IsNullOrEmpty(filterEvent.Title))
+            {
+                filteredEvents = filteredEvents.Where(e =>
+                    EF.Functions.ILike(e.Title, $"%{filterEvent.Title}%"));
+            }
 
             if (filterEvent.StartAt != null)
             {
@@ -67,7 +73,13 @@ namespace CSCourse.Services
 
         public async Task<PaginatedResult> GetAllAsync(FilterEvent filterEvent, int page, int pageSize)
         {
-            var filteredEvents = _context.Events.Where(e => e.Title.Contains(filterEvent.Title, StringComparison.CurrentCultureIgnoreCase));
+            var filteredEvents = _context.Events.AsQueryable();
+
+            if (!string.IsNullOrEmpty(filterEvent.Title))
+            {
+                filteredEvents = filteredEvents.Where(e =>
+                    EF.Functions.ILike(e.Title, $"%{filterEvent.Title}%"));
+            }
 
             if (filterEvent.StartAt != null)
             {
