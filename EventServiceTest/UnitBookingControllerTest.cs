@@ -1,8 +1,11 @@
 ﻿using CSCourse.Controllers;
+using CSCourse.DataAccess;
 using CSCourse.Interfaces;
 using CSCourse.Models;
 using CSCourse.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace EventServiceTest
@@ -13,20 +16,29 @@ namespace EventServiceTest
         private readonly EventsController _eventsController;
         private readonly BookingsController _bookingsController;
         private readonly BookingBackgroundService _backgroundService;
+        private readonly AppDbContext _context;
+
         const int _backgroundServiceProcessingDelaySec = 2;
 
         public UnitBookingControllerTest()
         {
-            _eventService = new EventService();
-            var bookingService = new BookingService(_eventService);
+            var dbName = Guid.NewGuid().ToString();
+            var services = new ServiceCollection();
+            services.AddDbContext<AppDbContext>(options =>
+                    options.UseInMemoryDatabase(dbName));
+
+            var serviceProvider = services.BuildServiceProvider();
+            _context = serviceProvider.GetRequiredService<AppDbContext>();
+
+            _eventService = new EventService(_context);
+            var bookingService = new BookingService(_eventService, _context);
             var logger = NullLogger<EventsController>.Instance;
             _eventsController = new EventsController(_eventService, bookingService, logger);
             _bookingsController = new BookingsController(bookingService);
 
             var backgroundLogger = NullLogger<BookingBackgroundService>.Instance;
             _backgroundService = new BookingBackgroundService(
-                bookingService,
-                _eventService,
+                serviceProvider.GetRequiredService<IServiceScopeFactory>(),
                 backgroundLogger,
                 TimeSpan.FromSeconds(_backgroundServiceProcessingDelaySec)
             );
@@ -44,8 +56,9 @@ namespace EventServiceTest
                 EndAt = DateTime.Now.AddHours(2)
             };
 
-            var resultCreateEvent = _eventsController.Post(validDto).Result as CreatedAtActionResult;
-            
+            var actionResult = await _eventsController.Post(validDto);
+            var resultCreateEvent = actionResult.Result as CreatedAtActionResult;
+
             Assert.NotNull(resultCreateEvent);
             Assert.Equal(201, resultCreateEvent.StatusCode);
 
@@ -75,7 +88,7 @@ namespace EventServiceTest
                 EndAt = DateTime.Now.AddHours(2)
             };
 
-            var resultCreateEvent = _eventsController.Post(validDto).Result as CreatedAtActionResult;
+            var resultCreateEvent = (await _eventsController.Post(validDto)).Result as CreatedAtActionResult;
 
             Assert.NotNull(resultCreateEvent);
             Assert.Equal(201, resultCreateEvent.StatusCode);
@@ -113,7 +126,7 @@ namespace EventServiceTest
                 EndAt = DateTime.Now.AddHours(2)
             };
 
-            var resultCreateEvent = _eventsController.Post(validDto).Result as CreatedAtActionResult;
+            var resultCreateEvent = (await _eventsController.Post(validDto)).Result as CreatedAtActionResult;
 
             Assert.NotNull(resultCreateEvent);
             Assert.Equal(201, resultCreateEvent.StatusCode);
@@ -156,7 +169,7 @@ namespace EventServiceTest
                 EndAt = DateTime.Now.AddHours(2)
             };
 
-            var resultCreateEvent = _eventsController.Post(validDto).Result as CreatedAtActionResult;
+            var resultCreateEvent = (await _eventsController.Post(validDto)).Result as CreatedAtActionResult;
 
             Assert.NotNull(resultCreateEvent);
             Assert.Equal(201, resultCreateEvent.StatusCode);
@@ -216,7 +229,7 @@ namespace EventServiceTest
                 EndAt = DateTime.Now.AddHours(2)
             };
 
-            var resultCreateEvent = _eventsController.Post(validDto).Result as CreatedAtActionResult;
+            var resultCreateEvent = (await _eventsController.Post(validDto)).Result as CreatedAtActionResult;
 
             Assert.NotNull(resultCreateEvent);
             Assert.Equal(201, resultCreateEvent.StatusCode);
@@ -224,7 +237,7 @@ namespace EventServiceTest
             var @event = resultCreateEvent.Value as Event;
             Assert.NotNull(@event);
 
-            var actionResult = _eventsController.Delete(@event.Id) as OkResult;
+            var actionResult = (await _eventsController.Delete(@event.Id)) as OkResult;
 
             Assert.NotNull(actionResult);
             Assert.Equal(200, actionResult.StatusCode);
