@@ -1,6 +1,8 @@
-﻿using CSCourse.Interfaces;
+﻿using CSCourse.DataAccess;
+using CSCourse.Interfaces;
 using CSCourse.Middlewares;
 using CSCourse.Models;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Concurrent;
 
 namespace CSCourse.Services
@@ -14,13 +16,14 @@ namespace CSCourse.Services
     {
         private readonly IEventService _eventService;
 
-        private readonly ConcurrentDictionary<Guid, Booking> Booking = [];
+        private readonly AppDbContext _context;
         private readonly object _bookingLock = new();
 
         public BookingService(
-            IEventService eventService)
+            IEventService eventService, AppDbContext context)
         {
             _eventService = eventService;
+            _context = context;
         }
         public async Task<Booking> CreateBookingAsync(Guid eventId)
         {
@@ -43,17 +46,20 @@ namespace CSCourse.Services
                 }
                 if (canReserveSeats)
                 {
-                    do
+                    //do
+                    // {
+                    bookingId = Guid.NewGuid();
+                    newBooking = new Booking
                     {
-                        bookingId = Guid.NewGuid();
-                        newBooking = new Booking
-                        {
-                            Id = bookingId,
-                            EventId = eventId,
-                            Status = BookingStatus.Pending,
-                            CreatedAt = DateTime.UtcNow
-                        };
-                    } while (!Booking.TryAdd(bookingId, newBooking));
+                        Id = bookingId,
+                        EventId = eventId,
+                        Status = BookingStatus.Pending,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    // todo: this need async?
+                    _context.Bookings.AddAsync(newBooking);
+                    //} while (!_context.Bookings.Add(newBooking));
                     
                     return newBooking;
                 }
@@ -64,23 +70,23 @@ namespace CSCourse.Services
 
         public IEnumerable<Booking> GetPending()
         {
-            var allBooking = Booking.Values;
-            var pendingBooking = allBooking.Where(x => x.Status == BookingStatus.Pending);
+            var pendingBooking = _context.Bookings.Where(x => x.Status == BookingStatus.Pending);
             return pendingBooking;
         }
 
         public async Task<Booking?> GetBookingByIdAsync(Guid bookingId)
         {
-            if (Booking.TryGetValue(bookingId, out var cached))
-                return cached;
-            return null;
+            return await _context.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId);
         }
         public async Task<Booking?> UpdateProcessedBookingByIdAsync(Guid bookingId, BookingProcessedDto booking)
         {
-            if (Booking.TryGetValue(bookingId, out var cached))
+            var cached = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId);
+            if (cached != null)
             {
                 cached.Status = booking.Status;
                 cached.ProcessedAt = booking.ProcessedAt;
+
+                await _context.SaveChangesAsync();
 
                 return cached;
             }
