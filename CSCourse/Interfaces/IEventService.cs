@@ -201,7 +201,7 @@ namespace CSCourse.Interfaces
         /// <exception cref="InvalidOperationException">Выбрасывается, если мероприятие с указанным ID не найдено.</exception>
         /// <exception cref="ValidationException">Выбрасывается при нарушении правил валидации данных.</exception>
         /// <exception cref="ArgumentNullException">Выбрасывается, если переданный объект <c>event</c> равен <c>null</c>.</exception>
-        void UpdateEvent(Guid id, Event @event);
+        bool UpdateEvent(Guid id, Event @event);
 
         /// <summary>
         /// Полностью обновляет данные существующего мероприятия (асинхронно).
@@ -212,7 +212,7 @@ namespace CSCourse.Interfaces
         /// <exception cref="InvalidOperationException">Выбрасывается, если мероприятие с указанным ID не найдено.</exception>
         /// <exception cref="ValidationException">Выбрасывается при нарушении правил валидации данных.</exception>
         /// <exception cref="ArgumentNullException">Выбрасывается, если переданный объект <c>event</c> равен <c>null</c>.</exception>
-        Task UpdateEventAsync(Guid id, Event @event);
+        Task<bool> UpdateEventAsync(Guid id, Event @event);
 
         /// <summary>
         /// Частично обновляет данные существующего мероприятия, позволяя изменить ключевые поля.
@@ -227,7 +227,7 @@ namespace CSCourse.Interfaces
         /// Альтернативный метод обновления, удобный для сценариев, где не требуется передавать полный объект <see cref="Event"/>.
         /// Позволяет гибко обновлять только необходимые поля.
         /// </remarks>
-        void UpdateEvent(Guid id, string Title, string? Description, DateTime StartAt, DateTime EndAt);
+        bool UpdateEvent(Guid id, string Title, string? Description, DateTime StartAt, DateTime EndAt);
 
         /// <summary>
         /// Частично обновляет данные существующего мероприятия, позволяя изменить ключевые поля (асинхронно).
@@ -242,7 +242,7 @@ namespace CSCourse.Interfaces
         /// Альтернативный метод обновления, удобный для сценариев, где не требуется передавать полный объект <see cref="Event"/>.
         /// Позволяет гибко обновлять только необходимые поля.
         /// </remarks>
-        Task UpdateEventAsync(Guid id, string Title, string? Description, DateTime StartAt, DateTime EndAt);
+        Task<bool> UpdateEventAsync(Guid id, string Title, string? Description, DateTime StartAt, DateTime EndAt);
 
         /// <summary>
         /// Удаляет мероприятие из системы по его уникальному идентификатору.

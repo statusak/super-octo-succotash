@@ -19,8 +19,8 @@ namespace CSCourse.DataAccess.Configurations
             builder.Property(e => e.TotalSeats).IsRequired().HasColumnType("decimal(18,2)");
             builder.Property(e => e.AvailableSeats).IsRequired().HasColumnType("decimal(18,2)");
 
-            builder.Property(e => e.StartAt).IsRequired().HasColumnType("TIMESTAMP");
-            builder.Property(e => e.EndAt).IsRequired().HasColumnType("TIMESTAMP");
+            builder.Property(e => e.StartAt).IsRequired().HasColumnType("timestamp with time zone");
+            builder.Property(e => e.EndAt).IsRequired().HasColumnType("timestamp with time zone");
 
             builder.HasMany(e => e.Bookings).WithOne(b => b.Event).HasForeignKey(b => b.EventId);
         }

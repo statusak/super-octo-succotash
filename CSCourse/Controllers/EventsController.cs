@@ -198,8 +198,12 @@ namespace CSCourse.Controllers
 
             try
             {
-                await _eventService.UpdateEventAsync(index, eventDto.Title, eventDto.Description, eventDto.StartAt, eventDto.EndAt);
-                return NoContent();
+                bool res = await _eventService.UpdateEventAsync(index, eventDto.Title, eventDto.Description, eventDto.StartAt, eventDto.EndAt);
+                if (res)
+                {
+                    return NoContent();
+                } 
+                return NotFound($"Event with index {index} not found");
             }
             catch (InvalidOperationException)
             {
