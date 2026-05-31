@@ -74,6 +74,8 @@ namespace CSCourse.Controllers
                 EndAt = filterEventDto?.EndAt,
             };
 
+            // TODO: Возвращать EventInfoDto, т.к. выводятся все Booking 
+
             return Ok(await _eventService.GetAllAsync(filterEvent, page ?? 1, pageSize ?? 10));
         }
 
@@ -90,13 +92,14 @@ namespace CSCourse.Controllers
         /// GET /Events/308dd020-a855-4e80-b29e-b3582b6de65c
         /// </remarks>
         /// <response code="200">Успешный ответ: информация о мероприятии (HTTP 200 OK)</response>
-        /// <response code="404">Мероприятие с указанным ID не найдено (HTTP 404 Not Found)</response>
+        /// <response code="404">Мероприятие с указанным ID не найдено (HTTP 404 Not Found)</response
         [HttpGet("{index:guid}")]
         public async Task<ActionResult<Event>> GetById(Guid index)
         {
             try
             {
                 var eventItem = await _eventService.GetEventByIdAsync(index);
+                // TODO: Возвращать EventInfoDto, т.к. выводится поле Booking 
                 return Ok(eventItem);
             }
             catch (InvalidOperationException)
@@ -152,6 +155,7 @@ namespace CSCourse.Controllers
             };
 
             @event.Id = await _eventService.CreateEventAsync(@event);
+            // TODO: Возвращать EventInfoDto, т.к. выводится поле Booking 
 
             return CreatedAtAction(
                 actionName: nameof(GetById),
