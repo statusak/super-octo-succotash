@@ -79,6 +79,12 @@ namespace CSCourse.Services
             return pendingBooking;
         }
 
+        public async Task<IEnumerable<Booking>> GetPendingAsync()
+        {
+            var pendingBooking = await _context.Bookings.Where(x => x.Status == BookingStatus.Pending).ToListAsync();
+            return pendingBooking;
+        }
+
         public async Task<Booking?> GetBookingByIdAsync(Guid bookingId)
         {
             return await _context.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId);

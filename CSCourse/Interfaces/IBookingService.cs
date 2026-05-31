@@ -55,6 +55,18 @@ namespace CSCourse.Interfaces
         /// Метод позволяет получить список всех незавершённых бронирований, которые ещё не были обработаны системой.
         /// </remarks>
         IEnumerable<Booking> GetPending();
+
+        /// <summary>
+        /// Возвращает коллекцию всех бронирований со статусом «ожидает обработки» (Pending) (асинхронно).
+        /// </summary>
+        /// <returns>
+        /// Коллекция объектов <see cref="Booking"/>, у которых свойство <see cref="Booking.Status"/>
+        /// имеет значение <see cref="BookingStatus.Pending"/>.
+        /// </returns>
+        /// <remarks>
+        /// Метод позволяет получить список всех незавершённых бронирований, которые ещё не были обработаны системой.
+        /// </remarks>
+        Task<IEnumerable<Booking>> GetPendingAsync();
     }
 
 }
