@@ -47,6 +47,9 @@
         /// </summary>
         public required DateTime EndAt { get; set; }
 
+        /// <summary>
+        /// Навигационное свойство: ссылка на связанные бронирования.
+        /// </summary>
         public List<Booking>? Bookings { get; set; }
 
     }
