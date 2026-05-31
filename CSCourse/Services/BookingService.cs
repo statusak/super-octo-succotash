@@ -10,14 +10,14 @@ namespace CSCourse.Services
         public NoAvailableSeatsException(string message) : base(message) { }
     }
 
-    public class BookingMemoryService : IBookingService
+    public class BookingService : IBookingService
     {
         private readonly IEventService _eventService;
 
         private readonly ConcurrentDictionary<Guid, Booking> Booking = [];
         private readonly object _bookingLock = new();
 
-        public BookingMemoryService(
+        public BookingService(
             IEventService eventService)
         {
             _eventService = eventService;

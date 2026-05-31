@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace CSCourse.Services
 {
-    public class EventMemoryService : IEventService
+    public class EventService : IEventService
     {
         private readonly List<Event> Events = [];
         private readonly object _lockCreateEvent = new object();

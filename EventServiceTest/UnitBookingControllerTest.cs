@@ -9,7 +9,7 @@ namespace EventServiceTest
 {
     public class UnitBookingControllerTest
     {
-        private readonly EventMemoryService _eventService;
+        private readonly EventService _eventService;
         private readonly EventsController _eventsController;
         private readonly BookingsController _bookingsController;
         private readonly BookingBackgroundService _backgroundService;
@@ -17,8 +17,8 @@ namespace EventServiceTest
 
         public UnitBookingControllerTest()
         {
-            _eventService = new EventMemoryService();
-            var bookingService = new BookingMemoryService(_eventService);
+            _eventService = new EventService();
+            var bookingService = new BookingService(_eventService);
             var logger = NullLogger<EventsController>.Instance;
             _eventsController = new EventsController(_eventService, bookingService, logger);
             _bookingsController = new BookingsController(bookingService);

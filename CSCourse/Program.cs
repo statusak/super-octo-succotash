@@ -4,8 +4,8 @@ using CSCourse.Services;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddSingleton<IEventService, EventMemoryService>();
-builder.Services.AddSingleton<IBookingService, BookingMemoryService>();
+builder.Services.AddSingleton<IEventService, EventService>();
+builder.Services.AddSingleton<IBookingService, BookingService>();
 builder.Services.AddHostedService<BookingBackgroundService>();
 
 builder.Services.AddSwaggerGen(options =>

@@ -11,16 +11,16 @@ namespace EventServiceTest
         
         protected override IBookingService CreateBookingService(IEventService eventService)
         {
-            return new BookingMemoryService(eventService);
+            return new BookingService(eventService);
         }
     }
 
     public abstract class BookingServiceTestsBase
     {
-        private readonly EventMemoryService _eventService;
+        private readonly EventService _eventService;
         public BookingServiceTestsBase()
         {
-            _eventService = new EventMemoryService();
+            _eventService = new EventService();
         }
         protected abstract IBookingService CreateBookingService(IEventService eventService);
 
