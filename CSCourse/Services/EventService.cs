@@ -1,4 +1,5 @@
-﻿using CSCourse.Interfaces;
+﻿using CSCourse.DataAccess;
+using CSCourse.Interfaces;
 using CSCourse.Models;
 using System.ComponentModel.DataAnnotations;
 
@@ -6,21 +7,26 @@ namespace CSCourse.Services
 {
     public class EventService : IEventService
     {
-        private readonly List<Event> Events = [];
+        private readonly AppDbContext _context;
         private readonly object _lockCreateEvent = new object();
+
+        public EventService(AppDbContext context)
+        {
+            _context = context;
+        }
 
         public PaginatedResult GetAll(int page, int pageSize)
         {
             return new PaginatedResult
             {
-                CountEvents = Events.Count,
-                Events = Events.Skip((page - 1) * pageSize).Take(pageSize).ToList()
+                CountEvents = _context.Events.Count(),
+                Events = _context.Events.Skip((page - 1) * pageSize).Take(pageSize).ToList()
             }; 
         }
 
         public PaginatedResult GetAll(FilterEvent filterEvent, int page, int pageSize)
         {
-            var filteredEvents = Events.Where(e => e.Title.Contains(filterEvent.Title, StringComparison.CurrentCultureIgnoreCase));
+            var filteredEvents = _context.Events.Where(e => e.Title.Contains(filterEvent.Title, StringComparison.CurrentCultureIgnoreCase));
 
             if (filterEvent.StartAt != null)
             {
@@ -34,26 +40,26 @@ namespace CSCourse.Services
 
             return new PaginatedResult
             {
-                CountEvents = Events.Count,
+                CountEvents = _context.Events.Count(),
                 Events = filteredEvents.Skip((page - 1) * pageSize).Take(pageSize).ToList()
             };
         }
 
         public Event? GetEventById(Guid id)
         {
-            return Events.First(x => x.Id == id);
+            return _context.Events.First(x => x.Id == id);
         }
 
         public bool IsEventExists(Guid id)
         {
-            return Events.Any(x => x.Id == id);
+            return _context.Events.Any(x => x.Id == id);
         }
 
         public bool TryReserveSeats(Guid id, int count = 1)
         {
             lock (_lockCreateEvent)
             {
-                var @event = Events.First(x => x.Id == id);
+                var @event = _context.Events.First(x => x.Id == id);
                 if (@event.AvailableSeats - count < 0) {
                     return false;
                 }
@@ -66,7 +72,7 @@ namespace CSCourse.Services
         {
             lock (_lockCreateEvent)
             {
-                var @event = Events.First(x => x.Id == id);
+                var @event = _context.Events.First(x => x.Id == id);
                 if (@event.AvailableSeats + count > @event.TotalSeats)
                 {
                     return false;
@@ -90,10 +96,10 @@ namespace CSCourse.Services
                 {
                     eventId = Guid.NewGuid();
                 }
-                while (Events.Any(e => e.Id == eventId));
+                while (_context.Events.Any(e => e.Id == eventId));
 
                 @event.Id = eventId;
-                Events.Add(@event);
+                _context.Events.Add(@event);
             }
 
             return eventId;
@@ -101,7 +107,7 @@ namespace CSCourse.Services
 
         public void UpdateEvent(Guid id, Event @event)
         {
-            var @event_old = Events.First(x => x.Id == id);
+            var @event_old = _context.Events.First(x => x.Id == id);
             if (@event_old != null)
             {
                 @event_old.Title = @event.Title;
@@ -113,7 +119,7 @@ namespace CSCourse.Services
 
         public void UpdateEvent(Guid id, string Title, string? Description, DateTime StartAt, DateTime EndAt)
         {
-            var @event_old = Events.First(x => x.Id == id);
+            var @event_old = _context.Events.First(x => x.Id == id);
             if (@event_old != null)
             {
                 @event_old.Title = Title;
@@ -124,9 +130,9 @@ namespace CSCourse.Services
         }
         public void DeleteEvent(Guid id)
         {
-            var @event = Events.First(x => x.Id == id);
+            var @event = _context.Events.First(x => x.Id == id);
             if (@event != null) {
-                Events.Remove(@event);
+                _context.Events.Remove(@event);
             }
         }
     }
