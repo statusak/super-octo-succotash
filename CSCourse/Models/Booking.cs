@@ -72,7 +72,10 @@
         /// </remarks>
         public DateTime? ProcessedAt { get; set; }
 
-        public required Event Event { get; set; }
+        /// <summary>
+        /// Навигационное свойство: ссылка на связанное мероприятие.
+        /// </summary>
+        public Event? Event { get; set; }
 
     }
 }
