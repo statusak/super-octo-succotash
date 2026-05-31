@@ -1,9 +1,11 @@
 ﻿using CSCourse.Controllers;
-using CSCourse.Interfaces;
+using CSCourse.DataAccess;
 using CSCourse.Models;
 using CSCourse.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace EventServiceTest
 {
@@ -11,17 +13,26 @@ namespace EventServiceTest
     {
         private readonly EventService _eventService;
         private readonly EventsController _controller;
+        private readonly AppDbContext _context;
 
         public UnitEventServiceTest()
         {
-            _eventService = new EventService();
-            var bookingService = new BookingService(_eventService);
+            var dbName = Guid.NewGuid().ToString();
+            var services = new ServiceCollection();
+            services.AddDbContext<AppDbContext>(options =>
+                    options.UseInMemoryDatabase(dbName));
+
+            var serviceProvider = services.BuildServiceProvider();
+            _context = serviceProvider.GetRequiredService<AppDbContext>();
+
+            _eventService = new EventService(_context);
+            var bookingService = new BookingService(_eventService, _context);
             var logger = NullLogger<EventsController>.Instance;
             _controller = new EventsController(_eventService, bookingService, logger);
         }
 
         [Fact]
-        public void EventService_CreateEvent_Success()
+        public async Task EventService_CreateEvent_Success()
         {
             var validDto = new EventCreateDto
             {
@@ -32,14 +43,14 @@ namespace EventServiceTest
                 EndAt = DateTime.Now.AddHours(2)
             };
 
-            var result = _controller.Post(validDto).Result as CreatedAtActionResult;
+            var result = (await _controller.Post(validDto)).Result as CreatedAtActionResult;
 
             Assert.NotNull(result);
             Assert.Equal(201, result.StatusCode);
         }
 
         [Fact]
-        public void GetAll_WithValidData_ReturnsOkResultWithPaginatedEvents()
+        public async Task GetAll_WithValidData_ReturnsOkResultWithPaginatedEvents()
         {
             var testEvents = new List<Event>
             {
@@ -71,7 +82,7 @@ namespace EventServiceTest
             }
 
 
-            var actionResult = _controller.GetAll(null, null, null).Result as OkObjectResult;
+            var actionResult = (await _controller.GetAll(null, null, null)).Result as OkObjectResult;
             var actualResult = actionResult?.Value as PaginatedResult;
 
             Assert.NotNull(actionResult);
@@ -90,7 +101,7 @@ namespace EventServiceTest
         }
 
         [Fact]
-        public void GetAll_WithFilter_ReturnsFilteredResults()
+        public async Task GetAll_WithFilter_ReturnsFilteredResults()
         {
             var allEvents = new List<Event>
             {
@@ -127,7 +138,7 @@ namespace EventServiceTest
             };
 
 
-            var actionResult = _controller.GetAll(filterDto, 1, 10).Result as OkObjectResult;
+            var actionResult = (await _controller.GetAll(filterDto, 1, 10)).Result as OkObjectResult;
             var actualResult = actionResult?.Value as PaginatedResult;
 
             Assert.NotNull(actionResult);
@@ -138,7 +149,7 @@ namespace EventServiceTest
         }
 
         [Fact]
-        public void GetAll_WithDateFilter_ReturnsFilteredByDateResults()
+        public async Task GetAll_WithDateFilter_ReturnsFilteredByDateResults()
         {
             var allEvents = new List<Event>
             {
@@ -198,7 +209,7 @@ namespace EventServiceTest
                 EndAt = new DateTime(2026, 12, 1, 12, 0, 0)
             };
 
-            var actionResult = _controller.GetAll(filterDto, 1, 10).Result as OkObjectResult;
+            var actionResult = (await _controller.GetAll(filterDto, 1, 10)).Result as OkObjectResult;
             var actualResult = actionResult?.Value as PaginatedResult;
 
             Assert.NotNull(actionResult);
@@ -220,7 +231,7 @@ namespace EventServiceTest
         }
 
         [Fact]
-        public void GetById_ExistingEvent_ReturnsOkResultWithEvent()
+        public async Task GetById_ExistingEvent_ReturnsOkResultWithEvent()
         {
             var testEvent = new Event
             {
@@ -235,7 +246,7 @@ namespace EventServiceTest
 
             Guid createdId = _eventService.CreateEvent(testEvent);
 
-            var actionResult = _controller.GetById(createdId).Result as OkObjectResult;
+            var actionResult = (await _controller.GetById(createdId)).Result as OkObjectResult;
             var actualEvent = actionResult?.Value as Event;
 
             Assert.NotNull(actionResult);
@@ -250,10 +261,10 @@ namespace EventServiceTest
         }
 
         [Fact]
-        public void GetById_NonExistingEvent_ReturnsNotFound()
+        public async Task GetById_NonExistingEvent_ReturnsNotFound()
         {
             Guid nonExistsGuid = Guid.NewGuid();
-            var actionResult = _controller.GetById(nonExistsGuid).Result as NotFoundObjectResult;
+            var actionResult = (await _controller.GetById(nonExistsGuid)).Result as NotFoundObjectResult;
 
             Assert.NotNull(actionResult);
             Assert.Equal(404, actionResult.StatusCode);
@@ -264,7 +275,7 @@ namespace EventServiceTest
 
 
         [Fact]
-        public void Put_UpdateExistingEvent_ReturnsNoContent()
+        public async Task Put_UpdateExistingEvent_ReturnsNoContent()
         {
             var originalEvent = new Event
             {
@@ -287,7 +298,7 @@ namespace EventServiceTest
                 EndAt = new DateTime(2026, 12, 2, 17, 0, 0)
             };
 
-            var actionResult = _controller.Put(id, updateDto) as NoContentResult;
+            var actionResult = (await _controller.Put(id, updateDto)) as NoContentResult;
 
             Assert.NotNull(actionResult);
             Assert.Equal(204, actionResult.StatusCode);
@@ -302,7 +313,7 @@ namespace EventServiceTest
         }
 
         [Fact]
-        public void Put_UpdateNonExistingEvent_ReturnsNotFound()
+        public async Task Put_UpdateNonExistingEvent_ReturnsNotFound()
         {
             var updateDto = new EventUpdateDto
             {
@@ -314,7 +325,7 @@ namespace EventServiceTest
 
             Guid nonExistsGuid = Guid.NewGuid();
 
-            var actionResult = _controller.Put(nonExistsGuid, updateDto) as NotFoundObjectResult;
+            var actionResult = (await _controller.Put(nonExistsGuid, updateDto)) as NotFoundObjectResult;
 
             Assert.NotNull(actionResult);
             Assert.Equal(404, actionResult.StatusCode);
@@ -324,7 +335,7 @@ namespace EventServiceTest
         }
 
         [Fact]
-        public void Delete_DeleteExistingEvent_ReturnsOk()
+        public async Task Delete_DeleteExistingEvent_ReturnsOk()
         {
             var testEvent = new Event
             {
@@ -339,7 +350,7 @@ namespace EventServiceTest
 
             Guid createdId = _eventService.CreateEvent(testEvent);
 
-            var actionResult = _controller.Delete(createdId) as OkResult;
+            var actionResult = (await _controller.Delete(createdId)) as OkResult;
 
             Assert.NotNull(actionResult);
             Assert.Equal(200, actionResult.StatusCode);
@@ -350,11 +361,11 @@ namespace EventServiceTest
         }
 
         [Fact]
-        public void Delete_DeleteNonExistingEvent_ReturnsNotFound()
+        public async Task Delete_DeleteNonExistingEvent_ReturnsNotFound()
         {
             Guid nonExistsGuid = Guid.NewGuid();
 
-            var actionResult = _controller.Delete(nonExistsGuid) as NotFoundObjectResult;
+            var actionResult = (await _controller.Delete(nonExistsGuid)) as NotFoundObjectResult;
 
             Assert.NotNull(actionResult);
             Assert.Equal(404, actionResult.StatusCode);

@@ -1,6 +1,5 @@
 ﻿using CSCourse.Controllers;
 using CSCourse.DataAccess;
-using CSCourse.Interfaces;
 using CSCourse.Models;
 using CSCourse.Services;
 using Microsoft.AspNetCore.Mvc;
