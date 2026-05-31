@@ -41,6 +41,8 @@
         /// <remarks>
         /// Связывает бронирование с конкретным мероприятием в системе.
         /// </remarks>
+        /// 
+        // TODO: Во Fluent API Указать, что это ForeignKey для EventID
         public required Guid EventId { get; set; }
 
         /// <summary>
@@ -69,5 +71,11 @@
         /// Имеет значение <c>null</c>, если бронирование ещё не обработано (статус <c>Pending</c>).
         /// </remarks>
         public DateTime? ProcessedAt { get; set; }
+
+        /// <summary>
+        /// Навигационное свойство: ссылка на связанное мероприятие.
+        /// </summary>
+        public Event? Event { get; set; }
+
     }
 }

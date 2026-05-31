@@ -5,25 +5,21 @@ namespace CSCourse.Services
 {
     public class BookingBackgroundService : BackgroundService
     {
-        private readonly IBookingService _bookingService;
-        private readonly IEventService _eventService;
+        private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly ILogger<BookingBackgroundService> _logger;
 
         private readonly TimeSpan _periodicTimer;
-
-        private readonly SemaphoreSlim _processingSemaphore = new(1, 1);
+        private const int DefaultPollingIntervalSec = 5;
 
         public BookingBackgroundService(
-            IBookingService bookingService,
-            IEventService eventService,
+            IServiceScopeFactory serviceScopeFactory,
             ILogger<BookingBackgroundService> logger,
             TimeSpan? periodicTimer = null
             )
         {
-            _bookingService = bookingService;
-            _eventService = eventService;
+            _serviceScopeFactory = serviceScopeFactory;
             _logger = logger;
-            _periodicTimer = periodicTimer ?? TimeSpan.FromSeconds(5);
+            _periodicTimer = periodicTimer ?? TimeSpan.FromSeconds(DefaultPollingIntervalSec);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -31,19 +27,25 @@ namespace CSCourse.Services
             _logger.LogInformation("BookingBackgroundService startup");
             using var timer = new PeriodicTimer(_periodicTimer);
 
-            while (true)
+            while (await timer.WaitForNextTickAsync(stoppingToken))
             {
                 try
                 {
-                    while (await timer.WaitForNextTickAsync(stoppingToken))
+                    stoppingToken.ThrowIfCancellationRequested();
+
+                    List<Guid> pendingBookingIds;
+                    using (var scope = _serviceScopeFactory.CreateScope())
                     {
-                        stoppingToken.ThrowIfCancellationRequested();
-                        List<Booking> pendingBookings = _bookingService.GetPending().ToList();
-                        if (pendingBookings.Any())
-                        {
-                            var tasks = pendingBookings.Select(booking => ProcessBookingAsync(booking, stoppingToken));
-                            await Task.WhenAll(tasks);
-                        }
+                        var bookingService = scope.ServiceProvider.GetRequiredService<IBookingService>();
+                        pendingBookingIds = (await bookingService.GetPendingAsync())
+                            .Select(b => b.Id)
+                            .ToList();
+                    }
+
+                    if (pendingBookingIds.Any())
+                    {
+                        var tasks = pendingBookingIds.Select(bookingId => ProcessBookingAsync(bookingId, stoppingToken));
+                        await Task.WhenAll(tasks);
                     }
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -62,44 +64,82 @@ namespace CSCourse.Services
             _logger.LogInformation("BookingBackgroundService stop");
         }
 
-        async Task ProcessBookingAsync(Booking booking, CancellationToken stoppingToken)
+        async Task ProcessBookingAsync(Guid bookingId, CancellationToken stoppingToken)
         {
             await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
-            await _processingSemaphore.WaitAsync(stoppingToken);
 
-            try
+            using(var scope = _serviceScopeFactory.CreateScope())
             {
-                if (!_eventService.IsEventExists(booking.EventId))
-                {
-                    _logger.LogError("EventId {EventId} did not exists", booking.EventId);
-                    await _bookingService.UpdateProcessedBookingByIdAsync(booking.Id, new BookingProcessedDto { Status = BookingStatus.Rejected, ProcessedAt = DateTime.UtcNow });
-                    return;
-                }
+                var bookingService = scope.ServiceProvider.GetRequiredService<IBookingService>();
+                var eventService = scope.ServiceProvider.GetRequiredService<IEventService>();
 
-                _logger.LogInformation(
-                            "Processing bookingId {TaskId} for eventId {EventId}, whitch created at {CreatedAt}",
-                            booking.Id, booking.EventId, booking.CreatedAt);
+                try
+                {
+                    var booking = await bookingService.GetBookingByIdAsync(bookingId);
+                    if (booking == null)
+                    {
+                        _logger.LogError("BookingId {BookingId} did not exists", bookingId);
+                        return;
+                    }
 
-                await _bookingService.UpdateProcessedBookingByIdAsync(booking.Id, new BookingProcessedDto { Status = BookingStatus.Confirmed, ProcessedAt = DateTime.UtcNow });
-                _logger.LogInformation(
-                    "Booking {TaskId} success processed", booking.Id);
-            }
-            catch(Exception e)
-            {
-                _logger.LogError("EventId {EventId} for bookingId {TaskId} while processing have error {error}", booking.EventId, booking.Id, e.Message);
-                await _bookingService.UpdateProcessedBookingByIdAsync(booking.Id, new BookingProcessedDto { Status = BookingStatus.Rejected, ProcessedAt = DateTime.UtcNow });
-                if (_eventService.ReleaseSeats(booking.EventId))
-                {
-                    _logger.LogInformation("EventId {EventId} success release seats for bookingId {TaskId}", booking.EventId, booking.Id);
+                    if(!await eventService.IsEventExistsAsync(booking.EventId))
+                    {
+                        _logger.LogError("EventId {EventId} did not exists", bookingId);
+                        await bookingService.UpdateProcessedBookingByIdAsync(booking.Id, new BookingProcessedDto { Status = BookingStatus.Rejected, ProcessedAt = DateTime.UtcNow });
+                        return;
+                    }
+
+                    _logger.LogInformation(
+                                "Processing bookingId {TaskId} for eventId {EventId}, whitch created at {CreatedAt}",
+                                booking.Id, booking.EventId, booking.CreatedAt);
+
+                    await bookingService.UpdateProcessedBookingByIdAsync(booking.Id, new BookingProcessedDto { Status = BookingStatus.Confirmed, ProcessedAt = DateTime.UtcNow });
+                    _logger.LogInformation(
+                        "Booking {TaskId} success processed", booking.Id);
                 }
-                else
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {
-                    _logger.LogError("EventId {EventId} error release seats for bookingId {TaskId}", booking.EventId, booking.Id);
+                    _logger.LogInformation("BookingBackgroundService catch interrupt");
                 }
-            }
-            finally
-            {
-                _processingSemaphore.Release();
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "Error processing booking {BookingId}", bookingId);
+                    try
+                    {
+                        await bookingService.UpdateProcessedBookingByIdAsync(
+                            bookingId,
+                            new BookingProcessedDto
+                            {
+                                Status = BookingStatus.Rejected,
+                                ProcessedAt = DateTime.UtcNow
+                            });
+
+                        var booking = await bookingService.GetBookingByIdAsync(bookingId);
+                        if (booking == null)
+                        {
+                            _logger.LogError(e, "BookingId {BookingId} did not exists", bookingId);
+                            return;
+                        }
+
+                        if (await eventService.ReleaseSeatsAsync(booking.EventId))
+                        {
+                            _logger.LogInformation(
+                                "EventId {EventId} success release seats for bookingId {BookingId}",
+                                booking.EventId, bookingId);
+                        }
+                        else
+                        {
+                            _logger.LogError(
+                                "EventId {EventId} error release seats for bookingId {BookingId}",
+                                booking.EventId, bookingId);
+                        }
+                    }
+                    catch (Exception updateEx)
+                    {
+                        _logger.LogError(updateEx,
+                            "Failed to update booking {BookingId} status after error", bookingId);
+                    }
+                }
             }
         }
     }

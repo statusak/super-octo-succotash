@@ -46,5 +46,11 @@
         /// Фиксирует момент завершения события; должна быть позже StartAt, валидация выполняется на уровне бизнес-логики.
         /// </summary>
         public required DateTime EndAt { get; set; }
+
+        /// <summary>
+        /// Навигационное свойство: ссылка на связанные бронирования.
+        /// </summary>
+        public List<Booking>? Bookings { get; set; }
+
     }
 }
