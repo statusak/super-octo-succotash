@@ -17,6 +17,7 @@ namespace CSCourse.Services
         private readonly IEventService _eventService;
 
         private readonly AppDbContext _context;
+        private readonly SemaphoreSlim _processingSemaphoreBooking = new(1, 1);
         private readonly object _bookingLock = new();
 
         public BookingService(
@@ -30,11 +31,13 @@ namespace CSCourse.Services
             Guid bookingId;
             Booking newBooking;
             bool canReserveSeats;
-            lock (_bookingLock)
+            // TODO: Здесь было-бы уместно использовать транзакцию
+            await _processingSemaphoreBooking.WaitAsync();
+            try
             {
                 try
                 {
-                    canReserveSeats = _eventService.TryReserveSeats(eventId);
+                    canReserveSeats = await _eventService.TryReserveSeatsAsync(eventId);
                 }
                 catch (InvalidOperationException) 
                 {
@@ -46,8 +49,7 @@ namespace CSCourse.Services
                 }
                 if (canReserveSeats)
                 {
-                    //do
-                    // {
+
                     bookingId = Guid.NewGuid();
                     newBooking = new Booking
                     {
@@ -57,14 +59,17 @@ namespace CSCourse.Services
                         CreatedAt = DateTime.UtcNow
                     };
 
-                    // todo: this need async?
-                    _context.Bookings.AddAsync(newBooking);
-                    //} while (!_context.Bookings.Add(newBooking));
-                    
+                    await _context.Bookings.AddAsync(newBooking);
+                    await _context.SaveChangesAsync();
+
                     return newBooking;
                 }
 
-                throw new NoAvailableSeatsException("No available seats for this event");
+                    throw new NoAvailableSeatsException("No available seats for this event");
+            }
+            finally
+            {
+                _processingSemaphoreBooking.Release();
             }
         }
 

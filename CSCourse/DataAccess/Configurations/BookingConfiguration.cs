@@ -18,8 +18,8 @@ namespace CSCourse.DataAccess.Configurations
 
             builder.Property(b => b.Status).IsRequired().HasConversion<string>();
 
-            builder.Property(b => b.CreatedAt).IsRequired().HasColumnType("TIMESTAMP");
-            builder.Property(b => b.ProcessedAt).HasColumnType("TIMESTAMP");
+            builder.Property(b => b.CreatedAt).IsRequired().HasColumnType("timestamp with time zone");
+            builder.Property(b => b.ProcessedAt).HasColumnType("timestamp with time zone");
 
             builder.HasOne(e => e.Event).WithMany(b => b.Bookings).HasForeignKey(b => b.EventId);
         }
