@@ -97,13 +97,7 @@ namespace CSCourse.Services
         {
             lock (_lockCreateEvent)
             {
-                var @event = _context.Events.First(x => x.Id == id);
-                if (@event.AvailableSeats - count < 0) {
-                    return false;
-                }
-                @event.AvailableSeats -= count;
-                _context.SaveChanges();
-                return true;
+                return _events.TryReserveSeats(id, count);
             }
         }
 
@@ -112,14 +106,7 @@ namespace CSCourse.Services
             await _processingSemaphoreEvent.WaitAsync();
             try
             {
-                var @event = await _context.Events.FirstAsync(x => x.Id == id);
-                if (@event.AvailableSeats - count < 0)
-                {
-                    return false;
-                }
-                @event.AvailableSeats -= count;
-                await _context.SaveChangesAsync();
-                return true;
+                return await _events.TryReserveSeatsAsync(id, count);
             }
             finally
             {
@@ -169,22 +156,7 @@ namespace CSCourse.Services
                 throw new ValidationException("@event.TotalSeats <= 0");
             }
 
-            Guid eventId;
-
-            lock (_lockCreateEvent)
-            {
-                do
-                {
-                    eventId = Guid.NewGuid();
-                }
-                while (_context.Events.Any(e => e.Id == eventId));
-
-                @event.Id = eventId;
-                _context.Events.Add(@event);
-                _context.SaveChanges();
-            }
-
-            return eventId;
+            return _events.Create(@event);
         }
 
         public async Task<Guid> CreateEventAsync(Event @event)

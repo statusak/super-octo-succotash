@@ -13,6 +13,23 @@ public class EventRepository : IEventRepository
         _context = context;
     }
 
+    public Guid Create(Event @event)
+    {
+        @event.Id = Guid.NewGuid();
+        _context.Events.Add(@event);
+
+        try
+        {
+            _context.SaveChanges();
+            return @event.Id;
+        }
+        catch (DbUpdateException)
+        {
+            _context.Entry(@event).State = EntityState.Detached;
+            return Create(@event);
+        }
+    }
+
     public async Task<Guid> CreateAsync(Event @event)
     {
         @event.Id = Guid.NewGuid();
@@ -97,8 +114,6 @@ public class EventRepository : IEventRepository
                 .Take(pageSize)
                 .ToListAsync();
     }
-
-
     public bool IsExists(Guid id)
     {
         return _context.Events.Any(x => x.Id == id);
@@ -107,6 +122,59 @@ public class EventRepository : IEventRepository
     {
         return await _context.Events.AnyAsync(x => x.Id == id);
     }
+
+    public async Task<bool> TryReserveSeatsAsync(Guid id, int count)
+    {
+        // System.Data.IsolationLevel.RepeatableRead needed for using MVCC for prevent Phantom RW 
+        using var transaction = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.RepeatableRead);
+        try
+        {
+            var @event = await _context.Events.FirstAsync(e => e.Id == id);
+            if (@event.AvailableSeats < count)
+            {
+                // RollbackAsync need for release line in DB
+                await transaction.RollbackAsync();
+                return false;
+            }
+
+            @event.AvailableSeats -= count;
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return true;
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    public bool TryReserveSeats(Guid id, int count)
+    {
+        // System.Data.IsolationLevel.RepeatableRead needed for using MVCC for prevent Phantom RW 
+        using var transaction = _context.Database.BeginTransaction(System.Data.IsolationLevel.RepeatableRead);
+        try
+        {
+            var @event = _context.Events.First(e => e.Id == id);
+            if (@event.AvailableSeats < count)
+            {
+                // Rollback need for release line in DB
+                transaction.Rollback();
+                return false;
+            }
+
+            @event.AvailableSeats -= count;
+            _context.SaveChanges();
+            transaction.Commit();
+            return true;
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
+    }
+
 
     public int Count()
     {
