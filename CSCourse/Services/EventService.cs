@@ -9,13 +9,16 @@ namespace CSCourse.Services
     public class EventService : IEventService
     {
         private readonly AppDbContext _context;
+        private readonly IEventRepository _events;
+
         private readonly object _lockCreateEvent = new object();
 
         private readonly SemaphoreSlim _processingSemaphoreEvent = new(1, 1);
 
-        public EventService(AppDbContext context)
+        public EventService(AppDbContext context, IEventRepository events)
         {
             _context = context;
+            _events = events;
         }
 
         public PaginatedResult GetAll(int page, int pageSize)
@@ -222,19 +225,7 @@ namespace CSCourse.Services
                 throw new ValidationException("@event.TotalSeats <= 0");
             }
 
-            @event.Id = Guid.NewGuid();
-            _context.Events.Add(@event);
-
-            try
-            {
-                await _context.SaveChangesAsync();
-                return @event.Id;
-            }
-            catch (DbUpdateException)
-            {
-                _context.Entry(@event).State = EntityState.Detached;
-                return await CreateEventAsync(@event);
-            }
+            return await _events.CreateAsync(@event);
         }
 
         public bool UpdateEvent(Guid id, Event @event)
