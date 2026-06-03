@@ -42,58 +42,34 @@ namespace CSCourse.Services
 
         public PaginatedResult GetAll(FilterEvent filterEvent, int page, int pageSize)
         {
-            var filteredEvents = _context.Events.AsQueryable();
-
-            if (!string.IsNullOrEmpty(filterEvent.Title))
+            FilterRepositoryEventDto filterRepositoryEventDto = new FilterRepositoryEventDto
             {
-                filteredEvents = filteredEvents.Where(e =>
-                    EF.Functions.ILike(e.Title, $"%{filterEvent.Title}%"));
-            }
-
-            if (filterEvent.StartAt != null)
-            {
-                filteredEvents = filteredEvents.Where(e => e.StartAt >= filterEvent.StartAt);
-            }
-
-            if (filterEvent.EndAt != null)
-            {
-                filteredEvents = filteredEvents.Where(e => e.EndAt <= filterEvent.EndAt);
-            }
+                Title = filterEvent.Title,
+                StartAt = filterEvent.StartAt,
+                EndAt = filterEvent.EndAt,
+            };
 
             return new PaginatedResult
             {
-                CountEvents = _context.Events.Count(),
-                Events = filteredEvents.Skip((page - 1) * pageSize).Take(pageSize).ToList()
+                CountEvents = _events.Count(),
+                Events = _events.GetFilteredPage(filterRepositoryEventDto, page, pageSize)
             };
         }
 
         public async Task<PaginatedResult> GetAllAsync(FilterEvent filterEvent, int page, int pageSize)
         {
-            var filteredEvents = _context.Events.AsQueryable();
 
-            if (!string.IsNullOrEmpty(filterEvent.Title))
+            FilterRepositoryEventDto filterRepositoryEventDto = new FilterRepositoryEventDto
             {
-                filteredEvents = filteredEvents.Where(e =>
-                    EF.Functions.ILike(e.Title, $"%{filterEvent.Title}%"));
-            }
-
-            if (filterEvent.StartAt != null)
-            {
-                filteredEvents = filteredEvents.Where(e => e.StartAt >= filterEvent.StartAt);
-            }
-
-            if (filterEvent.EndAt != null)
-            {
-                filteredEvents = filteredEvents.Where(e => e.EndAt <= filterEvent.EndAt);
-            }
-
-            var countEvents = await _context.Events.CountAsync();
-            var events = await filteredEvents.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
-
+                Title = filterEvent.Title,
+                StartAt = filterEvent.StartAt,
+                EndAt = filterEvent.EndAt,
+            };
+           
             return new PaginatedResult
             {
-                CountEvents = countEvents,
-                Events = events
+                CountEvents = await _events.CountAsync(),
+                Events = await _events.GetFilteredPageAsync(filterRepositoryEventDto, page, pageSize)
             };
         }
 
