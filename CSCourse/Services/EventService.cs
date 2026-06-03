@@ -25,24 +25,17 @@ namespace CSCourse.Services
         {
             return new PaginatedResult
             {
-                CountEvents = _context.Events.Count(),
-                Events = _context.Events.Skip((page - 1) * pageSize).Take(pageSize).ToList()
+                CountEvents = _events.Count(),
+                Events = _events.GetPage(page, pageSize)
             }; 
         }
 
         public async Task<PaginatedResult> GetAllAsync(int page, int pageSize)
         {
-            var countEvents = await _context.Events.CountAsync();
-            var events = await _context.Events
-                .AsQueryable()
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
-
             return new PaginatedResult
             {
-                CountEvents = countEvents,
-                Events = events
+                CountEvents = await _events.CountAsync(),
+                Events = await _events.GetPageAsync(page, pageSize)
             };
 
         }

@@ -29,4 +29,25 @@ public class EventRepository : IEventRepository
             return await CreateAsync(@event);
         }
     }
+
+    public List<Event> GetPage(int page, int pageSize)
+    {
+        return _context.Events.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+    }
+    public async Task<List<Event>> GetPageAsync(int page, int pageSize)
+    {
+        return await _context.Events
+                .AsQueryable()
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+    }
+    public int Count()
+    {
+        return _context.Events.Count();
+    }
+    public async Task<int> CountAsync()
+    {
+        return await _context.Events.CountAsync();
+    }
 }
