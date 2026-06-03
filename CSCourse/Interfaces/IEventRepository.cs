@@ -4,11 +4,13 @@ public interface IEventRepository
 {
     Guid Create(Event @event);
     Event GetById(Guid id);
+    // TODO: Может использовать перегрузку методов?
     List<Event> GetFilteredPage(FilterRepositoryEventDto filterEvent, int page, int pageSize);
     List<Event> GetPage(int page, int pageSize);
     bool IsExists(Guid id);
     bool TryReserveSeats(Guid id, int count);
     bool TryReleaseSeats(Guid id, int count);
+    bool Update(EventRepositoryUpdateDto @event);
     int Count();
 
     Task<Guid> CreateAsync(Event @event);
@@ -18,5 +20,6 @@ public interface IEventRepository
     Task<bool> IsExistsAsync(Guid id);
     Task<bool> TryReserveSeatsAsync(Guid id, int count);
     Task<bool> TryReleaseSeatsAsync(Guid id, int count);
+    Task<bool> UpdateAsync(EventRepositoryUpdateDto @event);
     Task<int> CountAsync();
 }

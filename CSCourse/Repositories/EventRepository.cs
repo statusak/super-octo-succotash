@@ -227,6 +227,48 @@ public class EventRepository : IEventRepository
         }
     }
 
+    public bool Update(EventRepositoryUpdateDto @event)
+    {
+        // System.Data.IsolationLevel.RepeatableRead needed for using MVCC for prevent Phantom RW 
+        using var transaction = _context.Database.BeginTransaction(System.Data.IsolationLevel.RepeatableRead);
+        try
+        {
+            var @event_old = _context.Events.First(e => e.Id == @event.Id);
+            if (@event_old != null)
+            {
+                @event_old.Title = @event.Title;
+                @event_old.Description = @event.Description;
+                @event_old.StartAt = @event.StartAt;
+                @event_old.EndAt = @event.EndAt;
+                _context.SaveChanges();
+                transaction.Commit();
+                return true;
+            }
+            // Rollback need for release line in DB
+            transaction.Rollback();
+            return false;
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
+    }
+
+    public async Task<bool> UpdateAsync(EventRepositoryUpdateDto @event)
+    {
+        var rowsAffected = await _context.Events
+            .Where(x => x.Id == @event.Id)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(e => e.Title, e => @event.Title)
+                .SetProperty(e => e.Description, e => @event.Description)
+                .SetProperty(e => e.StartAt, e => @event.StartAt)
+                .SetProperty(e => e.EndAt, e => @event.EndAt)
+        );
+
+        return rowsAffected > 0;
+    }
+
 
     public int Count()
     {

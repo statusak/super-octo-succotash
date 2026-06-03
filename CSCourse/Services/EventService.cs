@@ -157,32 +157,28 @@ namespace CSCourse.Services
 
         public bool UpdateEvent(Guid id, Event @event)
         {
-            var @event_old = _context.Events.First(x => x.Id == id);
-            if (@event_old != null)
+            var eventRepositoryUpdateDto = new EventRepositoryUpdateDto
             {
-                @event_old.Title = @event.Title;
-                @event_old.Description = @event.Description;
-                @event_old.StartAt = @event.StartAt;
-                @event_old.EndAt = @event.EndAt;
-                _context.SaveChanges();
-                return true;
-            }
-            return false;
+                Id = id,
+                Title = @event.Title,
+                Description = @event.Description,
+                StartAt = @event.StartAt,
+                EndAt = @event.EndAt,
+            };
+            return _events.Update(eventRepositoryUpdateDto);
         }
 
         public async Task<bool> UpdateEventAsync(Guid id, Event @event)
         {
-            var rowsAffected = await _context.Events
-                .Where(x => x.Id == id)
-                .ExecuteUpdateAsync(s => s
-                    .SetProperty(e => e.Title, e => @event.Title)
-                    .SetProperty(e => e.Description, e => @event.Description)
-                    .SetProperty(e => e.StartAt, e => @event.StartAt)
-                    .SetProperty(e => e.EndAt, e => @event.EndAt)
-            );
-
-            return rowsAffected > 0;
-
+            var eventRepositoryUpdateDto = new EventRepositoryUpdateDto
+            {
+                Id = id,
+                Title = @event.Title,
+                Description = @event.Description,
+                StartAt = @event.StartAt,
+                EndAt = @event.EndAt,
+            };
+            return await _events.UpdateAsync(eventRepositoryUpdateDto);
         }
 
         public bool UpdateEvent(Guid id, string Title, string? Description, DateTime StartAt, DateTime EndAt)
