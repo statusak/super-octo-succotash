@@ -11,6 +11,7 @@ public interface IEventRepository
     bool TryReserveSeats(Guid id, int count);
     bool TryReleaseSeats(Guid id, int count);
     bool Update(EventRepositoryUpdateDto @event);
+    bool Delete(Guid id);
     int Count();
 
     Task<Guid> CreateAsync(Event @event);
@@ -21,5 +22,7 @@ public interface IEventRepository
     Task<bool> TryReserveSeatsAsync(Guid id, int count);
     Task<bool> TryReleaseSeatsAsync(Guid id, int count);
     Task<bool> UpdateAsync(EventRepositoryUpdateDto @event);
+    Task<bool> DeleteAsync(Guid id);
+
     Task<int> CountAsync();
 }

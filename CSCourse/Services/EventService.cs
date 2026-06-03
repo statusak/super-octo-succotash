@@ -1,23 +1,19 @@
-﻿using CSCourse.DataAccess;
-using CSCourse.Interfaces;
+﻿using CSCourse.Interfaces;
 using CSCourse.Models;
-using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 
 namespace CSCourse.Services
 {
     public class EventService : IEventService
     {
-        private readonly AppDbContext _context;
         private readonly IEventRepository _events;
 
         private readonly object _lockCreateEvent = new object();
 
         private readonly SemaphoreSlim _processingSemaphoreEvent = new(1, 1);
 
-        public EventService(AppDbContext context, IEventRepository events)
+        public EventService(IEventRepository events)
         {
-            _context = context;
             _events = events;
         }
 
@@ -208,21 +204,12 @@ namespace CSCourse.Services
         }
         public void DeleteEvent(Guid id)
         {
-            var @event = _context.Events.First(x => x.Id == id);
-            if (@event != null) {
-                _context.Events.Remove(@event);
-                _context.SaveChanges();
-            }
+            _events.Delete(id);
         }
 
         public async Task DeleteEventAsync(Guid id)
         {
-            var @event = await _context.Events.FirstAsync(x => x.Id == id);
-            if (@event != null)
-            {
-                _context.Events.Remove(@event);
-                await _context.SaveChangesAsync();
-            }
+            await _events.DeleteAsync(id);
         }
     }
 }

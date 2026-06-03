@@ -269,6 +269,56 @@ public class EventRepository : IEventRepository
         return rowsAffected > 0;
     }
 
+    public bool Delete(Guid id)
+    {
+        // System.Data.IsolationLevel.RepeatableRead needed for using MVCC for prevent Phantom RW 
+        using var transaction = _context.Database.BeginTransaction(System.Data.IsolationLevel.RepeatableRead);
+        try
+        {
+            var @event = _context.Events.First(e => e.Id == id);
+            if (@event != null)
+            {
+                _context.Events.Remove(@event);
+                _context.SaveChanges();
+                transaction.Commit();
+                return true;
+            }
+            // Rollback need for release line in DB
+            transaction.Rollback();
+            return false;
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
+    }
+
+    public async Task<bool> DeleteAsync(Guid id)
+    {
+        // System.Data.IsolationLevel.RepeatableRead needed for using MVCC for prevent Phantom RW 
+        using var transaction = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.RepeatableRead);
+        try
+        {
+            var @event = await _context.Events.FirstAsync(e => e.Id == id);
+            if (@event != null)
+            {
+                _context.Events.Remove(@event);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return true;
+            }
+            // Rollback need for release line in DB
+            await transaction.RollbackAsync();
+            return false;
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
 
     public int Count()
     {
