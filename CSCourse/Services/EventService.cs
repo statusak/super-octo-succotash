@@ -85,12 +85,12 @@ namespace CSCourse.Services
 
         public bool IsEventExists(Guid id)
         {
-            return _context.Events.Any(x => x.Id == id);
+            return _events.IsExists(id);
         }
 
         public async Task<bool> IsEventExistsAsync(Guid id)
         {
-            return await _context.Events.AnyAsync(x => x.Id == id);
+            return await _events.IsExistsAsync(id);
         }
 
         public bool TryReserveSeats(Guid id, int count = 1)

@@ -97,6 +97,17 @@ public class EventRepository : IEventRepository
                 .Take(pageSize)
                 .ToListAsync();
     }
+
+
+    public bool IsExists(Guid id)
+    {
+        return _context.Events.Any(x => x.Id == id);
+    }
+    public async Task<bool> IsExistsAsync(Guid id)
+    {
+        return await _context.Events.AnyAsync(x => x.Id == id);
+    }
+
     public int Count()
     {
         return _context.Events.Count();
