@@ -183,31 +183,28 @@ namespace CSCourse.Services
 
         public bool UpdateEvent(Guid id, string Title, string? Description, DateTime StartAt, DateTime EndAt)
         {
-            var @event_old = _context.Events.First(x => x.Id == id);
-            if (@event_old != null)
+            var eventRepositoryUpdateDto = new EventRepositoryUpdateDto
             {
-                @event_old.Title = Title;
-                @event_old.Description = Description;
-                @event_old.StartAt = StartAt;
-                @event_old.EndAt = EndAt;
-                _context.SaveChanges();
-                return true;
-            }
-            return false;
+                Id = id,
+                Title = Title,
+                Description = Description,
+                StartAt = StartAt,
+                EndAt = EndAt,
+            };
+            return _events.Update(eventRepositoryUpdateDto);
         }
 
         public async Task<bool> UpdateEventAsync(Guid id, string Title, string? Description, DateTime StartAt, DateTime EndAt)
         {
-            var rowsAffected = await _context.Events
-                .Where(x => x.Id == id)
-                .ExecuteUpdateAsync(s => s
-                    .SetProperty(e => e.Title, e => Title)
-                    .SetProperty(e => e.Description, e => Description)
-                    .SetProperty(e => e.StartAt, e => StartAt)
-                    .SetProperty(e => e.EndAt, e => EndAt)
-            );
-
-            return rowsAffected > 0;
+            var eventRepositoryUpdateDto = new EventRepositoryUpdateDto
+            {
+                Id = id,
+                Title = Title,
+                Description = Description,
+                StartAt = StartAt,
+                EndAt = EndAt,
+            };
+            return await _events.UpdateAsync(eventRepositoryUpdateDto);
         }
         public void DeleteEvent(Guid id)
         {
