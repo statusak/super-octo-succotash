@@ -30,6 +30,15 @@ public class EventRepository : IEventRepository
         }
     }
 
+    public Event GetById(Guid id)
+    {
+        return _context.Events.First(x => x.Id == id);
+    }
+    public async Task<Event> GetByIdAsync(Guid id)
+    {
+        return await _context.Events.FirstAsync(x => x.Id == id);
+    }
+
     public List<Event> GetFilteredPage(FilterRepositoryEventDto filterEvent, int page, int pageSize)
     {
         var filteredEvents = _context.Events.AsQueryable();

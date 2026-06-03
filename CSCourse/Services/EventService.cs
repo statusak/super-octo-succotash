@@ -75,12 +75,12 @@ namespace CSCourse.Services
 
         public Event? GetEventById(Guid id)
         {
-            return _context.Events.First(x => x.Id == id);
+            return _events.GetById(id);
         }
 
         public async Task<Event?> GetEventByIdAsync(Guid id)
         {
-            return await _context.Events.FirstAsync(x => x.Id == id);
+            return await _events.GetByIdAsync(id);
         }
 
         public bool IsEventExists(Guid id)
