@@ -8,7 +8,7 @@ public interface IEventRepository
     List<Event> GetPage(int page, int pageSize);
     bool IsExists(Guid id);
     bool TryReserveSeats(Guid id, int count);
-
+    bool TryReleaseSeats(Guid id, int count);
     int Count();
 
     Task<Guid> CreateAsync(Event @event);
@@ -17,6 +17,6 @@ public interface IEventRepository
     Task<List<Event>> GetPageAsync(int page, int pageSize);
     Task<bool> IsExistsAsync(Guid id);
     Task<bool> TryReserveSeatsAsync(Guid id, int count);
-
+    Task<bool> TryReleaseSeatsAsync(Guid id, int count);
     Task<int> CountAsync();
 }

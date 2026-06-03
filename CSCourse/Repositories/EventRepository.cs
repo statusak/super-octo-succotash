@@ -175,6 +175,58 @@ public class EventRepository : IEventRepository
         }
     }
 
+    public async Task<bool> TryReleaseSeatsAsync(Guid id, int count)
+    {
+        // System.Data.IsolationLevel.RepeatableRead needed for using MVCC for prevent Phantom RW 
+        using var transaction = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.RepeatableRead);
+        try
+        {
+            var @event = await _context.Events.FirstAsync(e => e.Id == id);
+            if (@event.AvailableSeats + count > @event.TotalSeats)
+            {
+                // RollbackAsync need for release line in DB
+                await transaction.RollbackAsync();
+                return false;
+            }
+
+            @event.AvailableSeats += count;
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return true;
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    public bool TryReleaseSeats(Guid id, int count)
+    {
+        // System.Data.IsolationLevel.RepeatableRead needed for using MVCC for prevent Phantom RW 
+        using var transaction = _context.Database.BeginTransaction(System.Data.IsolationLevel.RepeatableRead);
+        try
+        {
+            var @event = _context.Events.First(e => e.Id == id);
+            if (@event.AvailableSeats + count > @event.TotalSeats)
+            {
+                // Rollback need for release line in DB
+                transaction.Rollback();
+                return false;
+            }
+
+            @event.AvailableSeats += count;
+            _context.SaveChanges();
+            transaction.Commit();
+            return true;
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
+    }
+
 
     public int Count()
     {

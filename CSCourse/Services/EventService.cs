@@ -118,14 +118,7 @@ namespace CSCourse.Services
         {
             lock (_lockCreateEvent)
             {
-                var @event = _context.Events.First(x => x.Id == id);
-                if (@event.AvailableSeats + count > @event.TotalSeats)
-                {
-                    return false;
-                }
-                @event.AvailableSeats += count;
-                _context.SaveChanges();
-                return true;
+                return _events.TryReleaseSeats(id, count);
             }
         }
 
@@ -134,14 +127,7 @@ namespace CSCourse.Services
             await _processingSemaphoreEvent.WaitAsync();
             try
             {
-                var @event = await _context.Events.FirstAsync(x => x.Id == id);
-                if (@event.AvailableSeats + count > @event.TotalSeats)
-                {
-                    return false;
-                }
-                @event.AvailableSeats += count;
-                await _context.SaveChangesAsync();
-                return true;
+                return await _events.TryReleaseSeatsAsync(id, count);
             }
             finally
             {
