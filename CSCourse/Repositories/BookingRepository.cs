@@ -70,4 +70,9 @@ public class BookingRepository : IBookingRepository
         return await _context.Bookings.Where(x => x.Status == BookingStatus.Pending).ToListAsync();
     }
 
+    public async Task<Booking?> GetByIdAsync(Guid id)
+    {
+        return await _context.Bookings.FirstOrDefaultAsync(b => b.Id == id);
+    }
+
 }

@@ -90,7 +90,7 @@ namespace CSCourse.Services
 
         public async Task<Booking?> GetBookingByIdAsync(Guid bookingId)
         {
-            return await _context.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId);
+            return await _bookings.GetByIdAsync(bookingId);
         }
         public async Task<Booking?> UpdateProcessedBookingByIdAsync(Guid bookingId, BookingProcessedDto booking)
         {
