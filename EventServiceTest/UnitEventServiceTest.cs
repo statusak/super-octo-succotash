@@ -374,6 +374,12 @@ namespace EventServiceTest
 
             Guid createdId = _eventService.CreateEvent(testEvent);
 
+
+            var savedEvent = _context.Events.Find(createdId);
+            Assert.NotNull(savedEvent);
+            Assert.Equal("Конференция разработчиков", savedEvent.Title);
+
+
             var actionResult = (await _controller.Delete(createdId)) as OkResult;
 
             Assert.NotNull(actionResult);
