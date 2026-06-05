@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using CSCourse.Repositories;
 
 namespace EventServiceTest
 {
@@ -24,9 +25,11 @@ namespace EventServiceTest
 
             var serviceProvider = services.BuildServiceProvider();
             _context = serviceProvider.GetRequiredService<AppDbContext>();
+            IBookingRepository bookings = new BookingRepository(_context); 
+            IEventRepository events = new EventRepository(_context); 
 
-            _eventService = new EventService(_context);
-            var bookingService = new BookingService(_eventService, _context);
+            _eventService = new EventService(events);
+            var bookingService = new BookingService(_eventService, bookings);
             var logger = NullLogger<EventsController>.Instance;
             _controller = new EventsController(_eventService, bookingService, logger);
         }
