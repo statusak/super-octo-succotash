@@ -7,7 +7,6 @@ public interface IBookingRepository
 
     Task<Guid> CreateAsync(BookingRepositoryCreateDto booking);
     Task<IEnumerable<Booking>> GetPendingAsync();
-
     Task<Booking?> GetByIdAsync(Guid id);
-
+    Task<bool> UpdateAsync(BookingRepositoryUpdateDto booking);
 }

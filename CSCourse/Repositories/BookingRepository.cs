@@ -75,4 +75,16 @@ public class BookingRepository : IBookingRepository
         return await _context.Bookings.FirstOrDefaultAsync(b => b.Id == id);
     }
 
+    public async Task<bool> UpdateAsync(BookingRepositoryUpdateDto booking)
+    {
+        var rowsAffected = await _context.Bookings
+            .Where(x => x.Id == booking.Id)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(b => b.Status, b => booking.Status)
+                .SetProperty(b => b.ProcessedAt, b => booking.ProcessedAt)
+        );
+
+        return rowsAffected > 0;
+    }
+
 }

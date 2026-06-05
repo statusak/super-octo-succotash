@@ -92,19 +92,15 @@ namespace CSCourse.Services
         {
             return await _bookings.GetByIdAsync(bookingId);
         }
-        public async Task<Booking?> UpdateProcessedBookingByIdAsync(Guid bookingId, BookingProcessedDto booking)
+        public async Task<bool> UpdateProcessedBookingByIdAsync(Guid bookingId, BookingProcessedDto booking)
         {
-            var cached = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId);
-            if (cached != null)
+            var bookingsRepositoryUpdateDto = new BookingRepositoryUpdateDto
             {
-                cached.Status = booking.Status;
-                cached.ProcessedAt = booking.ProcessedAt;
-
-                await _context.SaveChangesAsync();
-
-                return cached;
-            }
-            return null;
+                Id = bookingId,
+                Status = booking.Status,
+                ProcessedAt = booking.ProcessedAt,
+            };
+            return await _bookings.UpdateAsync(bookingsRepositoryUpdateDto); 
         }
     }
 }
