@@ -16,20 +16,20 @@ namespace CSCourse.Services
     {
         private readonly IEventService _eventService;
 
-        private readonly AppDbContext _context;
+        private readonly IBookingRepository _bookings;
+
+        // private readonly AppDbContext _context;
         private readonly SemaphoreSlim _processingSemaphoreBooking = new(1, 1);
         private readonly object _bookingLock = new();
 
         public BookingService(
-            IEventService eventService, AppDbContext context)
+            IEventService eventService, IBookingRepository bookings)
         {
             _eventService = eventService;
-            _context = context;
+            _bookings = bookings;
         }
         public async Task<Booking> CreateBookingAsync(Guid eventId)
         {
-            Guid bookingId;
-            Booking newBooking;
             bool canReserveSeats;
             // TODO: Здесь было-бы уместно использовать транзакцию
             await _processingSemaphoreBooking.WaitAsync();
@@ -49,18 +49,22 @@ namespace CSCourse.Services
                 }
                 if (canReserveSeats)
                 {
-
-                    bookingId = Guid.NewGuid();
-                    newBooking = new Booking
+                    var newBookingDto = new BookingRepositoryCreateDto
                     {
-                        Id = bookingId,
                         EventId = eventId,
                         Status = BookingStatus.Pending,
                         CreatedAt = DateTime.UtcNow
                     };
 
-                    await _context.Bookings.AddAsync(newBooking);
-                    await _context.SaveChangesAsync();
+                    Guid bookingId = await _bookings.CreateAsync(newBookingDto);
+
+                    var newBooking = new Booking
+                    {
+                        Id = bookingId, 
+                        EventId = newBookingDto.EventId,
+                        Status = newBookingDto.Status,
+                        CreatedAt = newBookingDto.CreatedAt,
+                    };
 
                     return newBooking;
                 }

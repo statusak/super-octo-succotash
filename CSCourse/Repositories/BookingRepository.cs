@@ -8,9 +8,56 @@ namespace CSCourse.Repositories;
 public class BookingRepository : IBookingRepository
 {
     private readonly AppDbContext _context;
-
     public BookingRepository(AppDbContext context)
     {
         _context = context;
     }
+
+    public Guid Create(BookingRepositoryCreateDto booking)
+    {
+        var newBooking = new Booking {
+            Id = Guid.NewGuid(),
+            EventId = booking.EventId,
+            Status = booking.Status,
+            CreatedAt = booking.CreatedAt,
+            ProcessedAt = booking.ProcessedAt
+        };
+
+        _context.Bookings.Add(newBooking);
+
+        try
+        {
+            _context.SaveChanges();
+            return newBooking.Id;
+        }
+        catch (DbUpdateException)
+        {
+            _context.Entry(newBooking).State = EntityState.Detached;
+            return Create(booking);
+        }
+    }
+    public async Task<Guid> CreateAsync(BookingRepositoryCreateDto booking)
+    {
+        var newBooking = new Booking {
+            Id = Guid.NewGuid(),
+            EventId = booking.EventId,
+            Status = booking.Status,
+            CreatedAt = booking.CreatedAt,
+            ProcessedAt = booking.ProcessedAt
+        };
+
+        _context.Bookings.Add(newBooking);
+
+        try
+        {
+            await _context.SaveChangesAsync();
+            return newBooking.Id;
+        }
+        catch (DbUpdateException)
+        {
+            _context.Entry(newBooking).State = EntityState.Detached;
+            return await CreateAsync(booking);
+        }
+    }
+
 }
