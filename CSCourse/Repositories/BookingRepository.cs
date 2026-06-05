@@ -60,4 +60,14 @@ public class BookingRepository : IBookingRepository
         }
     }
 
+    public IEnumerable<Booking> GetPending()
+    {
+        return _context.Bookings.Where(x => x.Status == BookingStatus.Pending);
+    }
+
+    public async Task<IEnumerable<Booking>> GetPendingAsync()
+    {
+        return await _context.Bookings.Where(x => x.Status == BookingStatus.Pending).ToListAsync();
+    }
+
 }

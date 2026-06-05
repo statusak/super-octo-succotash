@@ -18,7 +18,6 @@ namespace CSCourse.Services
 
         private readonly IBookingRepository _bookings;
 
-        // private readonly AppDbContext _context;
         private readonly SemaphoreSlim _processingSemaphoreBooking = new(1, 1);
         private readonly object _bookingLock = new();
 
@@ -79,13 +78,13 @@ namespace CSCourse.Services
 
         public IEnumerable<Booking> GetPending()
         {
-            var pendingBooking = _context.Bookings.Where(x => x.Status == BookingStatus.Pending);
+            var pendingBooking = _bookings.GetPending();
             return pendingBooking;
         }
 
         public async Task<IEnumerable<Booking>> GetPendingAsync()
         {
-            var pendingBooking = await _context.Bookings.Where(x => x.Status == BookingStatus.Pending).ToListAsync();
+            var pendingBooking = await _bookings.GetPendingAsync();
             return pendingBooking;
         }
 
