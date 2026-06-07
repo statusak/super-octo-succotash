@@ -9,7 +9,7 @@ namespace CSCourse.DataAccess.Configurations
     {
         public void Configure(EntityTypeBuilder<Booking> builder)
         {
-            builder.Metadata.SetTableName("Bookings");
+            builder.Metadata.SetTableName("bookings");
             // https://stackoverflow.com/q/47013752
             builder.Property(b => b.Id).ValueGeneratedNever();
             builder.HasKey(b => b.Id);
