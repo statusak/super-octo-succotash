@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace EventServiceTest
+namespace EventApi.IntegrationTests
 {
     public class UnitBookingControllerTest
     {

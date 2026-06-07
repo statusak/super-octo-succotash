@@ -7,7 +7,7 @@ using CSCourse.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace EventServiceTest
+namespace EventApi.IntegrationTests
 {
     public class BookingMemoryServiceTests : BookingServiceTestsBase
     {

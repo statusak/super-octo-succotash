@@ -1,9 +1,9 @@
 ﻿using CSCourse.Models;
 using System.ComponentModel.DataAnnotations;
 
-namespace EventServiceTest
+namespace EventApi.UnitTests
 {
-    public class UnitValidatorTest
+    public class ValidatorUnitTests
     {
         [Fact]
         public void DateTimeValidator_EndBeforeStart_ReturnsError()
