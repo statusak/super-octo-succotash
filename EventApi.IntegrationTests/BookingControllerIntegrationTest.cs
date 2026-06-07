@@ -8,70 +8,133 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Testcontainers.PostgreSql;
 
-namespace EventApi.IntegrationTests
+namespace EventApi.IntegrationTests;
+public class UnitBookingControllerTest : IAsyncLifetime
 {
-    public class UnitBookingControllerTest
+    private readonly EventService _eventService;
+    private readonly EventsController _eventsController;
+    private readonly BookingsController _bookingsController;
+    private readonly BookingBackgroundService _backgroundService;
+    private readonly AppDbContext _context;
+    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16-alpine").Build();
+    public async ValueTask InitializeAsync()
     {
-        private readonly EventService _eventService;
-        private readonly EventsController _eventsController;
-        private readonly BookingsController _bookingsController;
-        private readonly BookingBackgroundService _backgroundService;
-        private readonly AppDbContext _context;
+        await _postgres.StartAsync();
+    }
+    public async ValueTask DisposeAsync()
+    {
+        await _postgres.DisposeAsync();
+    }
+    private AppDbContext CreateContext()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql(_postgres.GetConnectionString())
+            .Options;
 
-        const int _backgroundServiceProcessingDelaySec = 2;
+        var context = new AppDbContext(options);
+        context.Database.EnsureCreated();
+        return context;
+    }
+    private async Task ResetDatabaseAsync()
+    {
+        await using var context = CreateContext();
+        await context.Database.ExecuteSqlRawAsync(
+            "TRUNCATE TABLE events, bookings RESTART IDENTITY CASCADE");
+    }
+    const int _backgroundServiceProcessingDelaySec = 2;
 
-        public UnitBookingControllerTest()
+    public UnitBookingControllerTest()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var services = new ServiceCollection();
+        services.AddDbContext<AppDbContext>(options =>
+                CreateContext());
+
+        services.AddScoped<IBookingService, BookingService>();
+        services.AddScoped<IEventService, EventService>();
+
+        var serviceProvider = services.BuildServiceProvider();
+
+        _context = serviceProvider.GetRequiredService<AppDbContext>();
+        IBookingRepository bookings = new BookingRepository(_context); 
+        IEventRepository events = new EventRepository(_context); 
+
+        _eventService = new EventService(events);
+        var bookingService = new BookingService(_eventService, bookings);
+        var logger = NullLogger<EventsController>.Instance;
+        _eventsController = new EventsController(_eventService, bookingService, logger);
+        _bookingsController = new BookingsController(bookingService);
+
+        var backgroundLogger = NullLogger<BookingBackgroundService>.Instance;
+        _backgroundService = new BookingBackgroundService(
+            serviceProvider.GetRequiredService<IServiceScopeFactory>(),
+            backgroundLogger,
+            TimeSpan.FromSeconds(_backgroundServiceProcessingDelaySec)
+        );
+    }
+
+    [Fact]
+    public async Task BookingController_CreateBooking_Success()
+    {
+        await ResetDatabaseAsync();
+        
+        var validDto = new EventCreateDto
         {
-            var dbName = Guid.NewGuid().ToString();
-            var services = new ServiceCollection();
-            services.AddDbContext<AppDbContext>(options =>
-                    options.UseInMemoryDatabase(dbName));
+            Title = "Тестовая конференция",
+            Description = "Описание мероприятия",
+            TotalSeats = 100,
+            StartAt = DateTime.Now.AddHours(1),
+            EndAt = DateTime.Now.AddHours(2)
+        };
 
-            services.AddScoped<IBookingService, BookingService>();
-            services.AddScoped<IEventService, EventService>();
+        var actionResult = await _eventsController.Post(validDto);
+        var resultCreateEvent = actionResult.Result as CreatedAtActionResult;
 
-            var serviceProvider = services.BuildServiceProvider();
+        Assert.NotNull(resultCreateEvent);
+        Assert.Equal(201, resultCreateEvent.StatusCode);
 
-            _context = serviceProvider.GetRequiredService<AppDbContext>();
-            IBookingRepository bookings = new BookingRepository(_context); 
-            IEventRepository events = new EventRepository(_context); 
+        var @event = resultCreateEvent.Value as Event;
+        Assert.NotNull(@event);
 
-            _eventService = new EventService(events);
-            var bookingService = new BookingService(_eventService, bookings);
-            var logger = NullLogger<EventsController>.Instance;
-            _eventsController = new EventsController(_eventService, bookingService, logger);
-            _bookingsController = new BookingsController(bookingService);
+        var resultCreateBooking = (await _eventsController.CreateBooking(@event.Id)) as AcceptedAtActionResult;
 
-            var backgroundLogger = NullLogger<BookingBackgroundService>.Instance;
-            _backgroundService = new BookingBackgroundService(
-                serviceProvider.GetRequiredService<IServiceScopeFactory>(),
-                backgroundLogger,
-                TimeSpan.FromSeconds(_backgroundServiceProcessingDelaySec)
-            );
-        }
+        Assert.NotNull(resultCreateBooking);
+        Assert.Equal(202, resultCreateBooking.StatusCode);
 
-        [Fact]
-        public async Task BookingController_CreateBooking_Success()
+        var booking = resultCreateBooking.Value as BookingResponseDto;
+        Assert.NotNull(booking);
+        Assert.Equal(BookingStatus.Pending, booking.Status);
+        Assert.Equal(@event.Id, booking.EventId);
+    }
+
+    [Fact]
+    public async Task BookingController_CreateMultiplyBooking_Success()
+    {
+        await ResetDatabaseAsync();
+        
+        var validDto = new EventCreateDto
         {
-            var validDto = new EventCreateDto
-            {
-                Title = "Тестовая конференция",
-                Description = "Описание мероприятия",
-                TotalSeats = 100,
-                StartAt = DateTime.Now.AddHours(1),
-                EndAt = DateTime.Now.AddHours(2)
-            };
+            Title = "Тестовая конференция",
+            Description = "Описание мероприятия",
+            TotalSeats = 100,
+            StartAt = DateTime.Now.AddHours(1),
+            EndAt = DateTime.Now.AddHours(2)
+        };
 
-            var actionResult = await _eventsController.Post(validDto);
-            var resultCreateEvent = actionResult.Result as CreatedAtActionResult;
+        var resultCreateEvent = (await _eventsController.Post(validDto)).Result as CreatedAtActionResult;
 
-            Assert.NotNull(resultCreateEvent);
-            Assert.Equal(201, resultCreateEvent.StatusCode);
+        Assert.NotNull(resultCreateEvent);
+        Assert.Equal(201, resultCreateEvent.StatusCode);
 
-            var @event = resultCreateEvent.Value as Event;
-            Assert.NotNull(@event);
+        var @event = resultCreateEvent.Value as Event;
+        Assert.NotNull(@event);
 
+        List<Guid> CreatedBookings = [];
+
+        for (int i = 0; i < 10; i++)
+        {
             var resultCreateBooking = (await _eventsController.CreateBooking(@event.Id)) as AcceptedAtActionResult;
 
             Assert.NotNull(resultCreateBooking);
@@ -81,202 +144,176 @@ namespace EventApi.IntegrationTests
             Assert.NotNull(booking);
             Assert.Equal(BookingStatus.Pending, booking.Status);
             Assert.Equal(@event.Id, booking.EventId);
+            Assert.DoesNotContain(booking.Id, CreatedBookings);
+            CreatedBookings.Add(booking.Id);
         }
+    }
 
-        [Fact]
-        public async Task BookingController_CreateMultiplyBooking_Success()
+    [Fact]
+    public async Task BookingController_CheckInfoBooking_Success()
+    {
+        await ResetDatabaseAsync();
+        
+        var validDto = new EventCreateDto
         {
-            var validDto = new EventCreateDto
-            {
-                Title = "Тестовая конференция",
-                Description = "Описание мероприятия",
-                TotalSeats = 100,
-                StartAt = DateTime.Now.AddHours(1),
-                EndAt = DateTime.Now.AddHours(2)
-            };
+            Title = "Тестовая конференция",
+            Description = "Описание мероприятия",
+            TotalSeats = 100,
+            StartAt = DateTime.Now.AddHours(1),
+            EndAt = DateTime.Now.AddHours(2)
+        };
 
-            var resultCreateEvent = (await _eventsController.Post(validDto)).Result as CreatedAtActionResult;
+        var resultCreateEvent = (await _eventsController.Post(validDto)).Result as CreatedAtActionResult;
 
-            Assert.NotNull(resultCreateEvent);
-            Assert.Equal(201, resultCreateEvent.StatusCode);
+        Assert.NotNull(resultCreateEvent);
+        Assert.Equal(201, resultCreateEvent.StatusCode);
 
-            var @event = resultCreateEvent.Value as Event;
-            Assert.NotNull(@event);
+        var @event = resultCreateEvent.Value as Event;
+        Assert.NotNull(@event);
 
-            List<Guid> CreatedBookings = [];
+        var resultCreateBooking = (await _eventsController.CreateBooking(@event.Id)) as AcceptedAtActionResult;
 
-            for (int i = 0; i < 10; i++)
-            {
-                var resultCreateBooking = (await _eventsController.CreateBooking(@event.Id)) as AcceptedAtActionResult;
+        Assert.NotNull(resultCreateBooking);
+        Assert.Equal(202, resultCreateBooking.StatusCode);
 
-                Assert.NotNull(resultCreateBooking);
-                Assert.Equal(202, resultCreateBooking.StatusCode);
+        var bookingCreate = resultCreateBooking.Value as BookingResponseDto;
+        Assert.NotNull(bookingCreate);
+        Assert.Equal(BookingStatus.Pending, bookingCreate.Status);
+        Assert.Equal(@event.Id, bookingCreate.EventId);
 
-                var booking = resultCreateBooking.Value as BookingResponseDto;
-                Assert.NotNull(booking);
-                Assert.Equal(BookingStatus.Pending, booking.Status);
-                Assert.Equal(@event.Id, booking.EventId);
-                Assert.DoesNotContain(booking.Id, CreatedBookings);
-                CreatedBookings.Add(booking.Id);
-            }
-        }
+        var resultInfoBooking = (await _bookingsController.GetById(bookingCreate.Id)) as OkObjectResult;
 
-        [Fact]
-        public async Task BookingController_CheckInfoBooking_Success()
+        Assert.NotNull(resultInfoBooking);
+        Assert.Equal(200, resultInfoBooking.StatusCode);
+
+        var bookingInfo = resultInfoBooking.Value as BookingResponseDto;
+        Assert.NotNull(bookingInfo);
+        Assert.Equal(bookingCreate.Id, bookingInfo.Id);
+        Assert.Equal(bookingCreate.EventId, bookingInfo.EventId);
+        Assert.Equal(bookingCreate.Status, bookingInfo.Status);
+        Assert.Equal(bookingCreate.CreatedAt, bookingInfo.CreatedAt);
+    }
+
+    [Fact]
+    public async Task BookingController_CheckInfoAfterProcessingBooking_Success()
+    {
+        await ResetDatabaseAsync();
+        
+        var validDto = new EventCreateDto
         {
-            var validDto = new EventCreateDto
-            {
-                Title = "Тестовая конференция",
-                Description = "Описание мероприятия",
-                TotalSeats = 100,
-                StartAt = DateTime.Now.AddHours(1),
-                EndAt = DateTime.Now.AddHours(2)
-            };
+            Title = "Тестовая конференция",
+            Description = "Описание мероприятия",
+            TotalSeats = 100,
+            StartAt = DateTime.Now.AddHours(1),
+            EndAt = DateTime.Now.AddHours(2)
+        };
 
-            var resultCreateEvent = (await _eventsController.Post(validDto)).Result as CreatedAtActionResult;
+        var resultCreateEvent = (await _eventsController.Post(validDto)).Result as CreatedAtActionResult;
 
-            Assert.NotNull(resultCreateEvent);
-            Assert.Equal(201, resultCreateEvent.StatusCode);
+        Assert.NotNull(resultCreateEvent);
+        Assert.Equal(201, resultCreateEvent.StatusCode);
 
-            var @event = resultCreateEvent.Value as Event;
-            Assert.NotNull(@event);
+        var @event = resultCreateEvent.Value as Event;
+        Assert.NotNull(@event);
 
-            var resultCreateBooking = (await _eventsController.CreateBooking(@event.Id)) as AcceptedAtActionResult;
+        var resultCreateBooking = (await _eventsController.CreateBooking(@event.Id)) as AcceptedAtActionResult;
 
-            Assert.NotNull(resultCreateBooking);
-            Assert.Equal(202, resultCreateBooking.StatusCode);
+        Assert.NotNull(resultCreateBooking);
+        Assert.Equal(202, resultCreateBooking.StatusCode);
 
-            var bookingCreate = resultCreateBooking.Value as BookingResponseDto;
-            Assert.NotNull(bookingCreate);
-            Assert.Equal(BookingStatus.Pending, bookingCreate.Status);
-            Assert.Equal(@event.Id, bookingCreate.EventId);
+        var bookingCreate = resultCreateBooking.Value as BookingResponseDto;
+        Assert.NotNull(bookingCreate);
+        Assert.Equal(BookingStatus.Pending, bookingCreate.Status);
+        Assert.Equal(@event.Id, bookingCreate.EventId);
 
-            var resultInfoBooking = (await _bookingsController.GetById(bookingCreate.Id)) as OkObjectResult;
+        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await _backgroundService.StartAsync(cts.Token);
+        await Task.Delay(5000, TestContext.Current.CancellationToken);
+        await _backgroundService.StopAsync(cts.Token);
 
-            Assert.NotNull(resultInfoBooking);
-            Assert.Equal(200, resultInfoBooking.StatusCode);
 
-            var bookingInfo = resultInfoBooking.Value as BookingResponseDto;
-            Assert.NotNull(bookingInfo);
-            Assert.Equal(bookingCreate.Id, bookingInfo.Id);
-            Assert.Equal(bookingCreate.EventId, bookingInfo.EventId);
-            Assert.Equal(bookingCreate.Status, bookingInfo.Status);
-            Assert.Equal(bookingCreate.CreatedAt, bookingInfo.CreatedAt);
-        }
+        // Принудительно обновляем состояние брони в контексте контроллера
+        var bookingEntity = _context.Bookings.Find(bookingCreate.Id);
+        Assert.NotNull(bookingEntity);
+        _context.Entry(bookingEntity).Reload();
 
-        [Fact]
-        public async Task BookingController_CheckInfoAfterProcessingBooking_Success()
+        var resultInfoBooking = (await _bookingsController.GetById(bookingCreate.Id)) as OkObjectResult;
+
+        Assert.NotNull(resultInfoBooking);
+        Assert.Equal(200, resultInfoBooking.StatusCode);
+
+        var bookingInfo = resultInfoBooking.Value as BookingResponseDto;
+        Assert.NotNull(bookingInfo);
+        Assert.Equal(BookingStatus.Confirmed, bookingInfo.Status);
+        Assert.Equal(@event.Id, bookingCreate.EventId);
+        Assert.Equal(bookingCreate.CreatedAt, bookingInfo.CreatedAt);
+        Assert.True(bookingInfo.ProcessedAt >= bookingCreate.CreatedAt);
+    }
+
+    [Fact]
+    public async Task BookingController_CreateBookingForNotExistsEvent_ReturnsNotFound()
+    {
+        await ResetDatabaseAsync();
+        
+        var actionResult = (await _eventsController.CreateBooking(Guid.Empty)) as NotFoundObjectResult;
+
+        Assert.NotNull(actionResult);
+        Assert.Equal(404, actionResult.StatusCode);
+
+        Assert.NotNull(actionResult.Value);
+        Assert.Contains($"Event with index {Guid.Empty} not found", actionResult.Value.ToString());
+    }
+
+    [Fact]
+    public async Task BookingController_CreateBookingForDeletedEvent_ReturnsNotFound()
+    {
+        await ResetDatabaseAsync();
+        
+        var validDto = new EventCreateDto
         {
-            var validDto = new EventCreateDto
-            {
-                Title = "Тестовая конференция",
-                Description = "Описание мероприятия",
-                TotalSeats = 100,
-                StartAt = DateTime.Now.AddHours(1),
-                EndAt = DateTime.Now.AddHours(2)
-            };
+            Title = "Тестовая конференция",
+            Description = "Описание мероприятия",
+            TotalSeats = 100,
+            StartAt = DateTime.Now.AddHours(1),
+            EndAt = DateTime.Now.AddHours(2)
+        };
 
-            var resultCreateEvent = (await _eventsController.Post(validDto)).Result as CreatedAtActionResult;
+        var resultCreateEvent = (await _eventsController.Post(validDto)).Result as CreatedAtActionResult;
 
-            Assert.NotNull(resultCreateEvent);
-            Assert.Equal(201, resultCreateEvent.StatusCode);
+        Assert.NotNull(resultCreateEvent);
+        Assert.Equal(201, resultCreateEvent.StatusCode);
 
-            var @event = resultCreateEvent.Value as Event;
-            Assert.NotNull(@event);
+        var @event = resultCreateEvent.Value as Event;
+        Assert.NotNull(@event);
 
-            var resultCreateBooking = (await _eventsController.CreateBooking(@event.Id)) as AcceptedAtActionResult;
+        var actionResult = (await _eventsController.Delete(@event.Id)) as OkResult;
 
-            Assert.NotNull(resultCreateBooking);
-            Assert.Equal(202, resultCreateBooking.StatusCode);
+        Assert.NotNull(actionResult);
+        Assert.Equal(200, actionResult.StatusCode);
 
-            var bookingCreate = resultCreateBooking.Value as BookingResponseDto;
-            Assert.NotNull(bookingCreate);
-            Assert.Equal(BookingStatus.Pending, bookingCreate.Status);
-            Assert.Equal(@event.Id, bookingCreate.EventId);
+        var allEvents = _eventService.GetAll(1, int.MaxValue).Events;
+        Assert.Empty(allEvents);
 
-            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            await _backgroundService.StartAsync(cts.Token);
-            await Task.Delay(5000, TestContext.Current.CancellationToken);
-            await _backgroundService.StopAsync(cts.Token);
+        var actionResultCreateBooking = (await _eventsController.CreateBooking(Guid.Empty)) as NotFoundObjectResult;
 
+        Assert.NotNull(actionResultCreateBooking);
+        Assert.Equal(404, actionResultCreateBooking.StatusCode);
 
-            // Принудительно обновляем состояние брони в контексте контроллера
-            var bookingEntity = _context.Bookings.Find(bookingCreate.Id);
-            Assert.NotNull(bookingEntity);
-            _context.Entry(bookingEntity).Reload();
+        Assert.NotNull(actionResultCreateBooking.Value);
+        Assert.Contains($"Event with index {Guid.Empty} not found", actionResultCreateBooking.Value.ToString());
+    }
 
-            var resultInfoBooking = (await _bookingsController.GetById(bookingCreate.Id)) as OkObjectResult;
+    [Fact]
+    public async Task BookingController_CheckInfoDontExistsBooking_ReturnsNotFound()
+    {
+        await ResetDatabaseAsync();
+        
+        var actionResult = (await _bookingsController.GetById(Guid.Empty)) as NotFoundObjectResult;
 
-            Assert.NotNull(resultInfoBooking);
-            Assert.Equal(200, resultInfoBooking.StatusCode);
+        Assert.NotNull(actionResult);
+        Assert.Equal(404, actionResult.StatusCode);
 
-            var bookingInfo = resultInfoBooking.Value as BookingResponseDto;
-            Assert.NotNull(bookingInfo);
-            Assert.Equal(BookingStatus.Confirmed, bookingInfo.Status);
-            Assert.Equal(@event.Id, bookingCreate.EventId);
-            Assert.Equal(bookingCreate.CreatedAt, bookingInfo.CreatedAt);
-            Assert.True(bookingInfo.ProcessedAt >= bookingCreate.CreatedAt);
-        }
-
-        [Fact]
-        public async Task BookingController_CreateBookingForNotExistsEvent_ReturnsNotFound()
-        {
-            var actionResult = (await _eventsController.CreateBooking(Guid.Empty)) as NotFoundObjectResult;
-
-            Assert.NotNull(actionResult);
-            Assert.Equal(404, actionResult.StatusCode);
-
-            Assert.NotNull(actionResult.Value);
-            Assert.Contains($"Event with index {Guid.Empty} not found", actionResult.Value.ToString());
-        }
-
-        [Fact]
-        public async Task BookingController_CreateBookingForDeletedEvent_ReturnsNotFound()
-        {
-            var validDto = new EventCreateDto
-            {
-                Title = "Тестовая конференция",
-                Description = "Описание мероприятия",
-                TotalSeats = 100,
-                StartAt = DateTime.Now.AddHours(1),
-                EndAt = DateTime.Now.AddHours(2)
-            };
-
-            var resultCreateEvent = (await _eventsController.Post(validDto)).Result as CreatedAtActionResult;
-
-            Assert.NotNull(resultCreateEvent);
-            Assert.Equal(201, resultCreateEvent.StatusCode);
-
-            var @event = resultCreateEvent.Value as Event;
-            Assert.NotNull(@event);
-
-            var actionResult = (await _eventsController.Delete(@event.Id)) as OkResult;
-
-            Assert.NotNull(actionResult);
-            Assert.Equal(200, actionResult.StatusCode);
-
-            var allEvents = _eventService.GetAll(1, int.MaxValue).Events;
-            Assert.Empty(allEvents);
-
-            var actionResultCreateBooking = (await _eventsController.CreateBooking(Guid.Empty)) as NotFoundObjectResult;
-
-            Assert.NotNull(actionResultCreateBooking);
-            Assert.Equal(404, actionResultCreateBooking.StatusCode);
-
-            Assert.NotNull(actionResultCreateBooking.Value);
-            Assert.Contains($"Event with index {Guid.Empty} not found", actionResultCreateBooking.Value.ToString());
-        }
-
-        [Fact]
-        public async Task BookingController_CheckInfoDontExistsBooking_ReturnsNotFound()
-        {
-            var actionResult = (await _bookingsController.GetById(Guid.Empty)) as NotFoundObjectResult;
-
-            Assert.NotNull(actionResult);
-            Assert.Equal(404, actionResult.StatusCode);
-
-            Assert.NotNull(actionResult.Value);
-            Assert.Contains($"Booking with index {Guid.Empty} not found", actionResult.Value.ToString());
-        }
+        Assert.NotNull(actionResult.Value);
+        Assert.Contains($"Booking with index {Guid.Empty} not found", actionResult.Value.ToString());
     }
 }
