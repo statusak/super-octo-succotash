@@ -8,295 +8,293 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using CSCourse.Repositories;
 
-namespace EventApi.UnitTests
+namespace EventApi.UnitTests;
+public class EventServiceUnitTests
 {
-    public class EventServiceUnitTests
+    private readonly EventService _eventService;
+    private readonly EventsController _controller;
+    private readonly AppDbContext _context;
+
+    public EventServiceUnitTests()
     {
-        private readonly EventService _eventService;
-        private readonly EventsController _controller;
-        private readonly AppDbContext _context;
+        var dbName = Guid.NewGuid().ToString();
+        var services = new ServiceCollection();
+        services.AddDbContext<AppDbContext>(options =>
+                options.UseInMemoryDatabase(dbName));
 
-        public EventServiceUnitTests()
+        var serviceProvider = services.BuildServiceProvider();
+        _context = serviceProvider.GetRequiredService<AppDbContext>();
+        IBookingRepository bookings = new BookingRepository(_context); 
+        IEventRepository events = new EventRepository(_context); 
+
+        _eventService = new EventService(events);
+        var bookingService = new BookingService(_eventService, bookings);
+        var logger = NullLogger<EventsController>.Instance;
+        _controller = new EventsController(_eventService, bookingService, logger);
+    }
+
+    [Fact]
+    public async Task EventService_CreateEvent_Success()
+    {
+        var validDto = new EventCreateDto
         {
-            var dbName = Guid.NewGuid().ToString();
-            var services = new ServiceCollection();
-            services.AddDbContext<AppDbContext>(options =>
-                    options.UseInMemoryDatabase(dbName));
+            Title = "Тестовая конференция",
+            Description = "Описание мероприятия",
+            TotalSeats = 100,
+            StartAt = DateTime.Now.AddHours(1),
+            EndAt = DateTime.Now.AddHours(2)
+        };
 
-            var serviceProvider = services.BuildServiceProvider();
-            _context = serviceProvider.GetRequiredService<AppDbContext>();
-            IBookingRepository bookings = new BookingRepository(_context); 
-            IEventRepository events = new EventRepository(_context); 
+        var result = (await _controller.Post(validDto)).Result as CreatedAtActionResult;
 
-            _eventService = new EventService(events);
-            var bookingService = new BookingService(_eventService, bookings);
-            var logger = NullLogger<EventsController>.Instance;
-            _controller = new EventsController(_eventService, bookingService, logger);
-        }
+        Assert.NotNull(result);
+        Assert.Equal(201, result.StatusCode);
+    }
 
-        [Fact]
-        public async Task EventService_CreateEvent_Success()
+    [Fact]
+    public async Task GetAll_WithValidData_ReturnsOkResultWithPaginatedEvents()
+    {
+        var testEvents = new List<Event>
         {
-            var validDto = new EventCreateDto
+            new Event
             {
-                Title = "Тестовая конференция",
-                Description = "Описание мероприятия",
+                Id = Guid.NewGuid(),
+                Title = "Конференция разработчиков",
+                Description = "Ежегодная конференция...",
                 TotalSeats = 100,
-                StartAt = DateTime.Now.AddHours(1),
-                EndAt = DateTime.Now.AddHours(2)
-            };
+                AvailableSeats = 100,
+                StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
+                EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
+            },
+            new Event
+            {
+                Id = Guid.NewGuid(),
+                Title = "Митап по C#",
+                Description = "Обсуждение новых возможностей языка",
+                TotalSeats = 100,
+                AvailableSeats = 100,
+                StartAt = new DateTime(2026, 12, 5, 14, 0, 0),
+                EndAt = new DateTime(2026, 12, 5, 17, 0, 0)
+            }
+        };
 
-            var result = (await _controller.Post(validDto)).Result as CreatedAtActionResult;
-
-            Assert.NotNull(result);
-            Assert.Equal(201, result.StatusCode);
+        foreach (var @event in testEvents)
+        {
+            _eventService.CreateEvent(@event);
         }
 
-        [Fact]
-        public async Task GetAll_WithValidData_ReturnsOkResultWithPaginatedEvents()
+
+        var actionResult = (await _controller.GetAll(null, null, null)).Result as OkObjectResult;
+        var actualResult = actionResult?.Value as PaginatedResult;
+
+        Assert.NotNull(actionResult);
+        Assert.Equal(200, actionResult.StatusCode);
+        Assert.NotNull(actualResult);
+        Assert.Equal(testEvents.Count, actualResult.CountEvents);
+        Assert.Equal(testEvents.Count, actualResult.Events.Count);
+
+        for (int i = 0; i < testEvents.Count; i++)
         {
-            var testEvents = new List<Event>
-            {
-                new Event
-                {
-                    Id = Guid.NewGuid(),
-                    Title = "Конференция разработчиков",
-                    Description = "Ежегодная конференция...",
-                    TotalSeats = 100,
-                    AvailableSeats = 100,
-                    StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
-                    EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
-                },
-                new Event
-                {
-                    Id = Guid.NewGuid(),
-                    Title = "Митап по C#",
-                    Description = "Обсуждение новых возможностей языка",
-                    TotalSeats = 100,
-                    AvailableSeats = 100,
-                    StartAt = new DateTime(2026, 12, 5, 14, 0, 0),
-                    EndAt = new DateTime(2026, 12, 5, 17, 0, 0)
-                }
-            };
-
-            foreach (var @event in testEvents)
-            {
-                _eventService.CreateEvent(@event);
-            }
-
-
-            var actionResult = (await _controller.GetAll(null, null, null)).Result as OkObjectResult;
-            var actualResult = actionResult?.Value as PaginatedResult;
-
-            Assert.NotNull(actionResult);
-            Assert.Equal(200, actionResult.StatusCode);
-            Assert.NotNull(actualResult);
-            Assert.Equal(testEvents.Count, actualResult.CountEvents);
-            Assert.Equal(testEvents.Count, actualResult.Events.Count);
-
-            for (int i = 0; i < testEvents.Count; i++)
-            {
-                Assert.Equal(testEvents[i].Id, actualResult.Events[i].Id);
-                Assert.Equal(testEvents[i].Title, actualResult.Events[i].Title);
-                Assert.Equal(testEvents[i].StartAt, actualResult.Events[i].StartAt);
-                Assert.Equal(testEvents[i].EndAt, actualResult.Events[i].EndAt);
-            }
+            Assert.Equal(testEvents[i].Id, actualResult.Events[i].Id);
+            Assert.Equal(testEvents[i].Title, actualResult.Events[i].Title);
+            Assert.Equal(testEvents[i].StartAt, actualResult.Events[i].StartAt);
+            Assert.Equal(testEvents[i].EndAt, actualResult.Events[i].EndAt);
         }
+    }
 
-        [Fact]
-        public async Task GetAll_WithDateFilter_ReturnsFilteredByDateResults()
+    [Fact]
+    public async Task GetAll_WithDateFilter_ReturnsFilteredByDateResults()
+    {
+        var allEvents = new List<Event>
         {
-            var allEvents = new List<Event>
+            new Event
             {
-                new Event
-                {
-                    Id = Guid.NewGuid(),
-                    Title = "Конференция утром",
-                    Description = "Утренняя конференция",
-                    TotalSeats = 100,
-                    AvailableSeats = 100,
-                    StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
-                    EndAt = new DateTime(2026, 12, 1, 12, 0, 0)
-                },
-                new Event
-                {
-                    Id = Guid.NewGuid(),
-                    Title = "Встреча днём",
-                    Description = "Дневная встреча",
-                    TotalSeats = 100,
-                    AvailableSeats = 100,
-                    StartAt = new DateTime(2026, 12, 1, 14, 0, 0),
-                    EndAt = new DateTime(2026, 12, 1, 16, 0, 0)
-                },
-                new Event
-                {
-                    Id = Guid.NewGuid(),
-                    Title = "Вечернее собрание",
-                    Description = "Собрание вечером",
-                    TotalSeats = 100,
-                    AvailableSeats = 100,
-                    StartAt = new DateTime(2026, 12, 1, 18, 0, 0),
-                    EndAt = new DateTime(2026, 12, 1, 20, 0, 0)
-                },
-                new Event
-                {
-                    Id = Guid.NewGuid(),
-                    Title = "Ранняя планерка",
-                    Description = "Утренняя планерка",
-                    TotalSeats = 100,
-                    AvailableSeats = 100,
-                    StartAt = new DateTime(2026, 12, 1, 8, 0, 0),
-                    EndAt = new DateTime(2026, 12, 1, 9, 0, 0)
-                }
-            };
-
-            Guid[] expectedIds = new Guid[2];
-            Guid[] notExpectedIds = new Guid[3];
-            expectedIds[0] = _eventService.CreateEvent(allEvents[0]);
-            expectedIds[1] = _eventService.CreateEvent(allEvents[3]);
-
-            notExpectedIds[0] = _eventService.CreateEvent(allEvents[1]);
-            notExpectedIds[1] = _eventService.CreateEvent(allEvents[2]);
-
-            var filterDto = new FilterEventDto
-            {
-                StartAt = new DateTime(2026, 12, 1, 8, 0, 0),  
+                Id = Guid.NewGuid(),
+                Title = "Конференция утром",
+                Description = "Утренняя конференция",
+                TotalSeats = 100,
+                AvailableSeats = 100,
+                StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
                 EndAt = new DateTime(2026, 12, 1, 12, 0, 0)
-            };
-
-            var actionResult = (await _controller.GetAll(filterDto, 1, 10)).Result as OkObjectResult;
-            var actualResult = actionResult?.Value as PaginatedResult;
-
-            Assert.NotNull(actionResult);
-            Assert.Equal(200, actionResult.StatusCode);
-            Assert.NotNull(actualResult);
-
-            Assert.Equal(allEvents.Count, actualResult.CountEvents);
-
-            var returnedIds = actualResult.Events.Select(e => e.Id).ToArray();
-            foreach ( var expectedId in expectedIds)
+            },
+            new Event
             {
-                Assert.Contains(expectedId, returnedIds);
-            }
-
-            foreach (var notExpectedId in notExpectedIds)
-            {
-                Assert.DoesNotContain(notExpectedId, returnedIds);
-            }
-        }
-
-        [Fact]
-        public async Task GetById_ExistingEvent_ReturnsOkResultWithEvent()
-        {
-            var testEvent = new Event
-            {
-                Id = Guid.Empty,
-                Title = "Конференция разработчиков",
-                Description = "Ежегодная конференция...",
+                Id = Guid.NewGuid(),
+                Title = "Встреча днём",
+                Description = "Дневная встреча",
                 TotalSeats = 100,
                 AvailableSeats = 100,
-                StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
-                EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
-            };
-
-            Guid createdId = _eventService.CreateEvent(testEvent);
-
-            var actionResult = (await _controller.GetById(createdId)).Result as OkObjectResult;
-            var actualEvent = actionResult?.Value as Event;
-
-            Assert.NotNull(actionResult);
-            Assert.Equal(200, actionResult.StatusCode);
-            Assert.NotNull(actualEvent);
-
-            Assert.Equal(createdId, actualEvent.Id);
-            Assert.Equal(testEvent.Title, actualEvent.Title);
-            Assert.Equal(testEvent.Description, actualEvent.Description);
-            Assert.Equal(testEvent.StartAt, actualEvent.StartAt);
-            Assert.Equal(testEvent.EndAt, actualEvent.EndAt);
-        }
-
-        [Fact]
-        public async Task GetById_NonExistingEvent_ReturnsNotFound()
-        {
-            Guid nonExistsGuid = Guid.NewGuid();
-            var actionResult = (await _controller.GetById(nonExistsGuid)).Result as NotFoundObjectResult;
-
-            Assert.NotNull(actionResult);
-            Assert.Equal(404, actionResult.StatusCode);
-
-            Assert.NotNull(actionResult.Value);
-            Assert.Contains($"Event with index {nonExistsGuid} not found", actionResult.Value.ToString());
-        }
-
-        [Fact]
-        public async Task Put_UpdateNonExistingEvent_ReturnsNotFound()
-        {
-            var updateDto = new EventUpdateDto
+                StartAt = new DateTime(2026, 12, 1, 14, 0, 0),
+                EndAt = new DateTime(2026, 12, 1, 16, 0, 0)
+            },
+            new Event
             {
-                Title = "Попытка обновления",
-                Description = "Это событие не существует",
-                StartAt = DateTime.Now,
-                EndAt = DateTime.Now.AddHours(2)
-            };
-
-            Guid nonExistsGuid = Guid.NewGuid();
-
-            var actionResult = (await _controller.Put(nonExistsGuid, updateDto)) as NotFoundObjectResult;
-
-            Assert.NotNull(actionResult);
-            Assert.Equal(404, actionResult.StatusCode);
-
-            Assert.NotNull(actionResult.Value);
-            Assert.Contains($"Event with index {nonExistsGuid} not found", actionResult.Value.ToString());
-        }
-
-        [Fact]
-        public async Task Delete_DeleteExistingEvent_ReturnsOk()
-        {
-            var testEvent = new Event
-            {
-                Id = Guid.Empty,
-                Title = "Конференция разработчиков",
-                Description = "Ежегодная конференция...",
+                Id = Guid.NewGuid(),
+                Title = "Вечернее собрание",
+                Description = "Собрание вечером",
                 TotalSeats = 100,
                 AvailableSeats = 100,
-                StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
-                EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
-            };
+                StartAt = new DateTime(2026, 12, 1, 18, 0, 0),
+                EndAt = new DateTime(2026, 12, 1, 20, 0, 0)
+            },
+            new Event
+            {
+                Id = Guid.NewGuid(),
+                Title = "Ранняя планерка",
+                Description = "Утренняя планерка",
+                TotalSeats = 100,
+                AvailableSeats = 100,
+                StartAt = new DateTime(2026, 12, 1, 8, 0, 0),
+                EndAt = new DateTime(2026, 12, 1, 9, 0, 0)
+            }
+        };
 
-            Guid createdId = _eventService.CreateEvent(testEvent);
+        Guid[] expectedIds = new Guid[2];
+        Guid[] notExpectedIds = new Guid[3];
+        expectedIds[0] = _eventService.CreateEvent(allEvents[0]);
+        expectedIds[1] = _eventService.CreateEvent(allEvents[3]);
 
+        notExpectedIds[0] = _eventService.CreateEvent(allEvents[1]);
+        notExpectedIds[1] = _eventService.CreateEvent(allEvents[2]);
 
-            var savedEvent = _context.Events.Find(createdId);
-            Assert.NotNull(savedEvent);
-            Assert.Equal("Конференция разработчиков", savedEvent.Title);
-
-
-            var actionResult = (await _controller.Delete(createdId)) as OkResult;
-
-            Assert.NotNull(actionResult);
-            Assert.Equal(200, actionResult.StatusCode);
-
-            var allEvents = _eventService.GetAll(1, int.MaxValue).Events;
-            Assert.DoesNotContain(testEvent, allEvents);
-            Assert.Empty(allEvents);
-        }
-
-        [Fact]
-        public async Task Delete_DeleteNonExistingEvent_ReturnsNotFound()
+        var filterDto = new FilterEventDto
         {
-            Guid nonExistsGuid = Guid.NewGuid();
+            StartAt = new DateTime(2026, 12, 1, 8, 0, 0),  
+            EndAt = new DateTime(2026, 12, 1, 12, 0, 0)
+        };
 
-            var actionResult = (await _controller.Delete(nonExistsGuid)) as NotFoundObjectResult;
+        var actionResult = (await _controller.GetAll(filterDto, 1, 10)).Result as OkObjectResult;
+        var actualResult = actionResult?.Value as PaginatedResult;
 
-            Assert.NotNull(actionResult);
-            Assert.Equal(404, actionResult.StatusCode);
+        Assert.NotNull(actionResult);
+        Assert.Equal(200, actionResult.StatusCode);
+        Assert.NotNull(actualResult);
 
-            Assert.NotNull(actionResult.Value);
-            Assert.Contains($"Event with index {nonExistsGuid} not found", actionResult.Value.ToString());
+        Assert.Equal(allEvents.Count, actualResult.CountEvents);
 
-            var remainingEvents = _eventService.GetAll(1, int.MaxValue).Events;
-            Assert.All(remainingEvents, e => Assert.NotEqual(nonExistsGuid, e.Id));
+        var returnedIds = actualResult.Events.Select(e => e.Id).ToArray();
+        foreach ( var expectedId in expectedIds)
+        {
+            Assert.Contains(expectedId, returnedIds);
         }
+
+        foreach (var notExpectedId in notExpectedIds)
+        {
+            Assert.DoesNotContain(notExpectedId, returnedIds);
+        }
+    }
+
+    [Fact]
+    public async Task GetById_ExistingEvent_ReturnsOkResultWithEvent()
+    {
+        var testEvent = new Event
+        {
+            Id = Guid.Empty,
+            Title = "Конференция разработчиков",
+            Description = "Ежегодная конференция...",
+            TotalSeats = 100,
+            AvailableSeats = 100,
+            StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
+            EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
+        };
+
+        Guid createdId = _eventService.CreateEvent(testEvent);
+
+        var actionResult = (await _controller.GetById(createdId)).Result as OkObjectResult;
+        var actualEvent = actionResult?.Value as Event;
+
+        Assert.NotNull(actionResult);
+        Assert.Equal(200, actionResult.StatusCode);
+        Assert.NotNull(actualEvent);
+
+        Assert.Equal(createdId, actualEvent.Id);
+        Assert.Equal(testEvent.Title, actualEvent.Title);
+        Assert.Equal(testEvent.Description, actualEvent.Description);
+        Assert.Equal(testEvent.StartAt, actualEvent.StartAt);
+        Assert.Equal(testEvent.EndAt, actualEvent.EndAt);
+    }
+
+    [Fact]
+    public async Task GetById_NonExistingEvent_ReturnsNotFound()
+    {
+        Guid nonExistsGuid = Guid.NewGuid();
+        var actionResult = (await _controller.GetById(nonExistsGuid)).Result as NotFoundObjectResult;
+
+        Assert.NotNull(actionResult);
+        Assert.Equal(404, actionResult.StatusCode);
+
+        Assert.NotNull(actionResult.Value);
+        Assert.Contains($"Event with index {nonExistsGuid} not found", actionResult.Value.ToString());
+    }
+
+    [Fact]
+    public async Task Put_UpdateNonExistingEvent_ReturnsNotFound()
+    {
+        var updateDto = new EventUpdateDto
+        {
+            Title = "Попытка обновления",
+            Description = "Это событие не существует",
+            StartAt = DateTime.Now,
+            EndAt = DateTime.Now.AddHours(2)
+        };
+
+        Guid nonExistsGuid = Guid.NewGuid();
+
+        var actionResult = (await _controller.Put(nonExistsGuid, updateDto)) as NotFoundObjectResult;
+
+        Assert.NotNull(actionResult);
+        Assert.Equal(404, actionResult.StatusCode);
+
+        Assert.NotNull(actionResult.Value);
+        Assert.Contains($"Event with index {nonExistsGuid} not found", actionResult.Value.ToString());
+    }
+
+    [Fact]
+    public async Task Delete_DeleteExistingEvent_ReturnsOk()
+    {
+        var testEvent = new Event
+        {
+            Id = Guid.Empty,
+            Title = "Конференция разработчиков",
+            Description = "Ежегодная конференция...",
+            TotalSeats = 100,
+            AvailableSeats = 100,
+            StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
+            EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
+        };
+
+        Guid createdId = _eventService.CreateEvent(testEvent);
+
+
+        var savedEvent = _context.Events.Find(createdId);
+        Assert.NotNull(savedEvent);
+        Assert.Equal("Конференция разработчиков", savedEvent.Title);
+
+
+        var actionResult = (await _controller.Delete(createdId)) as OkResult;
+
+        Assert.NotNull(actionResult);
+        Assert.Equal(200, actionResult.StatusCode);
+
+        var allEvents = _eventService.GetAll(1, int.MaxValue).Events;
+        Assert.DoesNotContain(testEvent, allEvents);
+        Assert.Empty(allEvents);
+    }
+
+    [Fact]
+    public async Task Delete_DeleteNonExistingEvent_ReturnsNotFound()
+    {
+        Guid nonExistsGuid = Guid.NewGuid();
+
+        var actionResult = (await _controller.Delete(nonExistsGuid)) as NotFoundObjectResult;
+
+        Assert.NotNull(actionResult);
+        Assert.Equal(404, actionResult.StatusCode);
+
+        Assert.NotNull(actionResult.Value);
+        Assert.Contains($"Event with index {nonExistsGuid} not found", actionResult.Value.ToString());
+
+        var remainingEvents = _eventService.GetAll(1, int.MaxValue).Events;
+        Assert.All(remainingEvents, e => Assert.NotEqual(nonExistsGuid, e.Id));
     }
 }
