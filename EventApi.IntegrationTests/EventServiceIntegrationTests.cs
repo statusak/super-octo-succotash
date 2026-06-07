@@ -52,6 +52,13 @@ public class EventServiceIntegrationTests : IAsyncLifetime
         _controller = new EventsController(_eventService, bookingService, logger);
     }
 
+    private void RefreshServices()
+    {
+        _context = CreateContext();
+        InitializeServices();
+    }
+
+
     private async Task ResetDatabaseAsync()
     {
         // TODO: Если в ...Configuration.cs имя таблицы задается с большой буквы, 
@@ -93,13 +100,13 @@ public class EventServiceIntegrationTests : IAsyncLifetime
         foreach (var @event in allEvents)
         {
             _eventService.CreateEvent(@event);
+            RefreshServices();
         }
 
         var filterDto = new FilterEventDto
         {
             Title = "кОнФеРеНцИЯ"
         };
-
 
         var actionResult = (await _controller.GetAll(filterDto, 1, 10)).Result as OkObjectResult;
         var actualResult = actionResult?.Value as PaginatedResult;
@@ -135,10 +142,14 @@ public class EventServiceIntegrationTests : IAsyncLifetime
             EndAt = new DateTime(2026, 12, 2, 17, 0, 0).ToUniversalTime()
         };
 
+        RefreshServices();
+
         var actionResult = (await _controller.Put(id, updateDto)) as NoContentResult;
 
         Assert.NotNull(actionResult);
         Assert.Equal(204, actionResult.StatusCode);
+
+        RefreshServices();
 
         var updatedEvent = _eventService.GetEventById(id);
         Assert.Equal(updateDto.Title, updatedEvent?.Title);
