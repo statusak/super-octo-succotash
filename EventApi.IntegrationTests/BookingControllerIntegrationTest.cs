@@ -13,20 +13,28 @@ using Testcontainers.PostgreSql;
 namespace EventApi.IntegrationTests;
 public class BookingControllerIntegrationTest : IAsyncLifetime
 {
-    private readonly EventService _eventService;
-    private readonly EventsController _eventsController;
-    private readonly BookingsController _bookingsController;
-    private readonly BookingBackgroundService _backgroundService;
-    private readonly AppDbContext _context;
+    const int _backgroundServiceProcessingDelaySec = 2;
+
+    private EventService _eventService = null!;
+    private EventsController _eventsController = null!;
+    private BookingsController _bookingsController = null!;
+    private BookingBackgroundService _backgroundService = null!;
+    private AppDbContext _context = null!;
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16-alpine").Build();
+
     public async ValueTask InitializeAsync()
     {
         await _postgres.StartAsync();
+        _context = CreateContext();
+        InitializeServices();
+        await ResetDatabaseAsync();
     }
+
     public async ValueTask DisposeAsync()
     {
         await _postgres.DisposeAsync();
     }
+
     private AppDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
@@ -37,17 +45,8 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
         context.Database.EnsureCreated();
         return context;
     }
-    private async Task ResetDatabaseAsync()
+    private void InitializeServices()
     {
-        await using var context = CreateContext();
-        await context.Database.ExecuteSqlRawAsync(
-            "TRUNCATE TABLE events, bookings RESTART IDENTITY CASCADE");
-    }
-    const int _backgroundServiceProcessingDelaySec = 2;
-
-    public BookingControllerIntegrationTest()
-    {
-        var dbName = Guid.NewGuid().ToString();
         var services = new ServiceCollection();
         services.AddDbContext<AppDbContext>(options =>
                 CreateContext());
@@ -73,13 +72,26 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
             backgroundLogger,
             TimeSpan.FromSeconds(_backgroundServiceProcessingDelaySec)
         );
+
+    }
+
+    private void RefreshServices()
+    {
+        _context = CreateContext();
+        InitializeServices();
+    }
+
+
+    private async Task ResetDatabaseAsync()
+    {
+        await using var context = CreateContext();
+        await context.Database.ExecuteSqlRawAsync(
+            "TRUNCATE TABLE events, bookings RESTART IDENTITY CASCADE");
     }
 
     [Fact]
     public async Task BookingController_CreateBooking_Success()
     {
-        await ResetDatabaseAsync();
-        
         var validDto = new EventCreateDto
         {
             Title = "Тестовая конференция",
@@ -98,6 +110,7 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
         var @event = resultCreateEvent.Value as Event;
         Assert.NotNull(@event);
 
+        RefreshServices();
         var resultCreateBooking = (await _eventsController.CreateBooking(@event.Id)) as AcceptedAtActionResult;
 
         Assert.NotNull(resultCreateBooking);
@@ -112,8 +125,6 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
     [Fact]
     public async Task BookingController_CreateMultiplyBooking_Success()
     {
-        await ResetDatabaseAsync();
-        
         var validDto = new EventCreateDto
         {
             Title = "Тестовая конференция",
@@ -135,6 +146,7 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
 
         for (int i = 0; i < 10; i++)
         {
+            RefreshServices();
             var resultCreateBooking = (await _eventsController.CreateBooking(@event.Id)) as AcceptedAtActionResult;
 
             Assert.NotNull(resultCreateBooking);
@@ -152,8 +164,6 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
     [Fact]
     public async Task BookingController_CheckInfoBooking_Success()
     {
-        await ResetDatabaseAsync();
-        
         var validDto = new EventCreateDto
         {
             Title = "Тестовая конференция",
@@ -171,6 +181,7 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
         var @event = resultCreateEvent.Value as Event;
         Assert.NotNull(@event);
 
+        RefreshServices();
         var resultCreateBooking = (await _eventsController.CreateBooking(@event.Id)) as AcceptedAtActionResult;
 
         Assert.NotNull(resultCreateBooking);
@@ -181,6 +192,7 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
         Assert.Equal(BookingStatus.Pending, bookingCreate.Status);
         Assert.Equal(@event.Id, bookingCreate.EventId);
 
+        RefreshServices();
         var resultInfoBooking = (await _bookingsController.GetById(bookingCreate.Id)) as OkObjectResult;
 
         Assert.NotNull(resultInfoBooking);
@@ -197,8 +209,6 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
     [Fact]
     public async Task BookingController_CheckInfoAfterProcessingBooking_Success()
     {
-        await ResetDatabaseAsync();
-        
         var validDto = new EventCreateDto
         {
             Title = "Тестовая конференция",
@@ -215,7 +225,8 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
 
         var @event = resultCreateEvent.Value as Event;
         Assert.NotNull(@event);
-
+        
+        RefreshServices();
         var resultCreateBooking = (await _eventsController.CreateBooking(@event.Id)) as AcceptedAtActionResult;
 
         Assert.NotNull(resultCreateBooking);
@@ -227,15 +238,18 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
         Assert.Equal(@event.Id, bookingCreate.EventId);
 
         var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        // TODO: это корректно???
+        RefreshServices();
         await _backgroundService.StartAsync(cts.Token);
         await Task.Delay(5000, TestContext.Current.CancellationToken);
         await _backgroundService.StopAsync(cts.Token);
 
 
         // Принудительно обновляем состояние брони в контексте контроллера
-        var bookingEntity = _context.Bookings.Find(bookingCreate.Id);
-        Assert.NotNull(bookingEntity);
-        _context.Entry(bookingEntity).Reload();
+        // var bookingEntity = _context.Bookings.Find(bookingCreate.Id);
+        // Assert.NotNull(bookingEntity);
+        // _context.Entry(bookingEntity).Reload();
+        RefreshServices();
 
         var resultInfoBooking = (await _bookingsController.GetById(bookingCreate.Id)) as OkObjectResult;
 
@@ -253,8 +267,6 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
     [Fact]
     public async Task BookingController_CreateBookingForNotExistsEvent_ReturnsNotFound()
     {
-        await ResetDatabaseAsync();
-        
         var actionResult = (await _eventsController.CreateBooking(Guid.Empty)) as NotFoundObjectResult;
 
         Assert.NotNull(actionResult);
@@ -267,8 +279,6 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
     [Fact]
     public async Task BookingController_CreateBookingForDeletedEvent_ReturnsNotFound()
     {
-        await ResetDatabaseAsync();
-        
         var validDto = new EventCreateDto
         {
             Title = "Тестовая конференция",
@@ -286,14 +296,17 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
         var @event = resultCreateEvent.Value as Event;
         Assert.NotNull(@event);
 
+        RefreshServices();
         var actionResult = (await _eventsController.Delete(@event.Id)) as OkResult;
 
         Assert.NotNull(actionResult);
         Assert.Equal(200, actionResult.StatusCode);
 
+        RefreshServices();
         var allEvents = _eventService.GetAll(1, int.MaxValue).Events;
         Assert.Empty(allEvents);
 
+        RefreshServices();
         var actionResultCreateBooking = (await _eventsController.CreateBooking(Guid.Empty)) as NotFoundObjectResult;
 
         Assert.NotNull(actionResultCreateBooking);
@@ -306,8 +319,6 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
     [Fact]
     public async Task BookingController_CheckInfoDontExistsBooking_ReturnsNotFound()
     {
-        await ResetDatabaseAsync();
-        
         var actionResult = (await _bookingsController.GetById(Guid.Empty)) as NotFoundObjectResult;
 
         Assert.NotNull(actionResult);
