@@ -45,7 +45,7 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
     }
     const int _backgroundServiceProcessingDelaySec = 2;
 
-    public UnitBookingControllerTest()
+    public BookingControllerIntegrationTest()
     {
         var dbName = Guid.NewGuid().ToString();
         var services = new ServiceCollection();

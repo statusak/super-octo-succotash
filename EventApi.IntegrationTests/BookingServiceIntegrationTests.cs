@@ -5,10 +5,7 @@ using CSCourse.Models;
 using CSCourse.Repositories;
 using CSCourse.Services;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
-using CSCourse.Controllers;
 
 namespace EventApi.IntegrationTests;
 public abstract class BookingServiceIntegrationTests : IAsyncLifetime
