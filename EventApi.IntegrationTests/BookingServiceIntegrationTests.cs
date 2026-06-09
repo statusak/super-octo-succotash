@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Testcontainers.PostgreSql;
 
 namespace EventApi.IntegrationTests;
-public abstract class BookingServiceIntegrationTests : IAsyncLifetime
+public class BookingServiceIntegrationTests : IAsyncLifetime
 {
     private EventService _eventService = null!;
     private BookingService _bookingService = null!;
@@ -70,8 +70,8 @@ public abstract class BookingServiceIntegrationTests : IAsyncLifetime
             Description = "Ежегодная конференция...",
             TotalSeats = 100,
             AvailableSeats = 100,
-            StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
-            EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
+            StartAt = new DateTime(2026, 12, 1, 10, 0, 0).ToUniversalTime(),
+            EndAt = new DateTime(2026, 12, 1, 18, 0, 0).ToUniversalTime(),
         });
 
         RefreshServices();
@@ -93,8 +93,8 @@ public abstract class BookingServiceIntegrationTests : IAsyncLifetime
             Description = "Ежегодная конференция...",
             TotalSeats = 100,
             AvailableSeats = 100,
-            StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
-            EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
+            StartAt = new DateTime(2026, 12, 1, 10, 0, 0).ToUniversalTime(),
+            EndAt = new DateTime(2026, 12, 1, 18, 0, 0).ToUniversalTime(),
         });
         
         var createdBookingIds = new HashSet<Guid>();
@@ -123,8 +123,8 @@ public abstract class BookingServiceIntegrationTests : IAsyncLifetime
             Description = "Ежегодная конференция...",
             TotalSeats = 100,
             AvailableSeats = 100,
-            StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
-            EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
+            StartAt = new DateTime(2026, 12, 1, 10, 0, 0).ToUniversalTime(),
+            EndAt = new DateTime(2026, 12, 1, 18, 0, 0).ToUniversalTime(),
         });
 
         RefreshServices();  
@@ -150,8 +150,8 @@ public abstract class BookingServiceIntegrationTests : IAsyncLifetime
             Description = "Ежегодная конференция...",
             TotalSeats = 100,
             AvailableSeats = 100,
-            StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
-            EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
+            StartAt = new DateTime(2026, 12, 1, 10, 0, 0).ToUniversalTime(),
+            EndAt = new DateTime(2026, 12, 1, 18, 0, 0).ToUniversalTime(),
         });
 
 
@@ -161,7 +161,7 @@ public abstract class BookingServiceIntegrationTests : IAsyncLifetime
         var processedDto = new BookingProcessedDto
         {
             Status = BookingStatus.Confirmed,
-            ProcessedAt = DateTime.UtcNow.AddSeconds(1)
+            ProcessedAt = DateTime.UtcNow.AddSeconds(1).ToUniversalTime(),
         };
 
         RefreshServices();
@@ -214,8 +214,8 @@ public abstract class BookingServiceIntegrationTests : IAsyncLifetime
             Description = "Ежегодная конференция...",
             TotalSeats = 100,
             AvailableSeats = 100,
-            StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
-            EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
+            StartAt = new DateTime(2026, 12, 1, 10, 0, 0).ToUniversalTime(),
+            EndAt = new DateTime(2026, 12, 1, 18, 0, 0).ToUniversalTime(),
         });
 
         RefreshServices();
@@ -243,8 +243,8 @@ public abstract class BookingServiceIntegrationTests : IAsyncLifetime
             Description = "Онлайн-мероприятие",
             TotalSeats = 5,
             AvailableSeats = 5,
-            StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
-            EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
+            StartAt = new DateTime(2026, 12, 1, 10, 0, 0).ToUniversalTime(),
+            EndAt = new DateTime(2026, 12, 1, 18, 0, 0).ToUniversalTime(),
         });
 
         var createdBookingIds = new HashSet<Guid>();
@@ -286,8 +286,8 @@ public abstract class BookingServiceIntegrationTests : IAsyncLifetime
             Description = "Практическое занятие",
             TotalSeats = 1,
             AvailableSeats = 1,
-            StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
-            EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
+            StartAt = new DateTime(2026, 12, 1, 10, 0, 0).ToUniversalTime(),
+            EndAt = new DateTime(2026, 12, 1, 18, 0, 0).ToUniversalTime(),
         });
 
         RefreshServices();
@@ -324,8 +324,8 @@ public abstract class BookingServiceIntegrationTests : IAsyncLifetime
             Description = "Обучающее мероприятие",
             TotalSeats = 1,
             AvailableSeats = 1,
-            StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
-            EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
+            StartAt = new DateTime(2026, 12, 1, 10, 0, 0).ToUniversalTime(),
+            EndAt = new DateTime(2026, 12, 1, 18, 0, 0).ToUniversalTime(),
         });
 
         RefreshServices();
@@ -374,8 +374,8 @@ public abstract class BookingServiceIntegrationTests : IAsyncLifetime
             Description = "Событие для проверки конкурентных запросов",
             TotalSeats = totalSeats,
             AvailableSeats = totalSeats,
-            StartAt = DateTime.UtcNow.AddDays(1),
-            EndAt = DateTime.UtcNow.AddDays(1).AddHours(2)
+            StartAt = DateTime.UtcNow.AddDays(1).ToUniversalTime(),
+            EndAt = DateTime.UtcNow.AddDays(1).AddHours(2).ToUniversalTime(),
         });
     }
 
