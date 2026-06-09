@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Testcontainers.PostgreSql;
 
 namespace EventApi.IntegrationTests;
-public class UnitBookingControllerTest : IAsyncLifetime
+public class BookingControllerIntegrationTest : IAsyncLifetime
 {
     private readonly EventService _eventService;
     private readonly EventsController _eventsController;

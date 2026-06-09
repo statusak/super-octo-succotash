@@ -4,7 +4,6 @@ using CSCourse.Models;
 using CSCourse.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 using CSCourse.Repositories;

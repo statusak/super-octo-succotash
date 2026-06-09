@@ -5,29 +5,27 @@ using CSCourse.Models;
 using CSCourse.Repositories;
 using CSCourse.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
+using CSCourse.Controllers;
 
 namespace EventApi.IntegrationTests;
-
-public class BookingMemoryServiceTests : BookingServiceTestsBase
+public abstract class BookingServiceIntegrationTests : IAsyncLifetime
 {
-    
-    protected override IBookingService CreateBookingService(IEventService eventService, IBookingRepository bookings)
-    {
-        return new BookingService(eventService, bookings);
-    }
-}
+    private EventService _eventService = null!;
+    private BookingService _bookingService = null!;
+    private AppDbContext _context = null!;
 
-public abstract class BookingServiceTestsBase : IAsyncLifetime
-{
-    private readonly EventService _eventService;
-    private readonly IBookingRepository _bookings;
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16-alpine").Build();
     public async ValueTask InitializeAsync()
     {
         await _postgres.StartAsync();
+        _context = CreateContext();
+        InitializeServices();
+        await ResetDatabaseAsync();
     }
+
     public async ValueTask DisposeAsync()
     {
         await _postgres.DisposeAsync();
@@ -43,6 +41,21 @@ public abstract class BookingServiceTestsBase : IAsyncLifetime
         context.Database.EnsureCreated();
         return context;
     }
+    private void InitializeServices()
+    {
+        IBookingRepository bookings = new BookingRepository(_context);
+        IEventRepository events = new EventRepository(_context);
+
+        _eventService = new EventService(events);
+        _bookingService = new BookingService(_eventService, bookings);
+    }
+
+    private void RefreshServices()
+    {
+        _context = CreateContext();
+        InitializeServices();
+    }
+
 
     private async Task ResetDatabaseAsync()
     {
@@ -50,30 +63,9 @@ public abstract class BookingServiceTestsBase : IAsyncLifetime
         await context.Database.ExecuteSqlRawAsync(
             "TRUNCATE TABLE events, bookings RESTART IDENTITY CASCADE");
     }
-
-    // TODO: Может await ResetDatabaseAsync(); использовать в деструкторе?
-    public BookingServiceTestsBase()
-    {
-        var dbName = Guid.NewGuid().ToString();
-        var services = new ServiceCollection();
-        services.AddDbContext<AppDbContext>(options =>
-                CreateContext());
-
-        var serviceProvider = services.BuildServiceProvider();
-        AppDbContext _context = serviceProvider.GetRequiredService<AppDbContext>();
-        _bookings = new BookingRepository(_context); 
-        IEventRepository events = new EventRepository(_context); 
-
-        _eventService = new EventService(events);
-    }
-    protected abstract IBookingService CreateBookingService(IEventService eventService, IBookingRepository bookings);
-
     [Fact]
     public async Task CreateBookingAsync_ForExistingEvent_ReturnsBookingWithPendingStatus()
     {
-        await ResetDatabaseAsync();
-
-        var bookingService = CreateBookingService(_eventService, _bookings);
         var eventId = _eventService.CreateEvent(new Event
         {
             Id = Guid.Empty,
@@ -85,7 +77,8 @@ public abstract class BookingServiceTestsBase : IAsyncLifetime
             EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
         });
 
-        var result = await bookingService.CreateBookingAsync(eventId);
+        RefreshServices();
+        var result = await _bookingService.CreateBookingAsync(eventId);
 
         Assert.NotNull(result);
         Assert.Equal(eventId, result.EventId);
@@ -96,10 +89,6 @@ public abstract class BookingServiceTestsBase : IAsyncLifetime
     [Fact]
     public async Task CreateBookingAsync_MultipleBookingsForSameEvent_AllHaveUniqueIds()
     {
-        await ResetDatabaseAsync();
-
-        var bookingService = CreateBookingService(_eventService, _bookings);
-
         var eventId = _eventService.CreateEvent(new Event
         {
             Id = Guid.Empty,
@@ -115,7 +104,9 @@ public abstract class BookingServiceTestsBase : IAsyncLifetime
 
         for (int i = 0; i < 10; i++)
         {
-            var result = await bookingService.CreateBookingAsync(eventId);
+            RefreshServices();
+
+            var result = await _bookingService.CreateBookingAsync(eventId);
 
             Assert.NotNull(result);
             Assert.Equal(eventId, result.EventId);
@@ -128,10 +119,6 @@ public abstract class BookingServiceTestsBase : IAsyncLifetime
     [Fact]
     public async Task GetBookingByIdAsync_ExistingBooking_ReturnsCorrectInformation()
     {
-        await ResetDatabaseAsync();
-
-        var bookingService = CreateBookingService(_eventService, _bookings);
-
         var eventId = _eventService.CreateEvent(new Event
         {
             Id = Guid.Empty,
@@ -143,9 +130,11 @@ public abstract class BookingServiceTestsBase : IAsyncLifetime
             EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
         });
 
-        var expectedBooking = await bookingService.CreateBookingAsync(eventId);
+        RefreshServices();  
+        var expectedBooking = await _bookingService.CreateBookingAsync(eventId);
 
-        var result = await bookingService.GetBookingByIdAsync(expectedBooking.Id);
+        RefreshServices();
+        var result = await _bookingService.GetBookingByIdAsync(expectedBooking.Id);
 
         Assert.NotNull(result);
         Assert.Equal(expectedBooking.Id, result.Id);
@@ -157,10 +146,6 @@ public abstract class BookingServiceTestsBase : IAsyncLifetime
     [Fact]
     public async Task UpdateProcessedBookingByIdAsync_AfterProcessing_StatusReflectsInGetBooking()
     {
-        await ResetDatabaseAsync();
-
-        var bookingService = CreateBookingService(_eventService, _bookings);
-
         var eventId = _eventService.CreateEvent(new Event
         {
             Id = Guid.Empty,
@@ -172,7 +157,9 @@ public abstract class BookingServiceTestsBase : IAsyncLifetime
             EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
         });
 
-        var booking = await bookingService.CreateBookingAsync(eventId);
+
+        RefreshServices();
+        var booking = await _bookingService.CreateBookingAsync(eventId);
 
         var processedDto = new BookingProcessedDto
         {
@@ -180,8 +167,11 @@ public abstract class BookingServiceTestsBase : IAsyncLifetime
             ProcessedAt = DateTime.UtcNow.AddSeconds(1)
         };
 
-        await bookingService.UpdateProcessedBookingByIdAsync(booking.Id, processedDto);
-        var updatedBooking = await bookingService.GetBookingByIdAsync(booking.Id);
+        RefreshServices();
+        await _bookingService.UpdateProcessedBookingByIdAsync(booking.Id, processedDto);
+        
+        RefreshServices();
+        var updatedBooking = await _bookingService.GetBookingByIdAsync(booking.Id);
 
         Assert.NotNull(updatedBooking);
         Assert.Equal(BookingStatus.Confirmed, updatedBooking.Status);
@@ -192,12 +182,9 @@ public abstract class BookingServiceTestsBase : IAsyncLifetime
     [Fact]
     public async Task GetBookingByIdAsync_NonExistingBookingId_ReturnsNull()
     {
-        await ResetDatabaseAsync();
-
-        var bookingService = CreateBookingService(_eventService, _bookings);
         var nonExistingBookingId = Guid.Empty;
 
-        var result = await bookingService.GetBookingByIdAsync(nonExistingBookingId);
+        var result = await _bookingService.GetBookingByIdAsync(nonExistingBookingId);
 
         Assert.Null(result);
     }
@@ -205,9 +192,6 @@ public abstract class BookingServiceTestsBase : IAsyncLifetime
     [Fact]
     public async Task UpdateProcessedBookingByIdAsync_NonExistingBooking_ReturnsNull()
     {
-        await ResetDatabaseAsync();
-
-        var bookingService = CreateBookingService(_eventService, _bookings);
         var nonExistingBookingId = Guid.NewGuid();
         var processedDto = new BookingProcessedDto
         {
@@ -215,7 +199,7 @@ public abstract class BookingServiceTestsBase : IAsyncLifetime
             ProcessedAt = DateTime.UtcNow
         };
 
-        var result = await bookingService.UpdateProcessedBookingByIdAsync(
+        var result = await _bookingService.UpdateProcessedBookingByIdAsync(
             nonExistingBookingId,
             processedDto
         );
@@ -226,10 +210,6 @@ public abstract class BookingServiceTestsBase : IAsyncLifetime
     [Fact]
     public async Task CreateBookingAsync_DecreasesAvailableSeatsByOne()
     {
-        await ResetDatabaseAsync();
-
-        var bookingService = CreateBookingService(_eventService, _bookings);
-
         var eventId = _eventService.CreateEvent(new Event
         {
             Id = Guid.Empty,
@@ -241,13 +221,16 @@ public abstract class BookingServiceTestsBase : IAsyncLifetime
             EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
         });
 
+        RefreshServices();
         var initialEvent = _eventService.GetEventById(eventId);
         Assert.NotNull(initialEvent);
         Assert.Equal(100, initialEvent.AvailableSeats);
 
-        var result = await bookingService.CreateBookingAsync(eventId);
+        RefreshServices();
+        var result = await _bookingService.CreateBookingAsync(eventId);
         Assert.NotNull(result);
 
+        RefreshServices();
         var updatedEvent = _eventService.GetEventById(eventId);
         Assert.NotNull(updatedEvent);
         Assert.Equal(99, updatedEvent.AvailableSeats);
@@ -256,10 +239,6 @@ public abstract class BookingServiceTestsBase : IAsyncLifetime
     [Fact]
     public async Task CreateBookingAsync_MultipleBookingsUntilLimit_AllSucceedWithUniqueIds()
     {
-        await ResetDatabaseAsync();
-
-        var bookingService = CreateBookingService(_eventService, _bookings);
-
         var eventId = _eventService.CreateEvent(new Event
         {
             Id = Guid.Empty,
@@ -272,13 +251,16 @@ public abstract class BookingServiceTestsBase : IAsyncLifetime
         });
 
         var createdBookingIds = new HashSet<Guid>();
+
+        RefreshServices();
         var eventState = _eventService.GetEventById(eventId);
         Assert.NotNull(eventState);
         var totalSeats = eventState.TotalSeats;
 
         for (int i = 0; i < totalSeats; i++)
         {
-            var result = await bookingService.CreateBookingAsync(eventId);
+            RefreshServices();
+            var result = await _bookingService.CreateBookingAsync(eventId);
 
             Assert.NotNull(result);
             Assert.Equal(eventId, result.EventId);
@@ -291,18 +273,15 @@ public abstract class BookingServiceTestsBase : IAsyncLifetime
             Assert.Equal(totalSeats - i - 1, updatedEvent.AvailableSeats);
         }
 
+        RefreshServices();
         await Assert.ThrowsAsync<NoAvailableSeatsException>(
-            async () => await bookingService.CreateBookingAsync(eventId)
+            async () => await _bookingService.CreateBookingAsync(eventId)
         );
     }
 
     [Fact]
     public async Task CreateBookingAsync_AfterSeatsExhausted_ThrowsNoAvailableSeatsException()
     {
-        await ResetDatabaseAsync();
-
-        var bookingService = CreateBookingService(_eventService, _bookings);
-
         var eventId = _eventService.CreateEvent(new Event
         {
             Id = Guid.Empty,
@@ -313,37 +292,34 @@ public abstract class BookingServiceTestsBase : IAsyncLifetime
             StartAt = new DateTime(2026, 12, 1, 10, 0, 0),
             EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
         });
-        await bookingService.CreateBookingAsync(eventId);
 
+        RefreshServices();
+        await _bookingService.CreateBookingAsync(eventId);
+
+        RefreshServices();
         var updatedEvent = _eventService.GetEventById(eventId);
         Assert.NotNull(updatedEvent);
         Assert.Equal(0, updatedEvent.AvailableSeats);
 
+        RefreshServices();
         await Assert.ThrowsAsync<NoAvailableSeatsException>(
-            async () => await bookingService.CreateBookingAsync(eventId)
+            async () => await _bookingService.CreateBookingAsync(eventId)
         );
     }
 
     [Fact]
     public async Task CreateBookingAsync_ForNonExistingEvent_ThrowsNotFoundException()
     {
-        await ResetDatabaseAsync();
-
-        var bookingService = CreateBookingService(_eventService, _bookings);
         var nonExistingEventId = Guid.NewGuid();
 
         await Assert.ThrowsAsync <NotFoundException> (
-            async () => await bookingService.CreateBookingAsync(nonExistingEventId)
+            async () => await _bookingService.CreateBookingAsync(nonExistingEventId)
         );
     }
 
     [Fact]
     public async Task RejectBooking_ThenReleaseSeats_AllowsNewBooking()
     {
-        await ResetDatabaseAsync();
-
-        var bookingService = CreateBookingService(_eventService, _bookings);
-
         var eventId = _eventService.CreateEvent(new Event
         {
             Id = Guid.Empty,
@@ -355,7 +331,10 @@ public abstract class BookingServiceTestsBase : IAsyncLifetime
             EndAt = new DateTime(2026, 12, 1, 18, 0, 0)
         });
 
-        var firstBooking = await bookingService.CreateBookingAsync(eventId);
+        RefreshServices();
+        var firstBooking = await _bookingService.CreateBookingAsync(eventId);
+        
+        RefreshServices();
         var eventState = _eventService.GetEventById(eventId);
         Assert.NotNull(eventState);
         Assert.Equal(0, eventState.AvailableSeats);
@@ -365,18 +344,25 @@ public abstract class BookingServiceTestsBase : IAsyncLifetime
             Status = BookingStatus.Rejected,
             ProcessedAt = DateTime.UtcNow
         };
-        await bookingService.UpdateProcessedBookingByIdAsync(firstBooking.Id, processedDto);
+
+        RefreshServices();
+        await _bookingService.UpdateProcessedBookingByIdAsync(firstBooking.Id, processedDto);
+        
+        RefreshServices();
         _eventService.ReleaseSeats(firstBooking.EventId);
 
+        RefreshServices();
         var eventAfterRelease = _eventService.GetEventById(eventId);
         Assert.NotNull(eventAfterRelease);
         Assert.Equal(1, eventAfterRelease.AvailableSeats);
 
-        var secondBooking = await bookingService.CreateBookingAsync(eventId);
+        RefreshServices();
+        var secondBooking = await _bookingService.CreateBookingAsync(eventId);
         Assert.NotNull(secondBooking);
         Assert.Equal(eventId, secondBooking.EventId);
         Assert.Equal(BookingStatus.Pending, secondBooking.Status);
 
+        RefreshServices();
         var finalEventState = _eventService.GetEventById(eventId);
         Assert.NotNull(finalEventState);
         Assert.Equal(0, finalEventState.AvailableSeats);
@@ -399,9 +385,6 @@ public abstract class BookingServiceTestsBase : IAsyncLifetime
     [Fact]
     public async Task CreateBookingAsync_ConcurrentRequests_PreventsOverbooking()
     {
-        await ResetDatabaseAsync();
-
-        var bookingService = CreateBookingService(_eventService, _bookings);
         var eventId = CreateTestEvent(5);
 
         var tasks = Enumerable.Range(0, 20)
@@ -409,7 +392,9 @@ public abstract class BookingServiceTestsBase : IAsyncLifetime
             {
                 try
                 {
-                    var result = await bookingService.CreateBookingAsync(eventId);
+                    // ?
+                    RefreshServices();
+                    var result = await _bookingService.CreateBookingAsync(eventId);
                     (bool Success, Booking? Booking, Exception? Exception) successResult =
                         (true, result, null);
                     return successResult;
@@ -431,6 +416,7 @@ public abstract class BookingServiceTestsBase : IAsyncLifetime
         Assert.Equal(5, successfulBookings.Count);
         Assert.Equal(15, failedBookings.Count);
 
+        RefreshServices();
         var eventState = _eventService.GetEventById(eventId);
         Assert.NotNull(eventState);
         Assert.Equal(0, eventState.AvailableSeats);
@@ -441,14 +427,11 @@ public abstract class BookingServiceTestsBase : IAsyncLifetime
 
     [Fact]
     public async Task CreateBookingAsync_ConcurrentRequests_AllHaveUniqueIds()
-    {
-        await ResetDatabaseAsync();
-
-        var bookingService = CreateBookingService(_eventService, _bookings);
+    {   
         var eventId = CreateTestEvent(10);
 
         var tasks = Enumerable.Range(0, 10)
-            .Select(_ => Task.Run(() => bookingService.CreateBookingAsync(eventId)))
+            .Select(_ => Task.Run(() => _bookingService.CreateBookingAsync(eventId)))
             .ToArray();
 
         var results = await Task.WhenAll(tasks);
@@ -464,7 +447,8 @@ public abstract class BookingServiceTestsBase : IAsyncLifetime
 
         var bookingIds = results.Select(r => r.Id).ToList();
         Assert.Equal(bookingIds.Count, bookingIds.Distinct().Count());
-
+        
+        RefreshServices();
         var eventState = _eventService.GetEventById(eventId);
         Assert.NotNull(eventState);
         Assert.Equal(0, eventState.AvailableSeats);
