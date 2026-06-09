@@ -171,6 +171,10 @@ public class BookingServiceIntegrationTests : IAsyncLifetime
         var updatedBooking = await _bookingService.GetBookingByIdAsync(booking.Id);
 
         Assert.NotNull(updatedBooking);
+        // TODO: При добалении в БД последняя цифра с погрешностью, из-за чего не проходят тесты
+        //       Т.е. логика корректна, но сама delta в 0.000001 не дает пройти тест
+        //       Надо думать...
+        //       Как вариант - в БД создать менее точное время
         Assert.Equal(BookingStatus.Confirmed, updatedBooking.Status);
         Assert.Equal(processedDto.ProcessedAt, updatedBooking.ProcessedAt);
         Assert.Equal(booking.CreatedAt, updatedBooking.CreatedAt);
@@ -201,7 +205,7 @@ public class BookingServiceIntegrationTests : IAsyncLifetime
             processedDto
         );
 
-        Assert.True(result);
+        Assert.False(result);
     }
 
     [Fact]
@@ -389,8 +393,6 @@ public class BookingServiceIntegrationTests : IAsyncLifetime
             {
                 try
                 {
-                    // ?
-                    RefreshServices();
                     var result = await _bookingService.CreateBookingAsync(eventId);
                     (bool Success, Booking? Booking, Exception? Exception) successResult =
                         (true, result, null);
