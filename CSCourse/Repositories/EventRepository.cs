@@ -42,6 +42,8 @@ public class EventRepository : IEventRepository
         }
         catch (DbUpdateException)
         {
+            // TODO: Сделать такую логику, чтобы ошибка не зацикливалась.
+            //       Иначе это может привести к вечному циклу и зависанию
             _context.Entry(@event).State = EntityState.Detached;
             return await CreateAsync(@event);
         }

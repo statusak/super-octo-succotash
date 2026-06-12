@@ -56,7 +56,6 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
 
         var serviceProvider = services.BuildServiceProvider();
 
-        _context = serviceProvider.GetRequiredService<AppDbContext>();
         IBookingRepository bookings = new BookingRepository(_context); 
         IEventRepository events = new EventRepository(_context); 
 
@@ -97,8 +96,8 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
             Title = "Тестовая конференция",
             Description = "Описание мероприятия",
             TotalSeats = 100,
-            StartAt = DateTime.Now.AddHours(1),
-            EndAt = DateTime.Now.AddHours(2)
+            StartAt = DateTime.Now.AddHours(1).ToUniversalTime(),
+            EndAt = DateTime.Now.AddHours(2).ToUniversalTime()
         };
 
         var actionResult = await _eventsController.Post(validDto);
@@ -130,8 +129,8 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
             Title = "Тестовая конференция",
             Description = "Описание мероприятия",
             TotalSeats = 100,
-            StartAt = DateTime.Now.AddHours(1),
-            EndAt = DateTime.Now.AddHours(2)
+            StartAt = DateTime.Now.AddHours(1).ToUniversalTime(),
+            EndAt = DateTime.Now.AddHours(2).ToUniversalTime()
         };
 
         var resultCreateEvent = (await _eventsController.Post(validDto)).Result as CreatedAtActionResult;
@@ -169,8 +168,8 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
             Title = "Тестовая конференция",
             Description = "Описание мероприятия",
             TotalSeats = 100,
-            StartAt = DateTime.Now.AddHours(1),
-            EndAt = DateTime.Now.AddHours(2)
+            StartAt = DateTime.Now.AddHours(1).ToUniversalTime(),
+            EndAt = DateTime.Now.AddHours(2).ToUniversalTime()
         };
 
         var resultCreateEvent = (await _eventsController.Post(validDto)).Result as CreatedAtActionResult;
@@ -214,8 +213,8 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
             Title = "Тестовая конференция",
             Description = "Описание мероприятия",
             TotalSeats = 100,
-            StartAt = DateTime.Now.AddHours(1),
-            EndAt = DateTime.Now.AddHours(2)
+            StartAt = DateTime.Now.AddHours(1).ToUniversalTime(),
+            EndAt = DateTime.Now.AddHours(2).ToUniversalTime()
         };
 
         var resultCreateEvent = (await _eventsController.Post(validDto)).Result as CreatedAtActionResult;
@@ -284,8 +283,8 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
             Title = "Тестовая конференция",
             Description = "Описание мероприятия",
             TotalSeats = 100,
-            StartAt = DateTime.Now.AddHours(1),
-            EndAt = DateTime.Now.AddHours(2)
+            StartAt = DateTime.Now.AddHours(1).ToUniversalTime(),
+            EndAt = DateTime.Now.AddHours(2).ToUniversalTime()
         };
 
         var resultCreateEvent = (await _eventsController.Post(validDto)).Result as CreatedAtActionResult;
