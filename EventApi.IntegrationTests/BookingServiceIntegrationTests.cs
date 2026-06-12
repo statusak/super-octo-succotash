@@ -127,7 +127,11 @@ public class BookingServiceIntegrationTests : IAsyncLifetime
             EndAt = new DateTime(2026, 12, 1, 18, 0, 0).ToUniversalTime(),
         });
 
-        RefreshServices();  
+        RefreshServices();
+        // TODO: Для корректного значения времени, во всех методах можно
+        //       возвращать не только GUID, а полный ответ от БД 
+        //       (Сейчас от БД возвращается только ID, а остальные поля дозаполняются
+        //        уже в методах-обертках, как в данном случае в CreateBookingAsync) 
         var expectedBooking = await _bookingService.CreateBookingAsync(eventId);
 
         RefreshServices();
@@ -137,7 +141,7 @@ public class BookingServiceIntegrationTests : IAsyncLifetime
         Assert.Equal(expectedBooking.Id, result.Id);
         Assert.Equal(expectedBooking.EventId, result.EventId);
         Assert.Equal(expectedBooking.Status, result.Status);
-        Assert.Equal(expectedBooking.CreatedAt, result.CreatedAt);
+        Assert.True(Math.Abs((expectedBooking.CreatedAt - result.CreatedAt).TotalMilliseconds) < 1);
     }
 
     [Fact]
