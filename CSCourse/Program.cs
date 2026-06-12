@@ -21,7 +21,6 @@ builder.Services.AddScoped<IBookingService, BookingService>();
 
 builder.Services.AddHostedService<BookingBackgroundService>();
 
-
 builder.Services.AddSwaggerGen(options =>
 {
     var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
