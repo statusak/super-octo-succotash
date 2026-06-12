@@ -176,8 +176,11 @@ public class BookingServiceIntegrationTests : IAsyncLifetime
         //       Надо думать...
         //       Как вариант - в БД создать менее точное время
         Assert.Equal(BookingStatus.Confirmed, updatedBooking.Status);
-        Assert.Equal(processedDto.ProcessedAt, updatedBooking.ProcessedAt);
-        Assert.Equal(booking.CreatedAt, updatedBooking.CreatedAt);
+        
+        Assert.NotNull(updatedBooking.ProcessedAt);
+        DateTime updatedBookingProcessedAt = updatedBooking.ProcessedAt.Value;
+        Assert.True(Math.Abs((processedDto.ProcessedAt - updatedBookingProcessedAt).TotalMilliseconds) < 1);
+        Assert.True(Math.Abs((booking.CreatedAt - updatedBooking.CreatedAt).TotalMilliseconds) < 1);
     }
 
     [Fact]
