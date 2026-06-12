@@ -15,17 +15,16 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
 {
     const int _backgroundServiceProcessingDelaySec = 2;
 
-    private EventService _eventService = null!;
+    private IEventService _eventService = null!;
     private EventsController _eventsController = null!;
     private BookingsController _bookingsController = null!;
     private BookingBackgroundService _backgroundService = null!;
-    private AppDbContext _context = null!;
+    private IServiceProvider _serviceProvider = null!;
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16-alpine").Build();
 
     public async ValueTask InitializeAsync()
     {
         await _postgres.StartAsync();
-        _context = CreateContext();
         InitializeServices();
         await ResetDatabaseAsync();
     }
@@ -37,53 +36,56 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
 
     private AppDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseNpgsql(_postgres.GetConnectionString())
-            .Options;
+        using var scope = _serviceProvider.CreateScope();
+        return scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var context = new AppDbContext(options);
-        context.Database.EnsureCreated();
-        return context;
     }
     private void InitializeServices()
     {
         var services = new ServiceCollection();
+
         services.AddDbContext<AppDbContext>(options =>
-                CreateContext());
+            options.UseNpgsql(_postgres.GetConnectionString()));
 
-        services.AddScoped<IBookingService, BookingService>();
+        services.AddScoped<IEventRepository, EventRepository>();
+        services.AddScoped<IBookingRepository, BookingRepository>();
+
         services.AddScoped<IEventService, EventService>();
+        services.AddScoped<IBookingService, BookingService>();
 
-        var serviceProvider = services.BuildServiceProvider();
+        _serviceProvider = services.BuildServiceProvider();
 
-        IBookingRepository bookings = new BookingRepository(_context); 
-        IEventRepository events = new EventRepository(_context); 
+        using var scope = _serviceProvider.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        context.Database.EnsureCreated();
 
-        _eventService = new EventService(events);
-        var bookingService = new BookingService(_eventService, bookings);
+        _eventService = _serviceProvider.GetRequiredService<IEventService>();
+        var bookingService = _serviceProvider.GetRequiredService<IBookingService>();
+
         var logger = NullLogger<EventsController>.Instance;
         _eventsController = new EventsController(_eventService, bookingService, logger);
         _bookingsController = new BookingsController(bookingService);
 
         var backgroundLogger = NullLogger<BookingBackgroundService>.Instance;
         _backgroundService = new BookingBackgroundService(
-            serviceProvider.GetRequiredService<IServiceScopeFactory>(),
+            _serviceProvider.GetRequiredService<IServiceScopeFactory>(),
             backgroundLogger,
             TimeSpan.FromSeconds(_backgroundServiceProcessingDelaySec)
         );
+}
 
-    }
 
     private void RefreshServices()
     {
-        _context = CreateContext();
         InitializeServices();
     }
 
 
     private async Task ResetDatabaseAsync()
     {
-        await using var context = CreateContext();
+        using var scope = _serviceProvider.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
         await context.Database.ExecuteSqlRawAsync(
             "TRUNCATE TABLE events, bookings RESTART IDENTITY CASCADE");
     }
@@ -260,7 +262,8 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
         Assert.NotNull(bookingInfo);
         Assert.Equal(BookingStatus.Confirmed, bookingInfo.Status);
         Assert.Equal(@event.Id, bookingCreate.EventId);
-        Assert.Equal(bookingCreate.CreatedAt, bookingInfo.CreatedAt);
+        // WARN: Особенность в сравнении времени
+        Assert.True(Math.Abs((bookingCreate.CreatedAt - bookingInfo.CreatedAt).TotalMilliseconds) < 1);
         Assert.True(bookingInfo.ProcessedAt >= bookingCreate.CreatedAt);
     }
 
