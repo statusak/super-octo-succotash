@@ -1,4 +1,5 @@
 using CSCourse.DataAccess;
+using CSCourse.Interfaces;
 using CSCourse.Models;
 using Microsoft.EntityFrameworkCore;
 

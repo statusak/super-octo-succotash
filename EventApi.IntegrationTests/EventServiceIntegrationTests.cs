@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Testcontainers.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 using CSCourse.Repositories;
+using CSCourse.Interfaces;
 
 namespace EventApi.IntegrationTests;
 public class EventServiceIntegrationTests : IAsyncLifetime

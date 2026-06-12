@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using CSCourse.Repositories;
+using CSCourse.Interfaces;
 
 namespace EventApi.UnitTests;
 public class EventServiceUnitTests
