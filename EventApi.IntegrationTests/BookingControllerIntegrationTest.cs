@@ -202,7 +202,8 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
         Assert.Equal(bookingCreate.Id, bookingInfo.Id);
         Assert.Equal(bookingCreate.EventId, bookingInfo.EventId);
         Assert.Equal(bookingCreate.Status, bookingInfo.Status);
-        Assert.Equal(bookingCreate.CreatedAt, bookingInfo.CreatedAt);
+        // WARN: Особенность в сравнении времени
+        Assert.True(Math.Abs((bookingCreate.CreatedAt - bookingInfo.CreatedAt).TotalMilliseconds) < 1);
     }
 
     [Fact]

@@ -141,6 +141,7 @@ public class BookingServiceIntegrationTests : IAsyncLifetime
         Assert.Equal(expectedBooking.Id, result.Id);
         Assert.Equal(expectedBooking.EventId, result.EventId);
         Assert.Equal(expectedBooking.Status, result.Status);
+        // WARN: Особенность в сравнении времени
         Assert.True(Math.Abs((expectedBooking.CreatedAt - result.CreatedAt).TotalMilliseconds) < 1);
     }
 
@@ -183,6 +184,7 @@ public class BookingServiceIntegrationTests : IAsyncLifetime
         
         Assert.NotNull(updatedBooking.ProcessedAt);
         DateTime updatedBookingProcessedAt = updatedBooking.ProcessedAt.Value;
+        // WARN: Особенность в сравнении времени
         Assert.True(Math.Abs((processedDto.ProcessedAt - updatedBookingProcessedAt).TotalMilliseconds) < 1);
         Assert.True(Math.Abs((booking.CreatedAt - updatedBooking.CreatedAt).TotalMilliseconds) < 1);
     }
