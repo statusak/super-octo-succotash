@@ -1,137 +1,99 @@
-﻿using CSCourse.DataAccess;
-using CSCourse.Interfaces;
+﻿using CSCourse.Interfaces;
 using CSCourse.Models;
-using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 
 namespace CSCourse.Services
 {
     public class EventService : IEventService
     {
-        private readonly AppDbContext _context;
+        private readonly IEventRepository _events;
+
         private readonly object _lockCreateEvent = new object();
 
         private readonly SemaphoreSlim _processingSemaphoreEvent = new(1, 1);
 
-        public EventService(AppDbContext context)
+        public EventService(IEventRepository events)
         {
-            _context = context;
+            _events = events;
         }
 
         public PaginatedResult GetAll(int page, int pageSize)
         {
             return new PaginatedResult
             {
-                CountEvents = _context.Events.Count(),
-                Events = _context.Events.Skip((page - 1) * pageSize).Take(pageSize).ToList()
+                CountEvents = _events.Count(),
+                Events = _events.GetPage(page, pageSize)
             }; 
         }
 
         public async Task<PaginatedResult> GetAllAsync(int page, int pageSize)
         {
-            var countEvents = await _context.Events.CountAsync();
-            var events = await _context.Events
-                .AsQueryable()
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
-
             return new PaginatedResult
             {
-                CountEvents = countEvents,
-                Events = events
+                CountEvents = await _events.CountAsync(),
+                Events = await _events.GetPageAsync(page, pageSize)
             };
 
         }
 
         public PaginatedResult GetAll(FilterEvent filterEvent, int page, int pageSize)
         {
-            var filteredEvents = _context.Events.AsQueryable();
-
-            if (!string.IsNullOrEmpty(filterEvent.Title))
+            FilterRepositoryEventDto filterRepositoryEventDto = new FilterRepositoryEventDto
             {
-                filteredEvents = filteredEvents.Where(e =>
-                    EF.Functions.ILike(e.Title, $"%{filterEvent.Title}%"));
-            }
-
-            if (filterEvent.StartAt != null)
-            {
-                filteredEvents = filteredEvents.Where(e => e.StartAt >= filterEvent.StartAt);
-            }
-
-            if (filterEvent.EndAt != null)
-            {
-                filteredEvents = filteredEvents.Where(e => e.EndAt <= filterEvent.EndAt);
-            }
+                Title = filterEvent.Title,
+                StartAt = filterEvent.StartAt,
+                EndAt = filterEvent.EndAt,
+            };
 
             return new PaginatedResult
             {
-                CountEvents = _context.Events.Count(),
-                Events = filteredEvents.Skip((page - 1) * pageSize).Take(pageSize).ToList()
+                CountEvents = _events.Count(),
+                Events = _events.GetFilteredPage(filterRepositoryEventDto, page, pageSize)
             };
         }
 
         public async Task<PaginatedResult> GetAllAsync(FilterEvent filterEvent, int page, int pageSize)
         {
-            var filteredEvents = _context.Events.AsQueryable();
 
-            if (!string.IsNullOrEmpty(filterEvent.Title))
+            FilterRepositoryEventDto filterRepositoryEventDto = new FilterRepositoryEventDto
             {
-                filteredEvents = filteredEvents.Where(e =>
-                    EF.Functions.ILike(e.Title, $"%{filterEvent.Title}%"));
-            }
-
-            if (filterEvent.StartAt != null)
-            {
-                filteredEvents = filteredEvents.Where(e => e.StartAt >= filterEvent.StartAt);
-            }
-
-            if (filterEvent.EndAt != null)
-            {
-                filteredEvents = filteredEvents.Where(e => e.EndAt <= filterEvent.EndAt);
-            }
-
-            var countEvents = await _context.Events.CountAsync();
-            var events = await filteredEvents.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
-
+                Title = filterEvent.Title,
+                StartAt = filterEvent.StartAt,
+                EndAt = filterEvent.EndAt,
+            };
+           
             return new PaginatedResult
             {
-                CountEvents = countEvents,
-                Events = events
+                CountEvents = await _events.CountAsync(),
+                Events = await _events.GetFilteredPageAsync(filterRepositoryEventDto, page, pageSize)
             };
         }
 
         public Event? GetEventById(Guid id)
         {
-            return _context.Events.First(x => x.Id == id);
+            return _events.GetById(id);
         }
 
         public async Task<Event?> GetEventByIdAsync(Guid id)
         {
-            return await _context.Events.FirstAsync(x => x.Id == id);
+            return await _events.GetByIdAsync(id);
         }
 
         public bool IsEventExists(Guid id)
         {
-            return _context.Events.Any(x => x.Id == id);
+            return _events.IsExists(id);
         }
 
         public async Task<bool> IsEventExistsAsync(Guid id)
         {
-            return await _context.Events.AnyAsync(x => x.Id == id);
+            return await _events.IsExistsAsync(id);
         }
 
         public bool TryReserveSeats(Guid id, int count = 1)
         {
             lock (_lockCreateEvent)
             {
-                var @event = _context.Events.First(x => x.Id == id);
-                if (@event.AvailableSeats - count < 0) {
-                    return false;
-                }
-                @event.AvailableSeats -= count;
-                _context.SaveChanges();
-                return true;
+                return _events.TryReserveSeats(id, count);
             }
         }
 
@@ -140,14 +102,7 @@ namespace CSCourse.Services
             await _processingSemaphoreEvent.WaitAsync();
             try
             {
-                var @event = await _context.Events.FirstAsync(x => x.Id == id);
-                if (@event.AvailableSeats - count < 0)
-                {
-                    return false;
-                }
-                @event.AvailableSeats -= count;
-                await _context.SaveChangesAsync();
-                return true;
+                return await _events.TryReserveSeatsAsync(id, count);
             }
             finally
             {
@@ -159,14 +114,7 @@ namespace CSCourse.Services
         {
             lock (_lockCreateEvent)
             {
-                var @event = _context.Events.First(x => x.Id == id);
-                if (@event.AvailableSeats + count > @event.TotalSeats)
-                {
-                    return false;
-                }
-                @event.AvailableSeats += count;
-                _context.SaveChanges();
-                return true;
+                return _events.TryReleaseSeats(id, count);
             }
         }
 
@@ -175,14 +123,7 @@ namespace CSCourse.Services
             await _processingSemaphoreEvent.WaitAsync();
             try
             {
-                var @event = await _context.Events.FirstAsync(x => x.Id == id);
-                if (@event.AvailableSeats + count > @event.TotalSeats)
-                {
-                    return false;
-                }
-                @event.AvailableSeats += count;
-                await _context.SaveChangesAsync();
-                return true;
+                return await _events.TryReleaseSeatsAsync(id, count);
             }
             finally
             {
@@ -197,22 +138,7 @@ namespace CSCourse.Services
                 throw new ValidationException("@event.TotalSeats <= 0");
             }
 
-            Guid eventId;
-
-            lock (_lockCreateEvent)
-            {
-                do
-                {
-                    eventId = Guid.NewGuid();
-                }
-                while (_context.Events.Any(e => e.Id == eventId));
-
-                @event.Id = eventId;
-                _context.Events.Add(@event);
-                _context.SaveChanges();
-            }
-
-            return eventId;
+            return _events.Create(@event);
         }
 
         public async Task<Guid> CreateEventAsync(Event @event)
@@ -222,96 +148,68 @@ namespace CSCourse.Services
                 throw new ValidationException("@event.TotalSeats <= 0");
             }
 
-            @event.Id = Guid.NewGuid();
-            _context.Events.Add(@event);
-
-            try
-            {
-                await _context.SaveChangesAsync();
-                return @event.Id;
-            }
-            catch (DbUpdateException)
-            {
-                _context.Entry(@event).State = EntityState.Detached;
-                return await CreateEventAsync(@event);
-            }
+            return await _events.CreateAsync(@event);
         }
 
         public bool UpdateEvent(Guid id, Event @event)
         {
-            var @event_old = _context.Events.First(x => x.Id == id);
-            if (@event_old != null)
+            var eventRepositoryUpdateDto = new EventRepositoryUpdateDto
             {
-                @event_old.Title = @event.Title;
-                @event_old.Description = @event.Description;
-                @event_old.StartAt = @event.StartAt;
-                @event_old.EndAt = @event.EndAt;
-                _context.SaveChanges();
-                return true;
-            }
-            return false;
+                Id = id,
+                Title = @event.Title,
+                Description = @event.Description,
+                StartAt = @event.StartAt,
+                EndAt = @event.EndAt,
+            };
+            return _events.Update(eventRepositoryUpdateDto);
         }
 
         public async Task<bool> UpdateEventAsync(Guid id, Event @event)
         {
-            var rowsAffected = await _context.Events
-                .Where(x => x.Id == id)
-                .ExecuteUpdateAsync(s => s
-                    .SetProperty(e => e.Title, e => @event.Title)
-                    .SetProperty(e => e.Description, e => @event.Description)
-                    .SetProperty(e => e.StartAt, e => @event.StartAt)
-                    .SetProperty(e => e.EndAt, e => @event.EndAt)
-            );
-
-            return rowsAffected > 0;
-
+            var eventRepositoryUpdateDto = new EventRepositoryUpdateDto
+            {
+                Id = id,
+                Title = @event.Title,
+                Description = @event.Description,
+                StartAt = @event.StartAt,
+                EndAt = @event.EndAt,
+            };
+            return await _events.UpdateAsync(eventRepositoryUpdateDto);
         }
 
         public bool UpdateEvent(Guid id, string Title, string? Description, DateTime StartAt, DateTime EndAt)
         {
-            var @event_old = _context.Events.First(x => x.Id == id);
-            if (@event_old != null)
+            var eventRepositoryUpdateDto = new EventRepositoryUpdateDto
             {
-                @event_old.Title = Title;
-                @event_old.Description = Description;
-                @event_old.StartAt = StartAt;
-                @event_old.EndAt = EndAt;
-                _context.SaveChanges();
-                return true;
-            }
-            return false;
+                Id = id,
+                Title = Title,
+                Description = Description,
+                StartAt = StartAt,
+                EndAt = EndAt,
+            };
+            return _events.Update(eventRepositoryUpdateDto);
         }
 
         public async Task<bool> UpdateEventAsync(Guid id, string Title, string? Description, DateTime StartAt, DateTime EndAt)
         {
-            var rowsAffected = await _context.Events
-                .Where(x => x.Id == id)
-                .ExecuteUpdateAsync(s => s
-                    .SetProperty(e => e.Title, e => Title)
-                    .SetProperty(e => e.Description, e => Description)
-                    .SetProperty(e => e.StartAt, e => StartAt)
-                    .SetProperty(e => e.EndAt, e => EndAt)
-            );
-
-            return rowsAffected > 0;
+            var eventRepositoryUpdateDto = new EventRepositoryUpdateDto
+            {
+                Id = id,
+                Title = Title,
+                Description = Description,
+                StartAt = StartAt,
+                EndAt = EndAt,
+            };
+            return await _events.UpdateAsync(eventRepositoryUpdateDto);
         }
         public void DeleteEvent(Guid id)
         {
-            var @event = _context.Events.First(x => x.Id == id);
-            if (@event != null) {
-                _context.Events.Remove(@event);
-                _context.SaveChanges();
-            }
+            _events.Delete(id);
         }
 
         public async Task DeleteEventAsync(Guid id)
         {
-            var @event = await _context.Events.FirstAsync(x => x.Id == id);
-            if (@event != null)
-            {
-                _context.Events.Remove(@event);
-                await _context.SaveChangesAsync();
-            }
+            await _events.DeleteAsync(id);
         }
     }
 }
