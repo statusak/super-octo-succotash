@@ -57,7 +57,7 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
 
         using var scope = _serviceProvider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        context.Database.EnsureCreated();
+        context.Database.Migrate();
 
         _eventService = _serviceProvider.GetRequiredService<IEventService>();
         var bookingService = _serviceProvider.GetRequiredService<IBookingService>();

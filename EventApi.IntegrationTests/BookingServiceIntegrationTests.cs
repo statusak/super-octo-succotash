@@ -35,7 +35,7 @@ public class BookingServiceIntegrationTests : IAsyncLifetime
             .Options;
 
         var context = new AppDbContext(options);
-        context.Database.EnsureCreated();
+        context.Database.Migrate();
         return context;
     }
     private void InitializeServices()
