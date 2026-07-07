@@ -274,7 +274,7 @@ public class EventRepository : IEventRepository
 
     public bool Delete(Guid id)
     {
-        var @event = _context.Events.First(e => e.Id == id);
+        var @event = _context.Events.FirstOrDefault(e => e.Id == id);
         if (@event != null)
         {
             _context.Events.Remove(@event);
@@ -286,7 +286,7 @@ public class EventRepository : IEventRepository
 
     public async Task<bool> DeleteAsync(Guid id)
     {
-        var @event = await _context.Events.FirstAsync(e => e.Id == id);
+        var @event = await _context.Events.FirstOrDefaultAsync(e => e.Id == id);
         if (@event != null)
         {
             _context.Events.Remove(@event);
