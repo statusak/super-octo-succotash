@@ -202,14 +202,14 @@ namespace CSCourse.Services
             };
             return await _events.UpdateAsync(eventRepositoryUpdateDto);
         }
-        public void DeleteEvent(Guid id)
+        public bool DeleteEvent(Guid id)
         {
-            _events.Delete(id);
+            return _events.Delete(id);
         }
 
-        public async Task DeleteEventAsync(Guid id)
+        public async Task<bool> DeleteEventAsync(Guid id)
         {
-            await _events.DeleteAsync(id);
+            return await _events.DeleteAsync(id);
         }
     }
 }

@@ -234,8 +234,14 @@ namespace CSCourse.Controllers
         {
             try
             {
-                await _eventService.DeleteEventAsync(index);
-                return Ok();
+                if(await _eventService.DeleteEventAsync(index))
+                {
+                    return Ok();
+                }
+                else
+                {
+                    return NotFound($"Event with index {index} not found");
+                }
             }
             catch (InvalidOperationException)
             {
