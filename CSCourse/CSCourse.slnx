@@ -4,6 +4,7 @@
     <File Path="../LICENSE" />
     <File Path="../README.md" />
   </Folder>
-  <Project Path="../EventServiceTest/EventServiceTest.csproj" Id="c5c7a51a-f296-4ada-bdf1-5a495a7ceb6c" />
+  <Project Path="../EventApi.IntegrationTests/EventApi.IntegrationTests.csproj"/>
+  <Project Path="../EventApi.UnitTests/EventApi.UnitTests.csproj"/>
   <Project Path="CSCourse.csproj" />
 </Solution>
