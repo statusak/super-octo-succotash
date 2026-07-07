@@ -219,7 +219,13 @@ cd super-octo-succotash
 ```bash
 dotnet restore
 ```
-3. Запустите приложение:
+
+3. Применение миграций
+```bash
+dotnet ef database update
+``` 
+
+4. Запустите приложение:
 ```bash
 dotnet run
 ```
