@@ -92,7 +92,7 @@ namespace CSCourse.Controllers
         /// GET /Events/308dd020-a855-4e80-b29e-b3582b6de65c
         /// </remarks>
         /// <response code="200">Успешный ответ: информация о мероприятии (HTTP 200 OK)</response>
-        /// <response code="404">Мероприятие с указанным ID не найдено (HTTP 404 Not Found)</response
+        /// <response code="404">Мероприятие с указанным ID не найдено (HTTP 404 Not Found)</response>
         [HttpGet("{index:guid}")]
         public async Task<ActionResult<Event>> GetById(Guid index)
         {
@@ -234,8 +234,14 @@ namespace CSCourse.Controllers
         {
             try
             {
-                await _eventService.DeleteEventAsync(index);
-                return Ok();
+                if(await _eventService.DeleteEventAsync(index))
+                {
+                    return Ok();
+                }
+                else
+                {
+                    return NotFound($"Event with index {index} not found");
+                }
             }
             catch (InvalidOperationException)
             {

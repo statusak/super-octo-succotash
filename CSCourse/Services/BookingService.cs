@@ -16,20 +16,19 @@ namespace CSCourse.Services
     {
         private readonly IEventService _eventService;
 
-        private readonly AppDbContext _context;
+        private readonly IBookingRepository _bookings;
+
         private readonly SemaphoreSlim _processingSemaphoreBooking = new(1, 1);
         private readonly object _bookingLock = new();
 
         public BookingService(
-            IEventService eventService, AppDbContext context)
+            IEventService eventService, IBookingRepository bookings)
         {
             _eventService = eventService;
-            _context = context;
+            _bookings = bookings;
         }
         public async Task<Booking> CreateBookingAsync(Guid eventId)
         {
-            Guid bookingId;
-            Booking newBooking;
             bool canReserveSeats;
             // TODO: Здесь было-бы уместно использовать транзакцию
             await _processingSemaphoreBooking.WaitAsync();
@@ -49,18 +48,22 @@ namespace CSCourse.Services
                 }
                 if (canReserveSeats)
                 {
-
-                    bookingId = Guid.NewGuid();
-                    newBooking = new Booking
+                    var newBookingDto = new BookingRepositoryCreateDto
                     {
-                        Id = bookingId,
                         EventId = eventId,
                         Status = BookingStatus.Pending,
                         CreatedAt = DateTime.UtcNow
                     };
 
-                    await _context.Bookings.AddAsync(newBooking);
-                    await _context.SaveChangesAsync();
+                    Guid bookingId = await _bookings.CreateAsync(newBookingDto);
+
+                    var newBooking = new Booking
+                    {
+                        Id = bookingId, 
+                        EventId = newBookingDto.EventId,
+                        Status = newBookingDto.Status,
+                        CreatedAt = newBookingDto.CreatedAt,
+                    };
 
                     return newBooking;
                 }
@@ -75,33 +78,29 @@ namespace CSCourse.Services
 
         public IEnumerable<Booking> GetPending()
         {
-            var pendingBooking = _context.Bookings.Where(x => x.Status == BookingStatus.Pending);
+            var pendingBooking = _bookings.GetPending();
             return pendingBooking;
         }
 
         public async Task<IEnumerable<Booking>> GetPendingAsync()
         {
-            var pendingBooking = await _context.Bookings.Where(x => x.Status == BookingStatus.Pending).ToListAsync();
+            var pendingBooking = await _bookings.GetPendingAsync();
             return pendingBooking;
         }
 
         public async Task<Booking?> GetBookingByIdAsync(Guid bookingId)
         {
-            return await _context.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId);
+            return await _bookings.GetByIdAsync(bookingId);
         }
-        public async Task<Booking?> UpdateProcessedBookingByIdAsync(Guid bookingId, BookingProcessedDto booking)
+        public async Task<bool> UpdateProcessedBookingByIdAsync(Guid bookingId, BookingProcessedDto booking)
         {
-            var cached = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId);
-            if (cached != null)
+            var bookingsRepositoryUpdateDto = new BookingRepositoryUpdateDto
             {
-                cached.Status = booking.Status;
-                cached.ProcessedAt = booking.ProcessedAt;
-
-                await _context.SaveChangesAsync();
-
-                return cached;
-            }
-            return null;
+                Id = bookingId,
+                Status = booking.Status,
+                ProcessedAt = booking.ProcessedAt,
+            };
+            return await _bookings.UpdateAsync(bookingsRepositoryUpdateDto); 
         }
     }
 }

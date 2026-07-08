@@ -42,7 +42,7 @@ namespace CSCourse.Interfaces
         /// <remarks>
         /// Метод предназначен для обновления бронирований после их обработки системой.
         /// </remarks>
-        Task<Booking?> UpdateProcessedBookingByIdAsync(Guid bookingId, BookingProcessedDto booking);
+        Task<bool> UpdateProcessedBookingByIdAsync(Guid bookingId, BookingProcessedDto booking);
 
         /// <summary>
         /// Возвращает коллекцию всех бронирований со статусом «ожидает обработки» (Pending).

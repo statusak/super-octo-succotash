@@ -254,7 +254,7 @@ namespace CSCourse.Interfaces
         /// в соответствии с бизнес‑правилами системы. Рекомендуется предварительно проверять существование мероприятия
         /// с помощью метода <see cref="IsEventExists(Guid)"/>.
         /// </remarks>
-        void DeleteEvent(Guid id);
+        bool DeleteEvent(Guid id);
 
         /// <summary>
         /// Удаляет мероприятие из системы по его уникальному идентификатору (асинхронно).
@@ -266,6 +266,6 @@ namespace CSCourse.Interfaces
         /// в соответствии с бизнес‑правилами системы. Рекомендуется предварительно проверять существование мероприятия
         /// с помощью метода <see cref="IsEventExists(Guid)"/>.
         /// </remarks>
-        Task DeleteEventAsync(Guid id);
+        Task<bool> DeleteEventAsync(Guid id);
     }
 }
