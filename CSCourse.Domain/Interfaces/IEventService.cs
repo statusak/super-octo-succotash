@@ -1,6 +1,6 @@
 ﻿using CSCourse.Domain.Models;
 
-namespace CSCourse.Interfaces
+namespace CSCourse.Domain.Interfaces
 {
     /// <summary>
     /// Сервис для работы с мероприятиями (Events). Предоставляет бизнес‑логику для управления событиями:

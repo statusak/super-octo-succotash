@@ -1,8 +1,8 @@
-﻿using CSCourse.Interfaces;
-using CSCourse.Models;
+﻿using CSCourse.Domain.Interfaces;
+using CSCourse.Domain.Models;
 using System.ComponentModel.DataAnnotations;
 
-namespace CSCourse.Services
+namespace CSCourse.Application.Services
 {
     public class EventService : IEventService
     {

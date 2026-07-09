@@ -1,11 +1,11 @@
 ﻿using CSCourse.DataAccess;
-using CSCourse.Interfaces;
+using CSCourse.Domain.Interfaces;
 using CSCourse.Middlewares;
-using CSCourse.Models;
+using CSCourse.Domain.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Concurrent;
 
-namespace CSCourse.Services
+namespace CSCourse.Application.Services
 {
     public class NoAvailableSeatsException : Exception
     {

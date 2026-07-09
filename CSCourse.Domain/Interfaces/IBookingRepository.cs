@@ -1,6 +1,6 @@
 using CSCourse.Domain.Models;
 
-namespace CSCourse.Interfaces
+namespace CSCourse.Domain.Interfaces
 {
     /// <summary>
     /// Репозиторий для работы с данными бронирований: создание, получение и обновление записей о бронированиях в хранилище.
