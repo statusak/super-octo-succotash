@@ -4,6 +4,9 @@
     <File Path="../LICENSE" />
     <File Path="../README.md" />
   </Folder>
+  <Project Path="../CSCourse.Application/CSCourse.Application.csproj"/>
+  <Project Path="../CSCourse.Domain/CSCourse.Domain.csproj"/>
+  <Project Path="../CSCourse.Infrastructure/CSCourse.Infrastructure.csproj"/>
   <Project Path="../EventApi.IntegrationTests/EventApi.IntegrationTests.csproj"/>
   <Project Path="../EventApi.UnitTests/EventApi.UnitTests.csproj"/>
   <Project Path="CSCourse.csproj" />
