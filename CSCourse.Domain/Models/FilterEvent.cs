@@ -1,10 +1,14 @@
-﻿namespace CSCourse.Models
+﻿namespace CSCourse.Domain.Models
 {
     /// <summary>
-    /// Модель для фильтрации мероприятий на уровне DB и доступа к данным.
-    /// Преобразуется из FilterEvent.
+    /// Модель для фильтрации мероприятий на уровне бизнес‑логики и доступа к данным.
+    /// Преобразуется из FilterEventDto после валидации.
     /// </summary>
-    public class FilterRepositoryEventDto
+    /// <remarks>
+    /// Отличается от FilterEventDto тем, что поле Title является обязательным (required)
+    /// и обычно уже нормализовано (например, приведено к нижнему регистру для поиска).
+    /// </remarks>
+    public class FilterEvent
     {
         /// <summary>
         /// Нормализованное название мероприятия для поиска по частичному совпадению.

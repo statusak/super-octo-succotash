@@ -1,4 +1,4 @@
-﻿using CSCourse.Models;
+﻿using CSCourse.Domain.Models;
 
 namespace CSCourse.Interfaces
 {

@@ -1,11 +1,15 @@
-﻿namespace CSCourse.Models
+﻿namespace CSCourse.Domain.Models
 {
     /// <summary>
-    /// DTO (Data Transfer Object) для передачи данных об обработанном бронировании.
+    /// DTO (Data Transfer Object) для передачи данных об обработанном бронировании для БД.
     /// Используется при обновлении статуса бронирования после его обработки системой.
     /// </summary>
-    public class BookingProcessedDto
+    public class BookingRepositoryUpdateDto
     {
+        /// <summary>
+        /// Уникальный идентификатор бронирования.
+        /// </summary>
+        public required Guid Id { get; set; }
         /// <summary>
         /// Новый статус бронирования после обработки.
         /// </summary>

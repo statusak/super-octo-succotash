@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace CSCourse.Models
+namespace CSCourse.Domain.Models
 {
     /// <summary>
     /// DTO (Data Transfer Object) для передачи параметров фильтрации мероприятий от клиента.

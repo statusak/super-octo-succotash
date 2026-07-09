@@ -1,4 +1,4 @@
-﻿namespace CSCourse.Models
+﻿namespace CSCourse.Domain.Models
 {
     /// <summary>
     /// Модель бронирования. Представляет данные о бронировании мероприятия.

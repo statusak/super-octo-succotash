@@ -1,4 +1,4 @@
-﻿namespace CSCourse.Models
+﻿namespace CSCourse.Domain.Models
 {
     /// <summary>
     /// Перечисление статусов бронирования. Определяет возможные состояния бронирования на протяжении его жизненного цикла.

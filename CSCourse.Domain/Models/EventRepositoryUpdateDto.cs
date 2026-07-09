@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace CSCourse.Models
+namespace CSCourse.Domain.Models
 {
     /// <summary>
     /// Класс Dto, содержащий информацию о мероприятии для обновления в БД.

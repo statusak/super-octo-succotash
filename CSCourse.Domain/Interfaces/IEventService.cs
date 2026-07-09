@@ -1,5 +1,4 @@
-﻿using CSCourse.Models;
-using System.ComponentModel.DataAnnotations;
+﻿using CSCourse.Domain.Models;
 
 namespace CSCourse.Interfaces
 {

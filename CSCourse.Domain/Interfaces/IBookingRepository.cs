@@ -1,5 +1,4 @@
-using CSCourse.Models;
-using Microsoft.EntityFrameworkCore;
+using CSCourse.Domain.Models;
 
 namespace CSCourse.Interfaces
 {
