@@ -1,7 +1,7 @@
-﻿using CSCourse.Interfaces;
-using CSCourse.Models;
+﻿using CSCourse.Domain.Interfaces;
+using CSCourse.Domain.Models;
 
-namespace CSCourse.Services
+namespace CSCourse.Infrastructure.Services
 {
     public class BookingBackgroundService : BackgroundService
     {

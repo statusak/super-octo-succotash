@@ -1,7 +1,7 @@
-﻿using CSCourse.Models;
+﻿using CSCourse.Domain.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace CSCourse.DataAccess
+namespace CSCourse.Infrastructure.DataAccess
 {
     public sealed class AppDbContext : DbContext
     {

@@ -1,9 +1,9 @@
-using CSCourse.DataAccess;
-using CSCourse.Interfaces;
-using CSCourse.Models;
+using CSCourse.Infrastructure.DataAccess;
+using CSCourse.Domain.Interfaces;
+using CSCourse.Domain.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace CSCourse.Repositories;
+namespace CSCourse.Infrastructure.Repositories;
 
 public class BookingRepository : IBookingRepository
 {

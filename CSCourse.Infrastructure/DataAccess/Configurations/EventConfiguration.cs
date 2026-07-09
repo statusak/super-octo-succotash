@@ -1,8 +1,8 @@
-﻿using CSCourse.Models;
+﻿using CSCourse.Domain.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace CSCourse.DataAccess.Configurations
+namespace CSCourse.Infrastructure.DataAccess.Configurations
 {
     public class EventConfiguration : IEntityTypeConfiguration<Event>
     {
