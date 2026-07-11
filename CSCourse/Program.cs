@@ -1,7 +1,6 @@
 ﻿using CSCourse.Application;
 using CSCourse.Infrastructure;
 using CSCourse.Infrastructure.DataAccess;
-using CSCourse.Infrastructure.Services;
 using CSCourse.Middlewares;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
@@ -12,10 +11,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
 builder.Services.AddInfrastructure(connectionString);
-
 builder.Services.AddApplication();
-
-builder.Services.AddHostedService<BookingBackgroundService>();
 
 builder.Services.AddSwaggerGen(options =>
 {

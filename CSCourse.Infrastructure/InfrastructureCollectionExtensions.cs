@@ -3,6 +3,7 @@ using CSCourse.Infrastructure.Repositories;
 using CSCourse.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using CSCourse.Infrastructure.Services;
 
 namespace CSCourse.Infrastructure;
 
@@ -20,6 +21,9 @@ public static class InfrastructureCollectionExtensions
 
         services.AddScoped<IEventRepository, EventRepository>();
         services.AddScoped<IBookingRepository, BookingRepository>();
+
+        services.AddHostedService<BookingBackgroundService>();
+
 
         return services;
     }
