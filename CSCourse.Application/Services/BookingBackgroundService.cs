@@ -1,5 +1,10 @@
-﻿using CSCourse.Domain.Interfaces;
+﻿using CSCourse.Application.Interfaces;
 using CSCourse.Domain.Models;
+
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using CSCourse.Application.Models;
 
 namespace CSCourse.Infrastructure.Services
 {
