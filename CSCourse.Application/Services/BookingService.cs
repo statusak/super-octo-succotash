@@ -1,10 +1,7 @@
-﻿using CSCourse.DataAccess;
-using CSCourse.Domain.Interfaces;
-using CSCourse.Middlewares;
+﻿using CSCourse.Domain.Models;
 using CSCourse.Domain.Exceptions;
-using CSCourse.Domain.Models;
-using Microsoft.EntityFrameworkCore;
-using System.Collections.Concurrent;
+using CSCourse.Application.Interfaces;
+using CSCourse.Application.Models;
 
 namespace CSCourse.Application.Services
 {

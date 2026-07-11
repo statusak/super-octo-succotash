@@ -1,5 +1,6 @@
-﻿using CSCourse.Domain.Interfaces;
-using CSCourse.Domain.Models;
+﻿using CSCourse.Domain.Models;
+using CSCourse.Application.Interfaces;
+using CSCourse.Application.Models;
 using System.ComponentModel.DataAnnotations;
 
 namespace CSCourse.Application.Services
