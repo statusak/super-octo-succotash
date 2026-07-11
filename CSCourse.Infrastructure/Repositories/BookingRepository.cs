@@ -1,6 +1,7 @@
-using CSCourse.Infrastructure.DataAccess;
-using CSCourse.Domain.Interfaces;
 using CSCourse.Domain.Models;
+using CSCourse.Application.Interfaces;
+using CSCourse.Application.Models;
+using CSCourse.Infrastructure.DataAccess;
 using Microsoft.EntityFrameworkCore;
 
 namespace CSCourse.Infrastructure.Repositories;

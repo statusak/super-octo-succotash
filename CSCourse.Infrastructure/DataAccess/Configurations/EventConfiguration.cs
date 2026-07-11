@@ -8,7 +8,7 @@ namespace CSCourse.Infrastructure.DataAccess.Configurations
     {
         public void Configure(EntityTypeBuilder<Event> builder)
         {
-            builder.Metadata.SetTableName("events");
+            builder.ToTable("events");
             // https://stackoverflow.com/q/47013752
             builder.Property(e => e.Id).ValueGeneratedNever();
             builder.HasKey(e => e.Id);

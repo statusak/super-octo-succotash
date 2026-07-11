@@ -1,5 +1,4 @@
 ﻿using CSCourse.Domain.Models;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -9,7 +8,7 @@ namespace CSCourse.Infrastructure.DataAccess.Configurations
     {
         public void Configure(EntityTypeBuilder<Booking> builder)
         {
-            builder.Metadata.SetTableName("bookings");
+            builder.ToTable("bookings");
             // https://stackoverflow.com/q/47013752
             builder.Property(b => b.Id).ValueGeneratedNever();
             builder.HasKey(b => b.Id);
