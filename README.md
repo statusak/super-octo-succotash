@@ -2,6 +2,25 @@
 
 Пример веб‑приложения на ASP.NET для управления мероприятиями с RESTful API и документацией Swagger.
 
+### Architecture: Clean Architecture (Domain, Application, Infrastructure, Presentation)
+
+#### Domain Layer (CSCourse.Domain)
+
+Содержит сущности предметной области (Event, Booking, FilterEvent, PaginatedResult), доменные исключения (NoAvailableSeatsException, NotFoundException). Здесь определена бизнес-логика на уровне правил предметной области без привязки к инфраструктуре или UI.
+
+#### Application Layer (CSCourse.Application)
+
+Включает контракты сервисов (IEventService, IBookingService) и репозиториев (IEventRepository, IBookingRepository), DTO для передачи данных между слоями (EventCreateDto, EventUpdateDto, BookingResponseDto и др.), а также реализации бизнес-сервисов (EventService, BookingService) и фонового сервиса обработки бронирований (BookingBackgroundService). Реализована оркестрация операций, валидация и координация взаимодействия между слоями.
+
+#### Infrastructure Layer (CSCourse.Infrastructure)
+
+Отвечает за взаимодействие с внешними ресурсами. Содержит реализацию репозиториев (BookingRepository, EventRepository), контекст базы данных (AppDbContext), конфигурацию сущностей через Fluent API (BookingConfiguration, EventConfiguration), миграции EF Core (папка Migrations), а также методы расширения для регистрации зависимостей (InfrastructureCollectionExtensions). Использует EF Core с PostgreSQL (тип timestamp with time zone), обеспечивает транзакции с уровнем изоляции RepeatableRead, защиту от состояния гонки (семафоры, UPDLOCK), обработку DbUpdateException и корректную работу с датами.
+
+#### Presentation Layer (CSCourse)
+
+Представляет собой ASP.NET Core Web API. Включает контроллеры (EventsController, BookingsController), middleware (GlobalExceptionHandlingMiddleware), конфигурацию Swagger/OpenAPI, настройки запуска и DI-контейнера (Program.cs). Обеспечивает обработку HTTP-запросов, маршрутизацию, глобальную обработку ошибок по стандарту Problem Details (RFC 7807), валидацию областей видимости зависимостей (ValidateScopes, ValidateOnBuild).
+
+
 ## Функциональность
 
 В приложении реализованы:
@@ -175,8 +194,8 @@
 
 * .NET 10.0 или выше;
 * PostgreSQL (для запуска приложения);
-* текстовый редактор или IDE (например, Visual Studio, VS Code);
-* браузер для доступа к Swagger UI.
+* Текстовый редактор или IDE (например, Visual Studio, VS Code);
+* Браузер для доступа к Swagger UI.
 
 ## Настройка базы данных
 
@@ -244,18 +263,30 @@ dotnet test EventApi.IntegrationTests
 ## Структура проекта
 
 ```txt
-├── CSCourse/                  # Основной проект приложения
-│   ├── Controllers/           # Контроллеры API
-│   ├── DataAccess/            # Правила для настройки БД c Fluent API
-│   ├── Interfaces/            # Бизнес‑логика: интерфейсы
-│   ├── Middlewares/           # Middleware-компоненты
-│   ├── Migrations/            # Миграции базы данных (EF Core)
-│   ├── Models/                # Модели данных
-│   ├── Properties/            # Настройки запуска приложения
-│   ├── Repositories/          # Репозитории для доступа к данным
-│   └── Services/              # Бизнес‑логика: реализации сервисов
-├── EventApi.IntegrationTests/ # Проект с интеграционными тестами
-└── EventApi.UnitTests/        # Проект с юнит‑тестами
+├── CSCourse/                  # Presentation Layer: ASP.NET Core Web API, контроллеры, middleware, Program.cs, Swagger
+│   ├── Controllers/           # RESTful контроллеры: EventsController, BookingsController
+│   ├── Middlewares/           # Компоненты обработки запросов: GlobalExceptionHandlingMiddleware
+│   ├── Properties/            # Настройки запуска приложения: launchSettings.json
+│   └── Program.cs             # Конфигурация приложения, регистрация DI, применение миграций, настройка Swagger
+│
+├── CSCourse.Domain/           # Domain Layer: сущности и доменные исключения
+│   ├── Exceptions/            # Доменные исключения: NoAvailableSeatsException, NotFoundException
+│   └── Models/                # Доменные модели: Event, Booking, FilterEvent, PaginatedResult
+│
+├── CSCourse.Application/      # Application Layer: интерфейсы, DTO, реализации сервисов и фоновых задач
+│   ├── Interfaces/            # Контракты: IEventService, IBookingService, IEventRepository, IBookingRepository
+│   ├── Models/                # DTO для передачи данных: EventCreateDto, BookingResponseDto, FilterEventDto и др.
+│   ├── Services/              # Бизнес-сервисы: EventService, BookingService; фоновый сервис: BookingBackgroundService
+│   └── ApplicationCollectionExtensions.cs # Методы расширения для регистрации инфраструктурных зависимостей в DI
+│
+├── CSCourse.Infrastructure/   # Infrastructure Layer: доступ к данным, конфигурация БД, миграции
+│   ├── DataAccess/            # Контекст БД и конфигурация сущностей: AppDbContext, BookingConfiguration, EventConfiguration
+│   ├── Migrations/            # Миграции EF Core: файлы миграций и снимок модели (AppDbContextModelSnapshot.cs)
+│   ├── Repositories/          # Репозитории: BookingRepository, EventRepository
+│   └── InfrastructureCollectionExtensions.cs # Методы расширения для регистрации инфраструктурных зависимостей в DI
+│
+├── EventApi.IntegrationTests/ # Интеграционные тесты с Testcontainers.PostgreSql
+└── EventApi.UnitTests/        # Юнит-тесты с InMemory-провайдером
 ```
 ---
 
