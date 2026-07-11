@@ -1,20 +1,27 @@
-﻿namespace CSCourse.Domain.Models
+﻿using CSCourse.Domain.Models;
+
+namespace CSCourse.Application.Models
 {
     /// <summary>
-    /// Модель бронирования. Представляет данные о бронировании мероприятия.
+    /// DTO (Data Transfer Object) для передачи данных о бронировании.
     /// Содержит основную информацию: идентификатор, связь с мероприятием, статус, временные метки.
-    /// Используется как DTO для создания в БД
     /// </summary>
-    public class BookingRepositoryCreateDto
+    public class BookingResponseDto
     {
+        /// <summary>
+        /// Уникальный идентификатор бронирования.
+        /// </summary>
+        /// <remarks>
+        /// Генерируется при создании бронирования. Используется для идентификации и поиска записи.
+        /// </remarks>
+        public required Guid Id { get; set; }
+
         /// <summary>
         /// Идентификатор мероприятия, к которому относится бронирование.
         /// </summary>
         /// <remarks>
         /// Связывает бронирование с конкретным мероприятием в системе.
         /// </remarks>
-        /// 
-        // TODO: Во Fluent API Указать, что это ForeignKey для EventID
         public required Guid EventId { get; set; }
 
         /// <summary>

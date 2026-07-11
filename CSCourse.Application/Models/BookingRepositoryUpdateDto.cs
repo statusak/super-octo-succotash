@@ -1,4 +1,6 @@
-﻿namespace CSCourse.Domain.Models
+﻿using CSCourse.Domain.Models;
+
+namespace CSCourse.Application.Models
 {
     /// <summary>
     /// DTO (Data Transfer Object) для передачи данных об обработанном бронировании для БД.
