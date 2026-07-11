@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using CSCourse.Application.Models;
 
-namespace CSCourse.Infrastructure.Services
+namespace CSCourse.Application.Services
 {
     public class BookingBackgroundService : BackgroundService
     {

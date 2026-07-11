@@ -3,7 +3,7 @@ using CSCourse.Infrastructure.Repositories;
 using CSCourse.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using CSCourse.Infrastructure.Services;
+using CSCourse.Application.Services;
 
 namespace CSCourse.Infrastructure;
 

@@ -1,9 +1,10 @@
-﻿using CSCourse.DataAccess;
-using CSCourse.Interfaces;
-using CSCourse.Middlewares;
-using CSCourse.Models;
-using CSCourse.Repositories;
-using CSCourse.Services;
+﻿using CSCourse.Domain.Models;
+using CSCourse.Domain.Exceptions;
+using CSCourse.Application.Interfaces;
+using CSCourse.Application.Models;
+using CSCourse.Application.Services;
+using CSCourse.Infrastructure.Repositories;
+using CSCourse.Infrastructure.DataAccess;
 using Microsoft.EntityFrameworkCore;
 using Testcontainers.PostgreSql;
 

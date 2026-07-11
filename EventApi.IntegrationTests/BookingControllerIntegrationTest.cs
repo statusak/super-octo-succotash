@@ -1,9 +1,10 @@
-﻿using CSCourse.Controllers;
-using CSCourse.DataAccess;
-using CSCourse.Interfaces;
-using CSCourse.Models;
-using CSCourse.Repositories;
-using CSCourse.Services;
+﻿using CSCourse.Domain.Models;
+using CSCourse.Application.Interfaces;
+using CSCourse.Application.Models;
+using CSCourse.Application.Services;
+using CSCourse.Infrastructure.Repositories;
+using CSCourse.Infrastructure.DataAccess;
+using CSCourse.Controllers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
