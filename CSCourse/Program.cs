@@ -1,8 +1,9 @@
-﻿using CSCourse.DataAccess;
-using CSCourse.Interfaces;
+﻿using CSCourse.Application.Interfaces;
+using CSCourse.Application.Services;
+using CSCourse.Infrastructure;
+using CSCourse.Infrastructure.DataAccess;
+using CSCourse.Infrastructure.Services;
 using CSCourse.Middlewares;
-using CSCourse.Repositories;
-using CSCourse.Services;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 
@@ -10,11 +11,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(connectionString));
 
-builder.Services.AddScoped<IEventRepository, EventRepository>();
-builder.Services.AddScoped<IBookingRepository, BookingRepository>();
+builder.Services.AddInfrastructure(connectionString);
 
 builder.Services.AddScoped<IEventService, EventService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
