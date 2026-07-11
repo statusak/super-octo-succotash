@@ -1,17 +1,13 @@
 ﻿using CSCourse.DataAccess;
 using CSCourse.Domain.Interfaces;
 using CSCourse.Middlewares;
+using CSCourse.Domain.Exceptions;
 using CSCourse.Domain.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Concurrent;
 
 namespace CSCourse.Application.Services
 {
-    public class NoAvailableSeatsException : Exception
-    {
-        public NoAvailableSeatsException(string message) : base(message) { }
-    }
-
     public class BookingService : IBookingService
     {
         private readonly IEventService _eventService;
