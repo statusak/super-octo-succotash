@@ -1,5 +1,4 @@
-﻿using CSCourse.Application.Interfaces;
-using CSCourse.Application.Services;
+﻿using CSCourse.Application;
 using CSCourse.Infrastructure;
 using CSCourse.Infrastructure.DataAccess;
 using CSCourse.Infrastructure.Services;
@@ -14,8 +13,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 
 builder.Services.AddInfrastructure(connectionString);
 
-builder.Services.AddScoped<IEventService, EventService>();
-builder.Services.AddScoped<IBookingService, BookingService>();
+builder.Services.AddApplication();
 
 builder.Services.AddHostedService<BookingBackgroundService>();
 
