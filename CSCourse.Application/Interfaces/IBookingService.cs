@@ -1,6 +1,7 @@
 ﻿using CSCourse.Domain.Models;
+using CSCourse.Application.Models;
 
-namespace CSCourse.Domain.Interfaces
+namespace CSCourse.Application.Interfaces
 {
     /// <summary>
     /// Сервис для работы с бронированиями: создание, получение и обновление обработанных бронирований.
