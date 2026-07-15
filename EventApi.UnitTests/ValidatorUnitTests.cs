@@ -1,4 +1,4 @@
-﻿using CSCourse.Models;
+﻿using CSCourse.Application.Models;
 using System.ComponentModel.DataAnnotations;
 
 namespace EventApi.UnitTests;

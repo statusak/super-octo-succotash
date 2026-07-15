@@ -1,25 +1,10 @@
-﻿using CSCourse.Services;
+﻿using CSCourse.Domain.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
 
 namespace CSCourse.Middlewares
 {
-    public class NotFoundException : Exception
-    {
-        public NotFoundException()
-        {
-        }
-
-        public NotFoundException(string Path)
-            : base(Path)
-        {
-        }
-
-        public NotFoundException(string Path, Exception inner)
-            : base(Path, inner)
-        {
-        }
-    }
+    
 
 
     public class GlobalExceptionHandlingMiddleware

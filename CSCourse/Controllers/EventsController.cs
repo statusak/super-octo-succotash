@@ -1,5 +1,6 @@
-﻿using CSCourse.Interfaces;
-using CSCourse.Models;
+﻿using CSCourse.Domain.Models;
+using CSCourse.Application.Interfaces;
+using CSCourse.Application.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CSCourse.Controllers

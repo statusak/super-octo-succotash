@@ -1,13 +1,14 @@
+using CSCourse.Domain.Models;
+using CSCourse.Application.Interfaces;
+using CSCourse.Application.Models;
+using CSCourse.Application.Services;
+using CSCourse.Infrastructure.Repositories;
+using CSCourse.Infrastructure.DataAccess;
 using CSCourse.Controllers;
-using CSCourse.DataAccess;
-using CSCourse.Models;
-using CSCourse.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Testcontainers.PostgreSql;
 using Microsoft.EntityFrameworkCore;
-using CSCourse.Repositories;
-using CSCourse.Interfaces;
 
 namespace EventApi.IntegrationTests;
 public class EventServiceIntegrationTests : IAsyncLifetime
