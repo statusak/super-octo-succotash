@@ -1,11 +1,11 @@
-using CSCourse.Application.Models;
+using CSCourse.Domain.Models;
 
 namespace CSCourse.Application.Interfaces;
 
 public interface ISecurityService
 {
-    string GenerateHashFromPassword(string password);
-    bool CheckPasswordAndHash(string password, string hash);
+    string HashPassword(string password);
+    bool VerifyPassword(string password, string hash);
 
-    string GenerateJWTToken(AccountJWTInfoDto accountJWTInfoDto);
+    string CreateJwtToken(AccountJWTInfoDto accountJWTInfoDto);
 }
