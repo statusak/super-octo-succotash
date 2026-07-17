@@ -38,13 +38,26 @@ namespace CSCourse.Application.Interfaces
         /// <param name="bookingId">Уникальный идентификатор (GUID) бронирования, которое необходимо обновить.</param>
         /// <param name="booking">Объект <see cref="BookingProcessedDto"/> с обновлёнными данными бронирования.</param>
         /// <returns>
-        /// Асинхронная задача (<see cref="Task{T}"/>), которая возвращает обновлённый объект <see cref="Booking"/>,
-        /// если бронирование найдено и успешно обновлено; в противном случае возвращает <c>null</c>.
+        /// Асинхронная задача (<see cref="Task{T}"/>), которая возвращает <see cref="true"/>,
+        /// если бронирование найдено и успешно обновлено; в противном случае возвращает <see cref="false"/>
         /// </returns>
         /// <remarks>
         /// Метод предназначен для обновления бронирований после их обработки системой.
         /// </remarks>
         Task<bool> UpdateProcessedBookingByIdAsync(Guid bookingId, BookingProcessedDto booking);
+
+        /// <summary>
+        /// Отменяет бронирование по его идентификатору, 
+        /// </summary>
+        /// <param name="bookingId">Уникальный идентификатор (GUID) бронирования, которое необходимо отменить.</param>
+        /// <returns>
+        /// Асинхронная задача (<see cref="Task{T}"/>), которая возвращает <see cref="true"/>,
+        /// если бронирование найдено и успешно обновлено; в противном случае возвращает <see cref="false"/>
+        /// </returns>
+        /// <remarks>
+        /// Метод предназначен для отмены бронирования
+        /// </remarks>
+        Task<bool> CancelledBookingByIdAsync(Guid bookingId);
 
         /// <summary>
         /// Возвращает коллекцию всех бронирований со статусом «ожидает обработки» (Pending).

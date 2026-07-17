@@ -71,6 +71,41 @@ namespace CSCourse.Application.Services
             }
         }
 
+        public async Task<bool> CancelledBookingByIdAsync(Guid bookingId)
+        {
+            Booking? booking;
+            // TODO: Здесь было-бы уместно использовать транзакцию
+            await _processingSemaphoreBooking.WaitAsync();
+            try
+            {
+                booking = await _bookings.GetByIdAsync(bookingId);
+
+                if(booking == null)
+                {
+                    throw new NotFoundException($"not found booking with id {bookingId}");
+                }
+
+                BookingProcessedDto bookingProcessedDto = new BookingProcessedDto
+                {
+                    Status = BookingStatus.Cancelled,
+                    ProcessedAt = DateTime.Now,
+                };
+
+                if(await UpdateProcessedBookingByIdAsync(bookingId, bookingProcessedDto))
+                {
+                    return await _eventService.ReleaseSeatsAsync(booking.EventId);
+                } else
+                {
+                    // TODO: Сделать лучшую архитектуру, для понимания почему не отменилась бронь
+                    return false;
+                }
+            }
+            finally
+            {
+                _processingSemaphoreBooking.Release();
+            }
+        }
+
         public IEnumerable<Booking> GetPending()
         {
             var pendingBooking = _bookings.GetPending();
