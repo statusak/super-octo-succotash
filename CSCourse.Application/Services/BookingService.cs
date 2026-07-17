@@ -20,7 +20,7 @@ namespace CSCourse.Application.Services
             _eventService = eventService;
             _bookings = bookings;
         }
-        public async Task<Booking> CreateBookingAsync(Guid eventId)
+        public async Task<Booking> CreateBookingAsync(Guid eventId, Guid userId)
         {
             bool canReserveSeats;
             // TODO: Здесь было-бы уместно использовать транзакцию
@@ -44,6 +44,7 @@ namespace CSCourse.Application.Services
                     var newBookingDto = new BookingRepositoryCreateDto
                     {
                         EventId = eventId,
+                        UserId = userId,
                         Status = BookingStatus.Pending,
                         CreatedAt = DateTime.UtcNow
                     };
@@ -52,7 +53,8 @@ namespace CSCourse.Application.Services
 
                     var newBooking = new Booking
                     {
-                        Id = bookingId, 
+                        Id = bookingId,
+                        UserId = userId, 
                         EventId = newBookingDto.EventId,
                         Status = newBookingDto.Status,
                         CreatedAt = newBookingDto.CreatedAt,

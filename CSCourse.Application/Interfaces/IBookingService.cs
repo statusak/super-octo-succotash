@@ -12,6 +12,7 @@ namespace CSCourse.Application.Interfaces
         /// Создаёт новое бронирование для указанного мероприятия.
         /// </summary>
         /// <param name="eventId">Уникальный идентификатор (GUID) мероприятия, для которого создаётся бронирование.</param>
+        /// <param name="userId">Уникальный идентификатор (GUID) пользователя, для которого создаётся бронирование.</param>
         /// <returns>
         /// Асинхронная задача (<see cref="Task{T}"/>), которая возвращает объект <see cref="Booking"/>
         /// после успешного создания бронирования.
@@ -19,7 +20,7 @@ namespace CSCourse.Application.Interfaces
         /// <exception cref="InvalidOperationException">
         /// Выбрасывается, если мероприятие с указанным идентификатором не найдено.
         /// </exception>
-        Task<Booking> CreateBookingAsync(Guid eventId);
+        Task<Booking> CreateBookingAsync(Guid eventId, Guid userId);
 
         /// <summary>
         /// Получает информацию о бронировании по его уникальному идентификатору.
