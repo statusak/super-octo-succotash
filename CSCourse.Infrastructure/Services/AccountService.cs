@@ -7,12 +7,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CSCourse.Infrastructure.Services;
 
-public class AccountSerice : IAccountService
+public class AccountService : IAccountService
 {
     private readonly AppDbContext _context;
     private readonly ISecurityService _securityService;
 
-    public AccountSerice(AppDbContext context, ISecurityService securityService)
+    public AccountService(AppDbContext context, ISecurityService securityService)
     {
         _context = context;
         _securityService = securityService;

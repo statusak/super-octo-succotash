@@ -63,7 +63,7 @@ public class BookingServiceIntegrationTests : IAsyncLifetime
 
         _eventService = new EventService(events);
         _bookingService = new BookingService(_eventService, bookings);
-        _accountService = new AccountSerice(_context, securityService);
+        _accountService = new AccountService(_context, securityService);
     }
 
     private void RefreshServices()

@@ -57,7 +57,7 @@ public class BookingRepositoryIntegrationTest : IAsyncLifetime
         var options = Options.Create(jwtSettings);
 
         ISecurityService securityService = new SecurityService(options);
-        _accountService = new AccountSerice(_context, securityService);
+        _accountService = new AccountService(_context, securityService);
         
     }
 

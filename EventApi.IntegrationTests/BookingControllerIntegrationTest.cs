@@ -10,6 +10,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Testcontainers.PostgreSql;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
+using CSCourse.Infrastructure.Models;
+using Microsoft.Extensions.Options;
+using CSCourse.Infrastructure.Services;
 
 namespace EventApi.IntegrationTests;
 public class BookingControllerIntegrationTest : IAsyncLifetime
@@ -20,6 +25,7 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
     private EventsController _eventsController = null!;
     private BookingsController _bookingsController = null!;
     private BookingBackgroundService _backgroundService = null!;
+    private IAccountService _accountService = null!;
     private IServiceProvider _serviceProvider = null!;
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16-alpine").Build();
 
@@ -54,6 +60,23 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
         services.AddScoped<IEventService, EventService>();
         services.AddScoped<IBookingService, BookingService>();
 
+
+        JwtSettings jwtSettings = new JwtSettings
+        {
+            Secret = "1234567890123456789012",
+            Issuer = "https://example.com",
+            Audience = "https://example.com",
+            ExpirationMinutes = 10,
+        };
+
+        services.AddSingleton(jwtSettings);     
+        services.AddSingleton<IOptions<JwtSettings>>(
+            Options.Create(jwtSettings)
+        );
+
+        services.AddScoped<ISecurityService, SecurityService>();
+        services.AddScoped<IAccountService, AccountService>();
+
         _serviceProvider = services.BuildServiceProvider();
 
         using var scope = _serviceProvider.CreateScope();
@@ -62,6 +85,8 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
 
         _eventService = _serviceProvider.GetRequiredService<IEventService>();
         var bookingService = _serviceProvider.GetRequiredService<IBookingService>();
+
+        _accountService = _serviceProvider.GetRequiredService<IAccountService>();
 
         var logger = NullLogger<EventsController>.Instance;
         _eventsController = new EventsController(_eventService, bookingService, logger);
@@ -113,6 +138,35 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
         Assert.NotNull(@event);
 
         RefreshServices();
+
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+
+        var context = _serviceProvider.GetRequiredService<AppDbContext>();
+
+        Guid userId = await context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);  
+
+        var identity = new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString())
+        }, "LoginTest");
+
+        var principal = new ClaimsPrincipal(identity);
+        var httpContext = new DefaultHttpContext { User = principal };
+
+        _eventsController.ControllerContext = new ControllerContext
+        {
+            HttpContext = httpContext
+        };
+
         var resultCreateBooking = (await _eventsController.CreateBooking(@event.Id)) as AcceptedAtActionResult;
 
         Assert.NotNull(resultCreateBooking);
@@ -146,9 +200,37 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
 
         List<Guid> CreatedBookings = [];
 
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+
+        var context = _serviceProvider.GetRequiredService<AppDbContext>();
+
+        Guid userId = await context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);  
+
         for (int i = 0; i < 10; i++)
         {
             RefreshServices();
+             var identity = new ClaimsIdentity(new[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, userId.ToString())
+            }, "LoginTest");
+
+            var principal = new ClaimsPrincipal(identity);
+            var httpContext = new DefaultHttpContext { User = principal };
+
+            _eventsController.ControllerContext = new ControllerContext
+            {
+                HttpContext = httpContext
+            };
+            
             var resultCreateBooking = (await _eventsController.CreateBooking(@event.Id)) as AcceptedAtActionResult;
 
             Assert.NotNull(resultCreateBooking);
@@ -184,6 +266,35 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
         Assert.NotNull(@event);
 
         RefreshServices();
+
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+
+        var context = _serviceProvider.GetRequiredService<AppDbContext>();
+
+        Guid userId = await context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);  
+
+         var identity = new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString())
+        }, "LoginTest");
+
+        var principal = new ClaimsPrincipal(identity);
+        var httpContext = new DefaultHttpContext { User = principal };
+
+        _eventsController.ControllerContext = new ControllerContext
+        {
+            HttpContext = httpContext
+        };
+
         var resultCreateBooking = (await _eventsController.CreateBooking(@event.Id)) as AcceptedAtActionResult;
 
         Assert.NotNull(resultCreateBooking);
@@ -230,6 +341,34 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
         Assert.NotNull(@event);
         
         RefreshServices();
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+
+        var context = _serviceProvider.GetRequiredService<AppDbContext>();
+
+        Guid userId = await context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);  
+
+         var identity = new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString())
+        }, "LoginTest");
+
+        var principal = new ClaimsPrincipal(identity);
+        var httpContext = new DefaultHttpContext { User = principal };
+
+        _eventsController.ControllerContext = new ControllerContext
+        {
+            HttpContext = httpContext
+        };
+
         var resultCreateBooking = (await _eventsController.CreateBooking(@event.Id)) as AcceptedAtActionResult;
 
         Assert.NotNull(resultCreateBooking);
@@ -271,6 +410,34 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
     [Fact]
     public async Task BookingController_CreateBookingForNotExistsEvent_ReturnsNotFound()
     {
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+
+        var context = _serviceProvider.GetRequiredService<AppDbContext>();
+
+        Guid userId = await context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);  
+
+         var identity = new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString())
+        }, "LoginTest");
+
+        var principal = new ClaimsPrincipal(identity);
+        var httpContext = new DefaultHttpContext { User = principal };
+
+        _eventsController.ControllerContext = new ControllerContext
+        {
+            HttpContext = httpContext
+        };
+
         var actionResult = (await _eventsController.CreateBooking(Guid.Empty)) as NotFoundObjectResult;
 
         Assert.NotNull(actionResult);
@@ -311,6 +478,34 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
         Assert.Empty(allEvents);
 
         RefreshServices();
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+
+        var context = _serviceProvider.GetRequiredService<AppDbContext>();
+
+        Guid userId = await context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);  
+
+         var identity = new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString())
+        }, "LoginTest");
+
+        var principal = new ClaimsPrincipal(identity);
+        var httpContext = new DefaultHttpContext { User = principal };
+
+        _eventsController.ControllerContext = new ControllerContext
+        {
+            HttpContext = httpContext
+        };
+
         var actionResultCreateBooking = (await _eventsController.CreateBooking(Guid.Empty)) as NotFoundObjectResult;
 
         Assert.NotNull(actionResultCreateBooking);

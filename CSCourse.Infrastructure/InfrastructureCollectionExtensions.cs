@@ -27,7 +27,7 @@ public static class InfrastructureCollectionExtensions
         services.AddHostedService<BookingBackgroundService>();
 
         services.AddScoped<ISecurityService, SecurityService>();
-        services.AddScoped<IAccountService, AccountSerice>();
+        services.AddScoped<IAccountService, AccountService>();
         
         return services;
     }
