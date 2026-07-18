@@ -89,6 +89,11 @@ namespace CSCourse.Application.Services
                     throw new NotFoundException($"not found booking with id {bookingId}");
                 }
 
+                if(booking.Status == BookingStatus.Rejected || booking.Status == BookingStatus.Cancelled)
+                {
+                    throw new BookingAlreadyCancelledException();
+                }
+
                 if(role != AccountRole.Admin)
                 {
                     if(userId != booking.UserId)
