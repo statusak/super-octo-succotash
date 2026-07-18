@@ -15,11 +15,22 @@ public static class InfrastructureCollectionExtensions
         this IServiceCollection services,
         string connectionString)
     {
-        services.AddDbContext<AppDbContext>(options =>
-            options.UseNpgsql(connectionString, o =>
-            {
-                o.EnableRetryOnFailure();
-            }));
+        /// Из-за настройки o.EnableRetryOnFailure() вылетает ошибка, 
+        // потому что NpgsqlRetryingExecutionStrategy (автоматически включается
+        // при использовании UseNpgsql с retry-политикой) не умеет работать
+        // с транзакциями, которые начали вручную через BeginTransactionAsync. 
+        // EF Core требует, чтобы вся транзакция выполнялась внутри стратегии 
+        // повторных попыток — иначе при transient-ошибке (например, таймаут 
+        // соединения) повтор не сработает корректно.
+        //
+        // services.AddDbContext<AppDbContext>(options =>
+        //     options.UseNpgsql(connectionString, o =>
+        //     {
+        //         o.EnableRetryOnFailure();
+        //     }));
+        ///
+
+        services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
 
         services.AddScoped<IEventRepository, EventRepository>();
         services.AddScoped<IBookingRepository, BookingRepository>();
