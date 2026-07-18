@@ -1,4 +1,4 @@
-namespace CSCourse.Domain.Models;
+namespace CSCourse.Application.Models;
 
 public class AccountSignInDto
 {

@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using CSCourse.Application.Interfaces;
+using CSCourse.Application.Models;
 using CSCourse.Domain.Models;
 using CSCourse.Infrastructure.Models;
 using Microsoft.Extensions.Options;

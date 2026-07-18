@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using CSCourse.Application.Services;
 using Microsoft.EntityFrameworkCore.Design;
+using CSCourse.Infrastructure.Services;
 
 namespace CSCourse.Infrastructure;
 
@@ -25,7 +26,9 @@ public static class InfrastructureCollectionExtensions
 
         services.AddHostedService<BookingBackgroundService>();
 
-
+        services.AddScoped<ISecurityService, SecurityService>();
+        services.AddScoped<IAccountService, AccountSerice>();
+        
         return services;
     }
 }

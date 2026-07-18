@@ -1,4 +1,6 @@
 using CSCourse.Application.Interfaces;
+using CSCourse.Application.Models;
+using CSCourse.Domain.Exceptions;
 using CSCourse.Domain.Models;
 using CSCourse.Infrastructure.DataAccess;
 using Microsoft.EntityFrameworkCore;
@@ -23,7 +25,7 @@ public class AccountSerice : IAccountService
 
         if(existing != null)
         {
-            return false;
+            throw new UserAlreadyExistsException();
         }
 
         var hash = _securityService.HashPassword(accountRegisterDto.Password);

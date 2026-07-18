@@ -1,4 +1,6 @@
-namespace CSCourse.Domain.Models;
+using CSCourse.Domain.Models;
+
+namespace CSCourse.Application.Models;
 
 public class AccountRegisterDto
 {
