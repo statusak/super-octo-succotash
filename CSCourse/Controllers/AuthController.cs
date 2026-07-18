@@ -2,12 +2,14 @@ using CSCourse.Application.Interfaces;
 using CSCourse.Application.Models;
 using Microsoft.AspNetCore.Mvc;
 using CSCourse.Domain.Exceptions;
+using Microsoft.AspNetCore.Authorization;
 
 namespace CSCourse.Controllers;
 
 /// <summary>
 /// Контроллер для работы с бронированиями.
 /// </summary>
+[AllowAnonymous]
 [ApiController]
 [Route("/[controller]")]
 public class AuthController : ControllerBase
