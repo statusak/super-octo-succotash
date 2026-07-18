@@ -12,7 +12,6 @@ namespace CSCourse.Application.Services
         private readonly IBookingRepository _bookings;
 
         private readonly SemaphoreSlim _processingSemaphoreBooking = new(1, 1);
-        private readonly object _bookingLock = new();
 
         public BookingService(
             IEventService eventService, IBookingRepository bookings)
@@ -29,6 +28,11 @@ namespace CSCourse.Application.Services
             {
                 try
                 {
+                    int bookingCountOnEventByUser = await _bookings.GetCountBookingsOnEventByUserAsync(eventId, userId);
+                    if(bookingCountOnEventByUser > 10)
+                    {
+                        throw new ActiveBookingsLimitExceededException($"Get limit booking for user on event: {eventId}");
+                    }
                     canReserveSeats = await _eventService.TryReserveSeatsAsync(eventId);
                 }
                 catch (InvalidOperationException) 

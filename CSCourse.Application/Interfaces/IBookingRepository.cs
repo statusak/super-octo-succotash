@@ -82,5 +82,7 @@ namespace CSCourse.Application.Interfaces
         /// Обновляются только свойства <see cref="Booking.Status"/> и <see cref="Booking.ProcessedAt"/>.
         /// </remarks>
         Task<bool> UpdateAsync(BookingRepositoryUpdateDto booking);
+
+        Task<int> GetCountBookingsOnEventByUserAsync(Guid eventId, Guid userId);
     }
 }
