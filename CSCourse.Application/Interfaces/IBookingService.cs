@@ -50,14 +50,16 @@ namespace CSCourse.Application.Interfaces
         /// Отменяет бронирование по его идентификатору, 
         /// </summary>
         /// <param name="bookingId">Уникальный идентификатор (GUID) бронирования, которое необходимо отменить.</param>
+        /// <param name="userId">Уникальный идентификатор (GUID) пользователя.</param>
+        /// <param name="role">AccountRole: User/Admin</param>
         /// <returns>
         /// Асинхронная задача (<see cref="Task{T}"/>), которая возвращает <see cref="true"/>,
         /// если бронирование найдено и успешно обновлено; в противном случае возвращает <see cref="false"/>
         /// </returns>
         /// <remarks>
-        /// Метод предназначен для отмены бронирования
+        /// Метод предназначен для отмены бронирования. Администратор может отменить любые бронирования, Пользователь - только свои
         /// </remarks>
-        Task<bool> CancelledBookingByIdAsync(Guid bookingId);
+        Task<bool> CancelledBookingByIdAsync(Guid bookingId, Guid userId, AccountRole role);
 
         /// <summary>
         /// Возвращает коллекцию всех бронирований со статусом «ожидает обработки» (Pending).

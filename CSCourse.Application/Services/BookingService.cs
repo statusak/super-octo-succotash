@@ -75,7 +75,7 @@ namespace CSCourse.Application.Services
             }
         }
 
-        public async Task<bool> CancelledBookingByIdAsync(Guid bookingId)
+        public async Task<bool> CancelledBookingByIdAsync(Guid bookingId, Guid userId, AccountRole role)
         {
             Booking? booking;
             // TODO: Здесь было-бы уместно использовать транзакцию
@@ -87,6 +87,14 @@ namespace CSCourse.Application.Services
                 if(booking == null)
                 {
                     throw new NotFoundException($"not found booking with id {bookingId}");
+                }
+
+                if(role != AccountRole.Admin)
+                {
+                    if(userId != booking.UserId)
+                    {
+                        throw new UnauthorizedOperationException($"You can not canceled booking with id {bookingId}");
+                    }   
                 }
 
                 BookingProcessedDto bookingProcessedDto = new BookingProcessedDto
