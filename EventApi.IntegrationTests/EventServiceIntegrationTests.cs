@@ -70,7 +70,7 @@ public class EventServiceIntegrationTests : IAsyncLifetime
         //       Пока при создании переименовал создание таблиц с маленькой буквы
         await using var context = CreateContext();
         await context.Database.ExecuteSqlRawAsync(
-            "TRUNCATE TABLE events, bookings RESTART IDENTITY CASCADE");
+            "TRUNCATE TABLE events, bookings, accounts RESTART IDENTITY CASCADE");
     }
 
     [Fact]

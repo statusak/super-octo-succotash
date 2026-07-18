@@ -5,11 +5,16 @@ using CSCourse.Infrastructure.Repositories;
 using CSCourse.Infrastructure.DataAccess;
 using Microsoft.EntityFrameworkCore;
 using Testcontainers.PostgreSql;
+using CSCourse.Infrastructure.Models;
+using Microsoft.Extensions.Options;
+using CSCourse.Infrastructure.Services;
 
 namespace EventApi.IntegrationTests;
 public class BookingRepositoryIntegrationTest : IAsyncLifetime
 {
     private IBookingRepository _repo = null!;
+
+    private IAccountService _accountService = null!;
     private AppDbContext _context = null!;
 
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16-alpine").Build();
@@ -41,6 +46,19 @@ public class BookingRepositoryIntegrationTest : IAsyncLifetime
     private void InitializeServices()
     {
         _repo = new BookingRepository(_context);
+        JwtSettings jwtSettings = new JwtSettings
+        {
+            Secret = "1234567890123456789012",
+            Issuer = "https://example.com",
+            Audience = "https://example.com",
+            ExpirationMinutes = 10,
+        };
+
+        var options = Options.Create(jwtSettings);
+
+        ISecurityService securityService = new SecurityService(options);
+        _accountService = new AccountSerice(_context, securityService);
+        
     }
 
     private void RefreshServices()
@@ -53,12 +71,13 @@ public class BookingRepositoryIntegrationTest : IAsyncLifetime
     {
         await using var context = CreateContext();
         await context.Database.ExecuteSqlRawAsync(
-            "TRUNCATE TABLE events, bookings RESTART IDENTITY CASCADE",
+            "TRUNCATE TABLE events, bookings, accounts RESTART IDENTITY CASCADE",
             cancellationToken: TestContext.Current.CancellationToken);
     }
 
     private static Booking CreateTestBooking(
         Guid eventId,
+        Guid userId,
         BookingStatus status = BookingStatus.Pending,
         DateTime? createdAt = null,
         DateTime? processedAt = null)
@@ -67,6 +86,7 @@ public class BookingRepositoryIntegrationTest : IAsyncLifetime
         {
             Id = Guid.NewGuid(),
             EventId = eventId,
+            UserId = userId,
             Status = status,
             CreatedAt = createdAt ?? DateTime.UtcNow,
             ProcessedAt = processedAt
@@ -100,10 +120,23 @@ public class BookingRepositoryIntegrationTest : IAsyncLifetime
         }, ct);
         await _context.SaveChangesAsync(ct);
 
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+        Guid userId = await _context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);  
+
         var createdAt = DateTime.UtcNow.AddMilliseconds(123);
         var bookingDto = new BookingRepositoryCreateDto
         {
             EventId = eventId,
+            UserId = userId,
             Status = BookingStatus.Confirmed,
             CreatedAt = createdAt,
             ProcessedAt = createdAt.AddMinutes(5)
@@ -138,9 +171,21 @@ public class BookingRepositoryIntegrationTest : IAsyncLifetime
         }, ct);
         await _context.SaveChangesAsync(ct);
 
-        var b1 = CreateTestBooking(eventId, BookingStatus.Pending);
-        var b2 = CreateTestBooking(eventId, BookingStatus.Confirmed);
-        var b3 = CreateTestBooking(eventId, BookingStatus.Pending);
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+        Guid userId = await _context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken); 
+
+        var b1 = CreateTestBooking(eventId, userId, BookingStatus.Pending);
+        var b2 = CreateTestBooking(eventId, userId, BookingStatus.Confirmed);
+        var b3 = CreateTestBooking(eventId, userId, BookingStatus.Pending);
 
         await _context.Bookings.AddRangeAsync(b1, b2, b3);
         await _context.SaveChangesAsync(ct);
@@ -172,7 +217,19 @@ public class BookingRepositoryIntegrationTest : IAsyncLifetime
         }, ct);
         await _context.SaveChangesAsync(ct);
 
-        var booking = CreateTestBooking(eventId, BookingStatus.Pending);
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+        Guid userId = await _context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken); 
+
+        var booking = CreateTestBooking(eventId, userId, BookingStatus.Pending);
         await _context.Bookings.AddAsync(booking, ct);
         await _context.SaveChangesAsync(ct);
 
@@ -203,7 +260,19 @@ public class BookingRepositoryIntegrationTest : IAsyncLifetime
         }, ct);
         await _context.SaveChangesAsync(ct);
 
-        var originalBooking = CreateTestBooking(eventId, BookingStatus.Pending);
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+        Guid userId = await _context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken); 
+
+        var originalBooking = CreateTestBooking(eventId, userId, BookingStatus.Pending);
         await _context.Bookings.AddAsync(originalBooking, ct);
         await _context.SaveChangesAsync(ct);
 

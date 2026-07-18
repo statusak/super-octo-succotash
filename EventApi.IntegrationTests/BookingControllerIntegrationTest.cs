@@ -88,7 +88,7 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         await context.Database.ExecuteSqlRawAsync(
-            "TRUNCATE TABLE events, bookings RESTART IDENTITY CASCADE");
+            "TRUNCATE TABLE events, bookings, accounts RESTART IDENTITY CASCADE");
     }
 
     [Fact]
