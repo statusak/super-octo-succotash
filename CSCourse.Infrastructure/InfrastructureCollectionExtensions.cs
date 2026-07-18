@@ -4,6 +4,7 @@ using CSCourse.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using CSCourse.Application.Services;
+using Microsoft.EntityFrameworkCore.Design;
 
 namespace CSCourse.Infrastructure;
 
@@ -28,3 +29,22 @@ public static class InfrastructureCollectionExtensions
         return services;
     }
 }
+
+public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
+{
+    public AppDbContext CreateDbContext(string[] args)
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
+
+        var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
+                               ?? "Host=localhost;Port=5432;Database=cscourse_dev;Username=postgres;Password=postgres";
+
+        optionsBuilder.UseNpgsql(connectionString, npgsqlOptions =>
+        {
+            npgsqlOptions.EnableRetryOnFailure();
+        });
+
+        return new AppDbContext(optionsBuilder.Options);
+    }
+}
+
