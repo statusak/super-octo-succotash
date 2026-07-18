@@ -306,6 +306,12 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
         Assert.Equal(@event.Id, bookingCreate.EventId);
 
         RefreshServices();
+
+        _bookingsController.ControllerContext = new ControllerContext
+        {
+            HttpContext = httpContext
+        };
+
         var resultInfoBooking = (await _bookingsController.GetById(bookingCreate.Id)) as OkObjectResult;
 
         Assert.NotNull(resultInfoBooking);
@@ -392,6 +398,11 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
         // Assert.NotNull(bookingEntity);
         // _context.Entry(bookingEntity).Reload();
         RefreshServices();
+
+        _bookingsController.ControllerContext = new ControllerContext
+        {
+            HttpContext = httpContext
+        };
 
         var resultInfoBooking = (await _bookingsController.GetById(bookingCreate.Id)) as OkObjectResult;
 
@@ -493,7 +504,7 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
             .Select(a => a.Id)
             .FirstOrDefaultAsync(TestContext.Current.CancellationToken);  
 
-         var identity = new ClaimsIdentity(new[]
+        var identity = new ClaimsIdentity(new[]
         {
             new Claim(ClaimTypes.NameIdentifier, userId.ToString())
         }, "LoginTest");
@@ -518,6 +529,34 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
     [Fact]
     public async Task BookingController_CheckInfoDontExistsBooking_ReturnsNotFound()
     {
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+
+        var context = _serviceProvider.GetRequiredService<AppDbContext>();
+
+        Guid userId = await context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);  
+
+        var identity = new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString())
+        }, "LoginTest");
+
+        var principal = new ClaimsPrincipal(identity);
+        var httpContext = new DefaultHttpContext { User = principal };
+
+        _bookingsController.ControllerContext = new ControllerContext
+        {
+            HttpContext = httpContext
+        };
+
         var actionResult = (await _bookingsController.GetById(Guid.Empty)) as NotFoundObjectResult;
 
         Assert.NotNull(actionResult);
