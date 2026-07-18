@@ -90,5 +90,9 @@
         /// </summary>
         public Event? Event { get; set; }
 
+        /// <summary>
+        /// Навигационное свойство: ссылка на пользователя, сделавшего бронирование.
+        /// </summary>
+        public Account? Account { get; set; }
     }
 }
