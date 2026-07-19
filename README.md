@@ -1,25 +1,24 @@
 # ASP.NET Application: Event Manager
 
-Пример веб‑приложения на ASP.NET для управления мероприятиями с RESTful API и документацией Swagger.
+Пример веб-приложения на ASP.NET для управления мероприятиями с RESTful API, авторизацией через JWT и документацией Swagger.
 
 ### Architecture: Clean Architecture (Domain, Application, Infrastructure, Presentation)
 
 #### Domain Layer (CSCourse.Domain)
 
-Содержит сущности предметной области (Event, Booking, FilterEvent, PaginatedResult), доменные исключения (NoAvailableSeatsException, NotFoundException). Здесь определена бизнес-логика на уровне правил предметной области без привязки к инфраструктуре или UI.
+Содержит сущности предметной области (Account, Event, Booking, FilterEvent, PaginatedResult), доменные исключения (NoAvailableSeatsException, NotFoundException, BookingForPastEventException, UnauthorizedOperationException и др.). Здесь определена бизнес-логика на уровне правил предметной области без привязки к инфраструктуре или UI. Ролевая модель реализована через перечисление AccountRole: User (пользователь) и Admin (администратор). Проверка прав выполняется на уровне сервисов и контроллеров с выбросом UnauthorizedOperationException при нарушении.
 
 #### Application Layer (CSCourse.Application)
 
-Включает контракты сервисов (IEventService, IBookingService) и репозиториев (IEventRepository, IBookingRepository), DTO для передачи данных между слоями (EventCreateDto, EventUpdateDto, BookingResponseDto и др.), а также реализации бизнес-сервисов (EventService, BookingService) и фонового сервиса обработки бронирований (BookingBackgroundService). Реализована оркестрация операций, валидация и координация взаимодействия между слоями.
+Включает контракты сервисов (IEventService, IBookingService, IAccountService, ISecurityService) и репозиториев (IEventRepository, IBookingRepository), DTO для передачи данных между слоями (EventCreateDto, BookingResponseDto, AccountRegisterDto, AccountSignInDto и др.), а также реализации бизнес-сервисов (EventService, BookingService) и фонового сервиса обработки бронирований (BookingBackgroundService). 
 
 #### Infrastructure Layer (CSCourse.Infrastructure)
 
-Отвечает за взаимодействие с внешними ресурсами. Содержит реализацию репозиториев (BookingRepository, EventRepository), контекст базы данных (AppDbContext), конфигурацию сущностей через Fluent API (BookingConfiguration, EventConfiguration), миграции EF Core (папка Migrations), а также методы расширения для регистрации зависимостей (InfrastructureCollectionExtensions). Использует EF Core с PostgreSQL (тип timestamp with time zone), обеспечивает транзакции с уровнем изоляции RepeatableRead, защиту от состояния гонки (семафоры, UPDLOCK), обработку DbUpdateException и корректную работу с датами.
+Отвечает за взаимодействие с внешними ресурсами. Содержит реализацию репозиториев (BookingRepository, EventRepository), контекст базы данных (AppDbContext), конфигурацию сущностей через Fluent API (AccountConfiguration, BookingConfiguration, EventConfiguration), миграции EF Core (папка Migrations), а также методы расширения для регистрации зависимостей (InfrastructureCollectionExtensions). Использует EF Core с PostgreSQL (тип timestamp with time zone), обеспечивает транзакции с уровнем изоляции RepeatableRead, защиту от состояния гонки (семафоры, UPDLOCK), обработку DbUpdateException и корректную работу с датами. Включает SecurityService для хеширования паролей и генерации JWT-токенов, а также AccountService для управления учётными записями.
 
 #### Presentation Layer (CSCourse)
 
-Представляет собой ASP.NET Core Web API. Включает контроллеры (EventsController, BookingsController), middleware (GlobalExceptionHandlingMiddleware), конфигурацию Swagger/OpenAPI, настройки запуска и DI-контейнера (Program.cs). Обеспечивает обработку HTTP-запросов, маршрутизацию, глобальную обработку ошибок по стандарту Problem Details (RFC 7807), валидацию областей видимости зависимостей (ValidateScopes, ValidateOnBuild).
-
+Представляет собой ASP.NET Core Web API. Включает контроллеры (AuthController, EventsController, BookingsController), middleware (GlobalExceptionHandlingMiddleware), конфигурацию Swagger/OpenAPI, настройки запуска и DI-контейнера (Program.cs). Обеспечивает обработку HTTP-запросов, маршрутизацию, глобальную обработку ошибок по стандарту Problem Details (RFC 7807), валидацию областей видимости зависимостей (ValidateScopes, ValidateOnBuild), а также интеграцию JWT-авторизации.
 
 ## Функциональность
 
@@ -83,19 +82,35 @@
      * При успешном создании возвращает статус `202 Accepted`, объект бронирования и заголовок `Location` с URL для получения информации о бронировании;
      * В случае ошибки возвращает `404 Not Found` или `409 Conflict`.
 
-4. **Модель `Booking`** — представляет данные о бронировании мероприятия со следующими полями:
+   * `POST /auth/register` — регистрирует нового пользователя. Доступен без токена : 
+     * Возвращает 204 No Content при успехе 
+     * 400 Bad Request при ошибке валидации.
+
+   * `POST /auth/login` —  принимает учётные данные (Login, Password). Доступен без токена:
+     * Возвращает JWT-токен в теле ответа (200 OK)
+     * Возвращает `401 Unauthorized` при неверных учётных данных. 
+
+5. **Ролевая модель и разграничение прав**
+
+  * Доступ к операциям с мероприятиями (POST /events/, PUT /events/{id}, DELETE /events/{id}) разрешён только пользователям с ролью Admin. Обычные пользователи (User) не могут выполнять эти действия. При отсутствии токена возвращается 401 Unauthorized, при наличии токена, но недостаточных правах — 403 Forbidden.
+
+  * Операции с бронированиями (GET /bookings/{id}, DELETE /bookings/{id}) требуют аутентификации (401 без токена). Пользователь может отменить только свою бронь (проверка по идентификатору пользователя). Администратор может отменить любую бронь. При попытке отмены чужой брони обычным пользователем возвращается 403 Forbidden.
+
+  * Создание брони (POST /events/{id}/book) доступно аутентифицированным пользователям. Возвращает 202 Accepted при успехе. Возможные ошибки: 400 Bad Request (событие уже началось), 404 Not Found (событие не найдено), 409 Conflict (нет доступных мест или превышен лимит броней).
+
+5. **Модель `Booking`** — представляет данные о бронировании мероприятия со следующими полями:
    * `Id` — уникальный идентификатор бронирования;
    * `EventId` — идентификатор мероприятия, к которому относится бронирование;
    * `Status` — текущий статус бронирования;
    * `CreatedAt` — дата и время создания бронирования;
    * `ProcessedAt` — дата и время обработки бронирования.
 
-5. **Модель `BookingStatus`** — перечисление, определяющее возможные состояния бронирования на протяжении его жизненного цикла:
+6. **Модель `BookingStatus`** — перечисление, определяющее возможные состояния бронирования на протяжении его жизненного цикла:
    * `Pending` — бронирование ожидает подтверждения (создано, но ещё не обработано);
    * `Confirmed` — бронирование подтверждено системой или администратором;
    * `Rejected` — бронирование отклонено.
 
-6. **Интерфейс `IBookingService`** — определяет контракт для работы с бронированиями, включая методы:
+7. **Интерфейс `IBookingService`** — определяет контракт для работы с бронированиями, включая методы:
    * `CreateBookingAsync(Guid eventId)` — создаёт новое бронирование для указанного мероприятия, выбрасывает `InvalidOperationException`, если мероприятие не найдено;
    * `GetBookingByIdAsync(Guid bookingId)` — получает информацию о бронировании по его уникальному идентификатору (может вернуть `null`);
    * `UpdateProcessedBookingByIdAsync(Guid bookingId, BookingProcessedDto booking)` — обновляет данные обработанного бронирования (может вернуть `null`);
@@ -104,13 +119,13 @@
 
    Методы содержат подробные XML‑комментарии, описывающие назначение, параметры, возвращаемые значения, исключения и особенности работы.
 
-7. **RESTful API для управления бронированиями** — контроллер `BookingsController` предоставляет следующие эндпоинты:
+8. **RESTful API для управления бронированиями** — контроллер `BookingsController` предоставляет следующие эндпоинты:
    * `GET /bookings/{index}` — получение информации о бронировании по его уникальному идентификатору:
      * Параметр `index` (`Guid`) — уникальный идентификатор бронирования, которое необходимо получить;
      * Возвращает объект `BookingResponseDto` при успешном запросе (`200 OK`);
      * В случае отсутствия бронирования возвращает `404 Not Found`.
 
-8. **Background Service для обработки бронирований (`BookingBackgroundService`)**
+9. **Background Service для обработки бронирований (`BookingBackgroundService`)**
 
    **Краткая логика работы:**
    1. Запускается при старте приложения и периодически (каждые 5 секунд) проверяет наличие бронирований со статусом `Pending` через `IBookingService.GetPendingAsync()`.
@@ -137,18 +152,18 @@
    * Обработка исключений на уровне отдельного бронирования (ошибка в одном бронировании не останавливает обработку остальных).
    * Гибкая настройка интервала опроса через параметр `periodicTimer` (по умолчанию — 5 секунд).
 
-9. **Интеграция Swagger/OpenAPI** — автоматическая генерация интерактивной документации API с подробными описаниями методов, примерами запросов и ответов, кодами HTTP‑статусов, параметрами и их типами.
+10. **Интеграция Swagger/OpenAPI** — автоматическая генерация интерактивной документации API с подробными описаниями методов, примерами запросов и ответов, кодами HTTP‑статусов, параметрами и их типами.
 
-10. **Глобальная обработка ошибок** — реализован middleware `GlobalExceptionHandlingMiddleware` для перехвата исключений и возврата структурированного ответа в формате **Problem Details (RFC 7807)**, содержащего:
+11. **Глобальная обработка ошибок** — реализован middleware `GlobalExceptionHandlingMiddleware` для перехвата исключений и возврата структурированного ответа в формате **Problem Details (RFC 7807)**, содержащего:
     * код статуса HTTP;
     * сообщение об ошибке;
     * детали ошибки (при наличии).
 
-11. **Валидация конфигурации**:
+12. **Валидация конфигурации**:
     * `ValidateScopes` — проверка корректности внедрения зависимостей (DI) при запуске приложения;
     * `ValidateOnBuild` — проверка конфигурации сервисов при сборке приложения.
 
-12. **Репозитории**:
+13. **Репозитории**:
     * Реализованы `BookingRepository.cs` и `EventRepository.cs`, обеспечивающие доступ к данным и взаимодействие с базой данных.
     * Репозитории абстрагируют работу с данными, отделяя бизнес‑логику от деталей реализации доступа к БД.
     * Обеспечивают выполнение CRUD‑операций и специализированных запросов для соответствующих сущностей (`Event` и `Booking`).
@@ -181,7 +196,7 @@
     * `Delete(Guid id)` / `DeleteAsync(Guid id)` — удаляет мероприятие по ID, возвращает `bool` / `Task<bool>`.
     * `Count()` / `CountAsync()` — получает общее количество мероприятий, возвращает `int` / `Task<int>`.
 
-13. **Юнит‑тесты и интеграционные тесты**:
+14. **Юнит‑тесты и интеграционные тесты**:
     * Созданы отдельные тестовые проекты:
       * `EventApi.UnitTests` — юнит‑тесты для проверки бизнес‑логики без внешних зависимостей
       * `EventApi.IntegrationTests` — интеграционные тесты с использованием **Testcontainers.PostgreSql**:
@@ -196,6 +211,34 @@
 * PostgreSQL (для запуска приложения);
 * Текстовый редактор или IDE (например, Visual Studio, VS Code);
 * Браузер для доступа к Swagger UI.
+
+
+## Интеграция Swagger/OpenAPI
+
+В Swagger добавлена кнопка Authorize для передачи JWT-токена в запросах. Для получения токена через Swagger:
+
+1. Откройте Swagger UI по адресу /swagger.
+2. Найдите эндпоинт POST /auth/login.
+3. Нажмите Try it out, введите логин и пароль в формате JSON (Login, Password).
+4. Выполните запрос — при успехе получите JWT-токен в ответе.
+5. Нажмите кнопку Authorize в интерфейсе Swagger, вставьте полученный токен (без префикса Bearer, если система ожидает чистый токен, или с префиксом — в зависимости от конфигурации).
+6. После авторизации все защищённые эндпоинты будут автоматически включать заголовок Authorization.
+
+## Настройка JWT в конфигурации
+
+Параметры JWT задаются в файле appsettings.json в секции JwtSettings: Secret, Issuer, Audience, ExpirationMinutes. Пример:
+```json
+{
+  "JwtSettings": {
+    "Secret": "1234567890123456789012",
+    "Issuer": "https://example.com",
+    "Audience": "https://example.com",
+    "ExpirationMinutes": 10
+  }
+}
+```
+
+*В продакшн-среде необходимо использовать криптографически стойкий секрет (длиной не менее 32 символов, случайная последовательность), хранить его в переменных окружения или специализированных хранилищах секретов (Azure Key Vault, AWS Secrets Manager и т.п.), не фиксировать в коде или репозитории.*
 
 ## Настройка базы данных
 
@@ -264,7 +307,7 @@ dotnet test EventApi.IntegrationTests
 
 ```txt
 ├── CSCourse/                  # Presentation Layer: ASP.NET Core Web API, контроллеры, middleware, Program.cs, Swagger
-│   ├── Controllers/           # RESTful контроллеры: EventsController, BookingsController
+│   ├── Controllers/           # RESTful контроллеры: EventsController, BookingsController, AuthController
 │   ├── Middlewares/           # Компоненты обработки запросов: GlobalExceptionHandlingMiddleware
 │   ├── Properties/            # Настройки запуска приложения: launchSettings.json
 │   └── Program.cs             # Конфигурация приложения, регистрация DI, применение миграций, настройка Swagger
@@ -274,15 +317,16 @@ dotnet test EventApi.IntegrationTests
 │   └── Models/                # Доменные модели: Event, Booking, FilterEvent, PaginatedResult
 │
 ├── CSCourse.Application/      # Application Layer: интерфейсы, DTO, реализации сервисов и фоновых задач
-│   ├── Interfaces/            # Контракты: IEventService, IBookingService, IEventRepository, IBookingRepository
+│   ├── Interfaces/            # Контракты
 │   ├── Models/                # DTO для передачи данных: EventCreateDto, BookingResponseDto, FilterEventDto и др.
-│   ├── Services/              # Бизнес-сервисы: EventService, BookingService; фоновый сервис: BookingBackgroundService
+│   ├── Services/              # Бизнес-сервисы
 │   └── ApplicationCollectionExtensions.cs # Методы расширения для регистрации инфраструктурных зависимостей в DI
 │
 ├── CSCourse.Infrastructure/   # Infrastructure Layer: доступ к данным, конфигурация БД, миграции
-│   ├── DataAccess/            # Контекст БД и конфигурация сущностей: AppDbContext, BookingConfiguration, EventConfiguration
+│   ├── DataAccess/            # Контекст БД и конфигурация сущностей
 │   ├── Migrations/            # Миграции EF Core: файлы миграций и снимок модели (AppDbContextModelSnapshot.cs)
 │   ├── Repositories/          # Репозитории: BookingRepository, EventRepository
+|   ├── Services/              # Инфраструктурные-сервисы
 │   └── InfrastructureCollectionExtensions.cs # Методы расширения для регистрации инфраструктурных зависимостей в DI
 │
 ├── EventApi.IntegrationTests/ # Интеграционные тесты с Testcontainers.PostgreSql
@@ -292,8 +336,29 @@ dotnet test EventApi.IntegrationTests
 
 **Пример сценария использования (полный цикл — от создания мероприятия до подтверждения бронирования)**
 
-**Шаг 1. Создание мероприятия**
-Пользователь отправляет запрос:
+**Шаг 1. Регистрация пользователя (опционально, если нет учётной записи):**
+```http
+POST /auth/register
+{
+  "login": "user1",
+  "password": "StrongPassword123!",
+  "role": "User"
+}
+```
+
+**Шаг 2. Получение JWT-токена:**
+```http
+POST /auth/login
+{
+  "login": "user1",
+  "password": "StrongPassword123!"
+}
+```
+Ответ (200 OK): eyJhbGciOiJIUzI1NiIs...
+
+**Шаг 3. Авторизация в Swagger: вставьте токен в окно Authorize.**
+
+**Шаг 4. Создание мероприятия (только Admin):**
 ```http
 POST /events
 {
@@ -306,7 +371,7 @@ POST /events
 ```
 * Система создаёт мероприятие и возвращает его данные с уникальным Id (например, `308dd020-a855-4e80-b29e-b3582b6de65c`).
 
-**Шаг 2. Создание бронирования**
+**Шаг 5. Создание бронирования**
 Пользователь отправляет запрос на бронирование для созданного мероприятия:
 ```http
 POST /events/308dd020-a855-4e80-b29e-b3582b6de65c/book
@@ -318,7 +383,7 @@ POST /events/308dd020-a855-4e80-b29e-b3582b6de65c/book
 * добавляет задачу в очередь _bookingTaskQueue;
 * возвращает ответ 202 Accepted с URL для отслеживания (например `/bookings/2fad1bc1-bece-4c6a-8d84-d99eaf53d5bd`).
 
-**Шаг 3. Проверка статуса бронирования**
+**Шаг 6. Проверка статуса бронирования**
 Пользователь запрашивает информацию о бронировании:
 ```http
 GET /bookings/2fad1bc1-bece-4c6a-8d84-d99eaf53d5bd
