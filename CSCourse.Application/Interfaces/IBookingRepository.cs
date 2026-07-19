@@ -83,6 +83,14 @@ namespace CSCourse.Application.Interfaces
         /// </remarks>
         Task<bool> UpdateAsync(BookingRepositoryUpdateDto booking);
 
+        /// <summary>
+        /// Асинхронно подсчитывает количество бронирований, сделанных конкретным пользователем на указанное событие.
+        /// Используется для проверки бизнес-правил (например, ограничение на несколько бронирований одного пользователя
+        /// на одно событие).
+        /// </summary>
+        /// <param name="eventId">Идентификатор события (<see cref="Guid"/>), для которого требуется подсчитать бронирования.</param>
+        /// <param name="userId">Идентификатор пользователя (<see cref="Guid"/>, сделавшего бронирования.</param>
+        /// <returns>Асинхронная операция, возвращающая целочисленное значение — количество бронирований.</returns>
         Task<int> GetCountBookingsOnEventByUserAsync(Guid eventId, Guid userId);
     }
 }
