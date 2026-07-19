@@ -35,6 +35,10 @@ namespace CSCourse.Application.Services
                     }
                     canReserveSeats = await _eventService.TryReserveSeatsAsync(eventId);
                 }
+                catch (BookingForPastEventException) 
+                {
+                    throw;
+                }
                 catch (InvalidOperationException) 
                 {
                     throw new NotFoundException($"not found event with id {eventId}");

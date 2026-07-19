@@ -138,7 +138,6 @@ public class EventRepository : IEventRepository
             
             if(DateTime.Now > @event.StartAt)
             {
-                await transaction.RollbackAsync();
                 throw new BookingForPastEventException($"cannot reserve seats after start event: {id}");
             }
 

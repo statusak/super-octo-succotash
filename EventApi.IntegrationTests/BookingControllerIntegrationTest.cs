@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Http;
 using CSCourse.Infrastructure.Models;
 using Microsoft.Extensions.Options;
 using CSCourse.Infrastructure.Services;
+using CSCourse.Domain.Exceptions;
 
 namespace EventApi.IntegrationTests;
 public class BookingControllerIntegrationTest : IAsyncLifetime
@@ -614,15 +615,29 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
             HttpContext = httpContext
         };
 
-        // Act
-        var actionResult = (await _eventsController.CreateBooking(@event.Id)) as ObjectResult;
+        BookingForPastEventException? exception = null;
+        ObjectResult? actionResult = null;
+
+        try
+        {
+            actionResult = (await _eventsController.CreateBooking(@event.Id)) as ObjectResult;
+            Assert.Fail("Expected BookingForPastEventException.");
+        }
+        catch (BookingForPastEventException ex)
+        {
+            exception = ex;
+        }
 
         // Assert
-        Assert.NotNull(actionResult);
-        Assert.Equal(StatusCodes.Status400BadRequest, actionResult.StatusCode);
-
-        Assert.NotNull(actionResult.Value);
-        Assert.Contains($"cannot reserve seats after start event: {@event.Id}", actionResult.Value.ToString());
+        Assert.NotNull(exception);
+        Assert.Contains($"cannot reserve seats after start event: {@event.Id}", exception.Message);
+        
+        if (actionResult != null)
+        {
+            Assert.Equal(StatusCodes.Status409Conflict, actionResult.StatusCode);
+            Assert.NotNull(actionResult.Value);
+            Assert.Contains($"cannot reserve seats after start event: {@event.Id}", actionResult.Value.ToString());
+        }
     }
 
     [Fact]
