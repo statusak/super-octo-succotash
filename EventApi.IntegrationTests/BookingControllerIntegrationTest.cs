@@ -631,7 +631,7 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
         // Assert
         Assert.NotNull(exception);
         Assert.Contains($"cannot reserve seats after start event: {@event.Id}", exception.Message);
-        
+
         if (actionResult != null)
         {
             Assert.Equal(StatusCodes.Status409Conflict, actionResult.StatusCode);
@@ -701,14 +701,30 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
         {
             HttpContext = httpContext
         };
-        var overLimitResult = (await _eventsController.CreateBooking(@event.Id)) as ObjectResult;
+
+        ActiveBookingsLimitExceededException? exception = null;
+        ObjectResult? overLimitResult = null;
+
+        try
+        {
+            overLimitResult = (await _eventsController.CreateBooking(@event.Id)) as ObjectResult;
+            Assert.Fail("Expected ActiveBookingsLimitExceededException.");
+        }
+        catch (ActiveBookingsLimitExceededException ex)
+        {
+            exception = ex;
+        }
 
         // Assert
-        Assert.NotNull(overLimitResult);
-        Assert.Equal(StatusCodes.Status409Conflict, overLimitResult.StatusCode);
-
-        Assert.NotNull(overLimitResult.Value);
-        Assert.Contains($"Get limit booking for user on event: {@event.Id}", overLimitResult.Value.ToString());
+        Assert.NotNull(exception);
+        Assert.Contains($"Get limit booking for user on event: {@event.Id}", exception.Message);
+        
+        if (overLimitResult != null)
+        {
+            Assert.Equal(StatusCodes.Status409Conflict, overLimitResult.StatusCode);
+            Assert.NotNull(overLimitResult.Value);
+            Assert.Contains($"Get limit booking for user on event: {@event.Id}", overLimitResult.Value.ToString());
+        }
 
         var bookingsCount = await context.Bookings
             .CountAsync(b => b.EventId == @event.Id && b.UserId == userId,
@@ -809,28 +825,67 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
             new Claim(ClaimTypes.NameIdentifier, userAId.ToString())
         }, "UserA");
 
-        _eventsController.ControllerContext = new ControllerContext
-        {
-            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identityA) }
-        };
+        ActiveBookingsLimitExceededException? exceptionA = null;
+        ObjectResult? overLimitResultA = null;
 
-        var overLimitA = (await _eventsController.CreateBooking(@event.Id)) as ObjectResult;
-        Assert.NotNull(overLimitA);
-        Assert.Equal(StatusCodes.Status409Conflict, overLimitA.StatusCode);
+        try
+        {
+            _eventsController.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identityA) }
+            };
+            overLimitResultA = (await _eventsController.CreateBooking(@event.Id)) as ObjectResult;
+            Assert.Fail("Expected ActiveBookingsLimitExceededException.");
+        }
+        catch (ActiveBookingsLimitExceededException ex)
+        {
+            exceptionA = ex;
+        }
+
+        // Assert
+        Assert.NotNull(exceptionA);
+        Assert.Contains($"Get limit booking for user on event: {@event.Id}", exceptionA.Message);
+        
+        if (overLimitResultA != null)
+        {
+            Assert.Equal(StatusCodes.Status409Conflict, overLimitResultA.StatusCode);
+            Assert.NotNull(overLimitResultA.Value);
+            Assert.Contains($"Get limit booking for user on event: {@event.Id}", overLimitResultA.Value.ToString());
+        }
+
 
         var identityB = new ClaimsIdentity(new[]
         {
             new Claim(ClaimTypes.NameIdentifier, userBId.ToString())
         }, "UserB");
 
-        _eventsController.ControllerContext = new ControllerContext
-        {
-            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identityB) }
-        };
+        ActiveBookingsLimitExceededException? exceptionB = null;
+        ObjectResult? overLimitResultB = null;
 
-        var overLimitB = (await _eventsController.CreateBooking(@event.Id)) as ObjectResult;
-        Assert.NotNull(overLimitB);
-        Assert.Equal(StatusCodes.Status409Conflict, overLimitB.StatusCode);
+         try
+        {
+            _eventsController.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identityA) }
+            };
+            overLimitResultB = (await _eventsController.CreateBooking(@event.Id)) as ObjectResult;
+            Assert.Fail("Expected ActiveBookingsLimitExceededException.");
+        }
+        catch (ActiveBookingsLimitExceededException ex)
+        {
+            exceptionB = ex;
+        }
+
+        // Assert
+        Assert.NotNull(exceptionB);
+        Assert.Contains($"Get limit booking for user on event: {@event.Id}", exceptionB.Message);
+        
+        if (overLimitResultB != null)
+        {
+            Assert.Equal(StatusCodes.Status409Conflict, overLimitResultB.StatusCode);
+            Assert.NotNull(overLimitResultB.Value);
+            Assert.Contains($"Get limit booking for user on event: {@event.Id}", overLimitResultB.Value.ToString());
+        }
 
         countA = await context.Bookings
             .CountAsync(b => b.EventId == @event.Id && b.UserId == userAId,

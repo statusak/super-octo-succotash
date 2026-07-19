@@ -29,7 +29,7 @@ namespace CSCourse.Application.Services
                 try
                 {
                     int bookingCountOnEventByUser = await _bookings.GetCountBookingsOnEventByUserAsync(eventId, userId);
-                    if(bookingCountOnEventByUser > 10)
+                    if(bookingCountOnEventByUser >= 10)
                     {
                         throw new ActiveBookingsLimitExceededException($"Get limit booking for user on event: {eventId}");
                     }
