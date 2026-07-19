@@ -567,206 +567,44 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
     }
 
     [Fact]
-public async Task BookingController_CreateBookingForPastEvent_ReturnsConflict()
-{
-    // Arrange
-    var pastEventDto = new EventCreateDto
+    public async Task BookingController_CreateBookingForPastEvent_ReturnsConflict()
     {
-        Title = "Прошедшее мероприятие",
-        Description = "Уже закончилось",
-        TotalSeats = 100,
-        StartAt = DateTime.UtcNow.AddDays(-2),
-        EndAt = DateTime.UtcNow.AddHours(-1)
-    };
+        // Arrange
+        var pastEventDto = new EventCreateDto
+        {
+            Title = "Прошедшее мероприятие",
+            Description = "Уже закончилось",
+            TotalSeats = 100,
+            StartAt = DateTime.UtcNow.AddDays(-2),
+            EndAt = DateTime.UtcNow.AddHours(-1)
+        };
 
-    var resultCreateEvent = (await _eventsController.Post(pastEventDto)).Result as CreatedAtActionResult;
-    Assert.NotNull(resultCreateEvent);
-    Assert.Equal(201, resultCreateEvent.StatusCode);
+        var resultCreateEvent = (await _eventsController.Post(pastEventDto)).Result as CreatedAtActionResult;
+        Assert.NotNull(resultCreateEvent);
+        Assert.Equal(201, resultCreateEvent.StatusCode);
 
-    var @event = resultCreateEvent.Value as Event;
-    Assert.NotNull(@event);
+        var @event = resultCreateEvent.Value as Event;
+        Assert.NotNull(@event);
 
-    RefreshServices();
-    await _accountService.Register(new AccountRegisterDto
-    {
-        Login = "LoginTest",
-        Password = "PasswordTest",
-        Role = AccountRole.User
-    });
-    RefreshServices();
+        RefreshServices();
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
 
-    var context = _serviceProvider.GetRequiredService<AppDbContext>();
-    Guid userId = await context.Accounts
-        .Where(a => a.Login == "LoginTest")
-        .Select(a => a.Id)
-        .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
+        var context = _serviceProvider.GetRequiredService<AppDbContext>();
+        Guid userId = await context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
 
-    var identity = new ClaimsIdentity(new[]
-    {
-        new Claim(ClaimTypes.NameIdentifier, userId.ToString())
-    }, "LoginTest");
-
-    var principal = new ClaimsPrincipal(identity);
-    var httpContext = new DefaultHttpContext { User = principal };
-
-    _eventsController.ControllerContext = new ControllerContext
-    {
-        HttpContext = httpContext
-    };
-
-    // Act
-    var actionResult = (await _eventsController.CreateBooking(@event.Id)) as ObjectResult;
-
-    // Assert
-    Assert.NotNull(actionResult);
-    // Подставь тот код, который ты используешь для конфликтов: 409 или 400
-    Assert.Equal(409, actionResult.StatusCode);
-
-    Assert.NotNull(actionResult.Value);
-    var msg = actionResult.Value.ToString();
-    Assert.Contains("No available seats", msg)
-            || Assert.Contains("past", msg.ToLower())
-            || Assert.Contains("limit", msg.ToLower());
-    }
-
-    [Fact]
-public async Task BookingController_CreateBooking_LimitExceeded_ReturnsConflict()
-{
-    // Arrange
-    var validDto = new EventCreateDto
-    {
-        Title = "Тестовая конференция",
-        Description = "Описание мероприятия",
-        TotalSeats = 100,
-        StartAt = DateTime.Now.AddHours(1).ToUniversalTime(),
-        EndAt = DateTime.Now.AddHours(2).ToUniversalTime()
-    };
-
-    var resultCreateEvent = (await _eventsController.Post(validDto)).Result as CreatedAtActionResult;
-    Assert.NotNull(resultCreateEvent);
-    Assert.Equal(201, resultCreateEvent.StatusCode);
-
-    var @event = resultCreateEvent.Value as Event;
-    Assert.NotNull(@event);
-
-    RefreshServices();
-    await _accountService.Register(new AccountRegisterDto
-    {
-        Login = "LoginTest",
-        Password = "PasswordTest",
-        Role = AccountRole.User
-    });
-    RefreshServices();
-
-    var context = _serviceProvider.GetRequiredService<AppDbContext>();
-    Guid userId = await context.Accounts
-        .Where(a => a.Login == "LoginTest")
-        .Select(a => a.Id)
-        .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
-
-    var identity = new ClaimsIdentity(new[]
-    {
-        new Claim(ClaimTypes.NameIdentifier, userId.ToString())
-    }, "LoginTest");
-
-    var principal = new ClaimsPrincipal(identity);
-    var httpContext = new DefaultHttpContext { User = principal };
-
-    _eventsController.ControllerContext = new ControllerContext
-    {
-        HttpContext = httpContext
-    };
-
-    const int limit = 10;
-
-    // Создаём ровно лимит броней
-    for (int i = 0; i < limit; i++)
-    {
-        var bookingResult = (await _eventsController.CreateBooking(@event.Id)) as AcceptedAtActionResult;
-        Assert.NotNull(bookingResult);
-        Assert.Equal(202, bookingResult.StatusCode);
-        RefreshServices(); // чтобы не было проблем с контекстом
-    }
-
-    // Act: пытаемся создать 11-ю бронь
-    var overLimitResult = (await _eventsController.CreateBooking(@event.Id)) as ObjectResult;
-
-    // Assert
-    Assert.NotNull(overLimitResult);
-    Assert.Equal(409, overLimitResult.StatusCode); // или 400 — по твоей реализации
-
-    Assert.NotNull(overLimitResult.Value);
-    var msg = overLimitResult.Value.ToString();
-    Assert.Contains("limit", msg.ToLower())
-        || Assert.Contains("exceeded", msg.ToLower());
-
-    // Дополнительно: проверим, что в БД действительно лимит
-    var bookingsCount = await context.Bookings
-        .CountAsync(b => b.EventId == @event.Id && b.UserId == userId,
-            TestContext.Current.CancellationToken);
-    Assert.Equal(limit, bookingsCount);
-}
-
-[Fact]
-public async Task BookingController_CreateBooking_LimitsArePerUser_NotGlobal()
-{
-    // Arrange: создаём событие
-    var validDto = new EventCreateDto
-    {
-        Title = "Тестовая конференция",
-        Description = "Описание мероприятия",
-        TotalSeats = 200, // достаточно мест
-        StartAt = DateTime.Now.AddHours(1).ToUniversalTime(),
-        EndAt = DateTime.Now.AddHours(2).ToUniversalTime()
-    };
-
-    var resultCreateEvent = (await _eventsController.Post(validDto)).Result as CreatedAtActionResult;
-    Assert.NotNull(resultCreateEvent);
-    Assert.Equal(201, resultCreateResult.StatusCode);
-
-    var @event = resultCreateEvent.Value as Event;
-    Assert.NotNull(@event);
-
-    RefreshServices();
-
-    // Регистрируем первого пользователя
-    await _accountService.Register(new AccountRegisterDto
-    {
-        Login = "UserA",
-        Password = "PasswordA",
-        Role = AccountRole.User
-    });
-    RefreshServices();
-
-    var context = _serviceProvider.GetRequiredService<AppDbContext>();
-    Guid userAId = await context.Accounts
-        .Where(a => a.Login == "UserA")
-        .Select(a => a.Id)
-        .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
-
-    // Регистрируем второго пользователя
-    await _accountService.Register(new AccountRegisterDto
-    {
-        Login = "UserB",
-        Password = "PasswordB",
-        Role = AccountRole.User
-    });
-    RefreshServices();
-
-    Guid userBId = await context.Accounts
-        .Where(a => a.Login == "UserB")
-        .Select(a => a.Id)
-        .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
-
-    const int limit = 10;
-
-    // Helper: создать N броней для пользователя
-    async Task CreateBookingsForUser(Guid userId, string login)
-    {
         var identity = new ClaimsIdentity(new[]
         {
             new Claim(ClaimTypes.NameIdentifier, userId.ToString())
-        }, login);
+        }, "LoginTest");
 
         var principal = new ClaimsPrincipal(identity);
         var httpContext = new DefaultHttpContext { User = principal };
@@ -776,71 +614,217 @@ public async Task BookingController_CreateBooking_LimitsArePerUser_NotGlobal()
             HttpContext = httpContext
         };
 
-        for (int i = 0; i < limit; i++)
-        {
-            var result = (await _eventsController.CreateBooking(@event.Id)) as AcceptedAtActionResult;
-            Assert.NotNull(result);
-            Assert.Equal(202, result.StatusCode);
-            RefreshServices();
-        }
+        // Act
+        var actionResult = (await _eventsController.CreateBooking(@event.Id)) as ObjectResult;
+
+        // Assert
+        Assert.NotNull(actionResult);
+        Assert.Equal(StatusCodes.Status400BadRequest, actionResult.StatusCode);
+
+        Assert.NotNull(actionResult.Value);
+        Assert.Contains($"cannot reserve seats after start event: {@event.Id}", actionResult.Value.ToString());
     }
 
-    // Создаём по 10 броней для каждого
-    await CreateBookingsForUser(userAId, "UserA");
-    await CreateBookingsForUser(userBId, "UserB");
-
-    // Проверяем, что оба имеют по 10 броней
-    var countA = await context.Bookings
-        .CountAsync(b => b.EventId == @event.Id && b.UserId == userAId,
-            TestContext.Current.CancellationToken);
-    var countB = await context.Bookings
-        .CountAsync(b => b.EventId == @event.Id && b.UserId == userBId,
-            TestContext.Current.CancellationToken);
-
-    Assert.Equal(limit, countA);
-    Assert.Equal(limit, countB);
-
-    // Act: пробуем создать 11-ю для UserA
-    var identityA = new ClaimsIdentity(new[]
+    [Fact]
+    public async Task BookingController_CreateBooking_LimitExceeded_ReturnsConflict()
     {
-        new Claim(ClaimTypes.NameIdentifier, userAId.ToString())
-    }, "UserA");
+        // Arrange
+        var validDto = new EventCreateDto
+        {
+            Title = "Тестовая конференция",
+            Description = "Описание мероприятия",
+            TotalSeats = 100,
+            StartAt = DateTime.Now.AddHours(1).ToUniversalTime(),
+            EndAt = DateTime.Now.AddHours(2).ToUniversalTime()
+        };
 
-    _eventsController.ControllerContext = new ControllerContext
+        var resultCreateEvent = (await _eventsController.Post(validDto)).Result as CreatedAtActionResult;
+        Assert.NotNull(resultCreateEvent);
+        Assert.Equal(201, resultCreateEvent.StatusCode);
+
+        var @event = resultCreateEvent.Value as Event;
+        Assert.NotNull(@event);
+
+        RefreshServices();
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+
+        var context = _serviceProvider.GetRequiredService<AppDbContext>();
+        Guid userId = await context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
+
+        var identity = new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString())
+        }, "LoginTest");
+
+        var principal = new ClaimsPrincipal(identity);
+        var httpContext = new DefaultHttpContext { User = principal };
+
+        const int limit = 10;
+
+        for (int i = 0; i < limit; i++)
+        {
+            _eventsController.ControllerContext = new ControllerContext
+            {
+                HttpContext = httpContext
+            };
+            var bookingResult = (await _eventsController.CreateBooking(@event.Id)) as AcceptedAtActionResult;
+            Assert.NotNull(bookingResult);
+            Assert.Equal(202, bookingResult.StatusCode);
+            RefreshServices();
+        }
+
+        _eventsController.ControllerContext = new ControllerContext
+        {
+            HttpContext = httpContext
+        };
+        var overLimitResult = (await _eventsController.CreateBooking(@event.Id)) as ObjectResult;
+
+        // Assert
+        Assert.NotNull(overLimitResult);
+        Assert.Equal(StatusCodes.Status409Conflict, overLimitResult.StatusCode);
+
+        Assert.NotNull(overLimitResult.Value);
+        Assert.Contains($"Get limit booking for user on event: {@event.Id}", overLimitResult.Value.ToString());
+
+        var bookingsCount = await context.Bookings
+            .CountAsync(b => b.EventId == @event.Id && b.UserId == userId,
+                TestContext.Current.CancellationToken);
+        Assert.Equal(limit, bookingsCount);
+    }
+
+    [Fact]
+    public async Task BookingController_CreateBooking_LimitsArePerUser_NotGlobal()
     {
-        HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identityA) }
-    };
+        var validDto = new EventCreateDto
+        {
+            Title = "Тестовая конференция",
+            Description = "Описание мероприятия",
+            TotalSeats = 200,
+            StartAt = DateTime.Now.AddHours(1).ToUniversalTime(),
+            EndAt = DateTime.Now.AddHours(2).ToUniversalTime()
+        };
 
-    var overLimitA = (await _eventsController.CreateBooking(@event.Id)) as ObjectResult;
-    Assert.NotNull(overLimitA);
-    Assert.Equal(409, overLimitA.StatusCode);
+        var resultCreateEvent = (await _eventsController.Post(validDto)).Result as CreatedAtActionResult;
+        Assert.NotNull(resultCreateEvent);
+        Assert.Equal(StatusCodes.Status201Created, resultCreateEvent.StatusCode);
 
-    // Act: пробуем создать 11-ю для UserB
-    var identityB = new ClaimsIdentity(new[]
-    {
-        new Claim(ClaimTypes.NameIdentifier, userBId.ToString())
-    }, "UserB");
+        var @event = resultCreateEvent.Value as Event;
+        Assert.NotNull(@event);
 
-    _eventsController.ControllerContext = new ControllerContext
-    {
-        HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identityB) }
-    };
+        RefreshServices();
 
-    var overLimitB = (await _eventsController.CreateBooking(@event.Id)) as ObjectResult;
-    Assert.NotNull(overLimitB);
-    Assert.Equal(409, overLimitB.StatusCode);
+        // Регистрируем первого пользователя
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "UserA",
+            Password = "PasswordA",
+            Role = AccountRole.User
+        });
+        RefreshServices();
 
-    // Финальная проверка: оба всё ещё имеют ровно по 10
-    countA = await context.Bookings
-        .CountAsync(b => b.EventId == @event.Id && b.UserId == userAId,
-            TestContext.Current.CancellationToken);
-    countB = await context.Bookings
-        .CountAsync(b => b.EventId == @event.Id && b.UserId == userBId,
-            TestContext.Current.CancellationToken);
+        var context = _serviceProvider.GetRequiredService<AppDbContext>();
+        Guid userAId = await context.Accounts
+            .Where(a => a.Login == "UserA")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
 
-    Assert.Equal(limit, countA);
-    Assert.Equal(limit, countB);
-}
+        // Регистрируем второго пользователя
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "UserB",
+            Password = "PasswordB",
+            Role = AccountRole.User
+        });
+        RefreshServices();
 
+        Guid userBId = await context.Accounts
+            .Where(a => a.Login == "UserB")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
 
+        const int limit = 10;
+
+        async Task CreateBookingsForUser(Guid userId, string login)
+        {
+            var identity = new ClaimsIdentity(new[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, userId.ToString())
+            }, login);
+
+            var principal = new ClaimsPrincipal(identity);
+            var httpContext = new DefaultHttpContext { User = principal };
+
+            for (int i = 0; i < limit; i++)
+            {
+                _eventsController.ControllerContext = new ControllerContext
+                {
+                    HttpContext = httpContext
+                };
+                var result = (await _eventsController.CreateBooking(@event.Id)) as AcceptedAtActionResult;
+                Assert.NotNull(result);
+                Assert.Equal(StatusCodes.Status202Accepted, result.StatusCode);
+                RefreshServices();
+            }
+        }
+
+        await CreateBookingsForUser(userAId, "UserA");
+        await CreateBookingsForUser(userBId, "UserB");
+
+        var countA = await context.Bookings
+            .CountAsync(b => b.EventId == @event.Id && b.UserId == userAId,
+                TestContext.Current.CancellationToken);
+        var countB = await context.Bookings
+            .CountAsync(b => b.EventId == @event.Id && b.UserId == userBId,
+                TestContext.Current.CancellationToken);
+
+        Assert.Equal(limit, countA);
+        Assert.Equal(limit, countB);
+
+        var identityA = new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userAId.ToString())
+        }, "UserA");
+
+        _eventsController.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identityA) }
+        };
+
+        var overLimitA = (await _eventsController.CreateBooking(@event.Id)) as ObjectResult;
+        Assert.NotNull(overLimitA);
+        Assert.Equal(StatusCodes.Status409Conflict, overLimitA.StatusCode);
+
+        var identityB = new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userBId.ToString())
+        }, "UserB");
+
+        _eventsController.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identityB) }
+        };
+
+        var overLimitB = (await _eventsController.CreateBooking(@event.Id)) as ObjectResult;
+        Assert.NotNull(overLimitB);
+        Assert.Equal(StatusCodes.Status409Conflict, overLimitB.StatusCode);
+
+        countA = await context.Bookings
+            .CountAsync(b => b.EventId == @event.Id && b.UserId == userAId,
+                TestContext.Current.CancellationToken);
+        countB = await context.Bookings
+            .CountAsync(b => b.EventId == @event.Id && b.UserId == userBId,
+                TestContext.Current.CancellationToken);
+
+        Assert.Equal(limit, countA);
+        Assert.Equal(limit, countB);
+    }
 }
