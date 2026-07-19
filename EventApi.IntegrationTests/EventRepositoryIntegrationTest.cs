@@ -54,7 +54,7 @@ public class EventRepositoryIntegrationTest : IAsyncLifetime
     {
         await using var context = CreateContext();
         await context.Database.ExecuteSqlRawAsync(
-            "TRUNCATE TABLE events, bookings RESTART IDENTITY CASCADE",
+            "TRUNCATE TABLE events, bookings, accounts RESTART IDENTITY CASCADE",
             cancellationToken: TestContext.Current.CancellationToken);
     }
 

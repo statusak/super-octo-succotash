@@ -1,4 +1,5 @@
 using CSCourse.Domain.Models;
+using CSCourse.Domain.Exceptions;
 using CSCourse.Application.Interfaces;
 using CSCourse.Application.Models;
 using CSCourse.Infrastructure.DataAccess;
@@ -134,6 +135,12 @@ public class EventRepository : IEventRepository
         try
         {
             var @event = await _context.Events.FirstAsync(e => e.Id == id);
+            
+            if(DateTime.Now > @event.StartAt)
+            {
+                throw new BookingForPastEventException($"cannot reserve seats after start event: {id}");
+            }
+
             if (@event.AvailableSeats < count)
             {
                 // RollbackAsync need for release line in DB
@@ -160,6 +167,14 @@ public class EventRepository : IEventRepository
         try
         {
             var @event = _context.Events.First(e => e.Id == id);
+
+            if(DateTime.Now > @event.StartAt)
+            {
+                // Rollback need for release line in DB
+                transaction.Rollback();
+                throw new BookingForPastEventException($"cannot reserve seats after start event: {id}");
+            }
+
             if (@event.AvailableSeats < count)
             {
                 // Rollback need for release line in DB

@@ -10,6 +10,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Testcontainers.PostgreSql;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
+using CSCourse.Infrastructure.Models;
+using Microsoft.Extensions.Options;
+using CSCourse.Infrastructure.Services;
+using CSCourse.Domain.Exceptions;
 
 namespace EventApi.IntegrationTests;
 public class BookingControllerIntegrationTest : IAsyncLifetime
@@ -20,6 +26,7 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
     private EventsController _eventsController = null!;
     private BookingsController _bookingsController = null!;
     private BookingBackgroundService _backgroundService = null!;
+    private IAccountService _accountService = null!;
     private IServiceProvider _serviceProvider = null!;
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16-alpine").Build();
 
@@ -54,6 +61,23 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
         services.AddScoped<IEventService, EventService>();
         services.AddScoped<IBookingService, BookingService>();
 
+
+        JwtSettings jwtSettings = new JwtSettings
+        {
+            Secret = "1234567890123456789012",
+            Issuer = "https://example.com",
+            Audience = "https://example.com",
+            ExpirationMinutes = 10,
+        };
+
+        services.AddSingleton(jwtSettings);     
+        services.AddSingleton<IOptions<JwtSettings>>(
+            Options.Create(jwtSettings)
+        );
+
+        services.AddScoped<ISecurityService, SecurityService>();
+        services.AddScoped<IAccountService, AccountService>();
+
         _serviceProvider = services.BuildServiceProvider();
 
         using var scope = _serviceProvider.CreateScope();
@@ -62,6 +86,8 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
 
         _eventService = _serviceProvider.GetRequiredService<IEventService>();
         var bookingService = _serviceProvider.GetRequiredService<IBookingService>();
+
+        _accountService = _serviceProvider.GetRequiredService<IAccountService>();
 
         var logger = NullLogger<EventsController>.Instance;
         _eventsController = new EventsController(_eventService, bookingService, logger);
@@ -88,7 +114,7 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         await context.Database.ExecuteSqlRawAsync(
-            "TRUNCATE TABLE events, bookings RESTART IDENTITY CASCADE");
+            "TRUNCATE TABLE events, bookings, accounts RESTART IDENTITY CASCADE");
     }
 
     [Fact]
@@ -113,6 +139,35 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
         Assert.NotNull(@event);
 
         RefreshServices();
+
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+
+        var context = _serviceProvider.GetRequiredService<AppDbContext>();
+
+        Guid userId = await context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);  
+
+        var identity = new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString())
+        }, "LoginTest");
+
+        var principal = new ClaimsPrincipal(identity);
+        var httpContext = new DefaultHttpContext { User = principal };
+
+        _eventsController.ControllerContext = new ControllerContext
+        {
+            HttpContext = httpContext
+        };
+
         var resultCreateBooking = (await _eventsController.CreateBooking(@event.Id)) as AcceptedAtActionResult;
 
         Assert.NotNull(resultCreateBooking);
@@ -146,9 +201,37 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
 
         List<Guid> CreatedBookings = [];
 
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+
+        var context = _serviceProvider.GetRequiredService<AppDbContext>();
+
+        Guid userId = await context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);  
+
         for (int i = 0; i < 10; i++)
         {
             RefreshServices();
+             var identity = new ClaimsIdentity(new[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, userId.ToString())
+            }, "LoginTest");
+
+            var principal = new ClaimsPrincipal(identity);
+            var httpContext = new DefaultHttpContext { User = principal };
+
+            _eventsController.ControllerContext = new ControllerContext
+            {
+                HttpContext = httpContext
+            };
+            
             var resultCreateBooking = (await _eventsController.CreateBooking(@event.Id)) as AcceptedAtActionResult;
 
             Assert.NotNull(resultCreateBooking);
@@ -184,6 +267,35 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
         Assert.NotNull(@event);
 
         RefreshServices();
+
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+
+        var context = _serviceProvider.GetRequiredService<AppDbContext>();
+
+        Guid userId = await context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);  
+
+         var identity = new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString())
+        }, "LoginTest");
+
+        var principal = new ClaimsPrincipal(identity);
+        var httpContext = new DefaultHttpContext { User = principal };
+
+        _eventsController.ControllerContext = new ControllerContext
+        {
+            HttpContext = httpContext
+        };
+
         var resultCreateBooking = (await _eventsController.CreateBooking(@event.Id)) as AcceptedAtActionResult;
 
         Assert.NotNull(resultCreateBooking);
@@ -195,6 +307,12 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
         Assert.Equal(@event.Id, bookingCreate.EventId);
 
         RefreshServices();
+
+        _bookingsController.ControllerContext = new ControllerContext
+        {
+            HttpContext = httpContext
+        };
+
         var resultInfoBooking = (await _bookingsController.GetById(bookingCreate.Id)) as OkObjectResult;
 
         Assert.NotNull(resultInfoBooking);
@@ -230,6 +348,34 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
         Assert.NotNull(@event);
         
         RefreshServices();
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+
+        var context = _serviceProvider.GetRequiredService<AppDbContext>();
+
+        Guid userId = await context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);  
+
+         var identity = new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString())
+        }, "LoginTest");
+
+        var principal = new ClaimsPrincipal(identity);
+        var httpContext = new DefaultHttpContext { User = principal };
+
+        _eventsController.ControllerContext = new ControllerContext
+        {
+            HttpContext = httpContext
+        };
+
         var resultCreateBooking = (await _eventsController.CreateBooking(@event.Id)) as AcceptedAtActionResult;
 
         Assert.NotNull(resultCreateBooking);
@@ -254,6 +400,11 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
         // _context.Entry(bookingEntity).Reload();
         RefreshServices();
 
+        _bookingsController.ControllerContext = new ControllerContext
+        {
+            HttpContext = httpContext
+        };
+
         var resultInfoBooking = (await _bookingsController.GetById(bookingCreate.Id)) as OkObjectResult;
 
         Assert.NotNull(resultInfoBooking);
@@ -271,6 +422,34 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
     [Fact]
     public async Task BookingController_CreateBookingForNotExistsEvent_ReturnsNotFound()
     {
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+
+        var context = _serviceProvider.GetRequiredService<AppDbContext>();
+
+        Guid userId = await context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);  
+
+         var identity = new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString())
+        }, "LoginTest");
+
+        var principal = new ClaimsPrincipal(identity);
+        var httpContext = new DefaultHttpContext { User = principal };
+
+        _eventsController.ControllerContext = new ControllerContext
+        {
+            HttpContext = httpContext
+        };
+
         var actionResult = (await _eventsController.CreateBooking(Guid.Empty)) as NotFoundObjectResult;
 
         Assert.NotNull(actionResult);
@@ -311,6 +490,34 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
         Assert.Empty(allEvents);
 
         RefreshServices();
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+
+        var context = _serviceProvider.GetRequiredService<AppDbContext>();
+
+        Guid userId = await context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);  
+
+        var identity = new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString())
+        }, "LoginTest");
+
+        var principal = new ClaimsPrincipal(identity);
+        var httpContext = new DefaultHttpContext { User = principal };
+
+        _eventsController.ControllerContext = new ControllerContext
+        {
+            HttpContext = httpContext
+        };
+
         var actionResultCreateBooking = (await _eventsController.CreateBooking(Guid.Empty)) as NotFoundObjectResult;
 
         Assert.NotNull(actionResultCreateBooking);
@@ -323,6 +530,34 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
     [Fact]
     public async Task BookingController_CheckInfoDontExistsBooking_ReturnsNotFound()
     {
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+
+        var context = _serviceProvider.GetRequiredService<AppDbContext>();
+
+        Guid userId = await context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);  
+
+        var identity = new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString())
+        }, "LoginTest");
+
+        var principal = new ClaimsPrincipal(identity);
+        var httpContext = new DefaultHttpContext { User = principal };
+
+        _bookingsController.ControllerContext = new ControllerContext
+        {
+            HttpContext = httpContext
+        };
+
         var actionResult = (await _bookingsController.GetById(Guid.Empty)) as NotFoundObjectResult;
 
         Assert.NotNull(actionResult);
@@ -330,5 +565,336 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
 
         Assert.NotNull(actionResult.Value);
         Assert.Contains($"Booking with index {Guid.Empty} not found", actionResult.Value.ToString());
+    }
+
+    [Fact]
+    public async Task BookingController_CreateBookingForPastEvent_ReturnsConflict()
+    {
+        // Arrange
+        var pastEventDto = new EventCreateDto
+        {
+            Title = "Прошедшее мероприятие",
+            Description = "Уже закончилось",
+            TotalSeats = 100,
+            StartAt = DateTime.UtcNow.AddDays(-2),
+            EndAt = DateTime.UtcNow.AddHours(-1)
+        };
+
+        var resultCreateEvent = (await _eventsController.Post(pastEventDto)).Result as CreatedAtActionResult;
+        Assert.NotNull(resultCreateEvent);
+        Assert.Equal(201, resultCreateEvent.StatusCode);
+
+        var @event = resultCreateEvent.Value as Event;
+        Assert.NotNull(@event);
+
+        RefreshServices();
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+
+        var context = _serviceProvider.GetRequiredService<AppDbContext>();
+        Guid userId = await context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
+
+        var identity = new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString())
+        }, "LoginTest");
+
+        var principal = new ClaimsPrincipal(identity);
+        var httpContext = new DefaultHttpContext { User = principal };
+
+        _eventsController.ControllerContext = new ControllerContext
+        {
+            HttpContext = httpContext
+        };
+
+        BookingForPastEventException? exception = null;
+        ObjectResult? actionResult = null;
+
+        try
+        {
+            actionResult = (await _eventsController.CreateBooking(@event.Id)) as ObjectResult;
+            Assert.Fail("Expected BookingForPastEventException.");
+        }
+        catch (BookingForPastEventException ex)
+        {
+            exception = ex;
+        }
+
+        // Assert
+        Assert.NotNull(exception);
+        Assert.Contains($"cannot reserve seats after start event: {@event.Id}", exception.Message);
+
+        if (actionResult != null)
+        {
+            Assert.Equal(StatusCodes.Status409Conflict, actionResult.StatusCode);
+            Assert.NotNull(actionResult.Value);
+            Assert.Contains($"cannot reserve seats after start event: {@event.Id}", actionResult.Value.ToString());
+        }
+    }
+
+    [Fact]
+    public async Task BookingController_CreateBooking_LimitExceeded_ReturnsConflict()
+    {
+        // Arrange
+        var validDto = new EventCreateDto
+        {
+            Title = "Тестовая конференция",
+            Description = "Описание мероприятия",
+            TotalSeats = 100,
+            StartAt = DateTime.Now.AddHours(1).ToUniversalTime(),
+            EndAt = DateTime.Now.AddHours(2).ToUniversalTime()
+        };
+
+        var resultCreateEvent = (await _eventsController.Post(validDto)).Result as CreatedAtActionResult;
+        Assert.NotNull(resultCreateEvent);
+        Assert.Equal(201, resultCreateEvent.StatusCode);
+
+        var @event = resultCreateEvent.Value as Event;
+        Assert.NotNull(@event);
+
+        RefreshServices();
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+
+        var context = _serviceProvider.GetRequiredService<AppDbContext>();
+        Guid userId = await context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
+
+        var identity = new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString())
+        }, "LoginTest");
+
+        var principal = new ClaimsPrincipal(identity);
+        var httpContext = new DefaultHttpContext { User = principal };
+
+        const int limit = 10;
+
+        for (int i = 0; i < limit; i++)
+        {
+            _eventsController.ControllerContext = new ControllerContext
+            {
+                HttpContext = httpContext
+            };
+            var bookingResult = (await _eventsController.CreateBooking(@event.Id)) as AcceptedAtActionResult;
+            Assert.NotNull(bookingResult);
+            Assert.Equal(202, bookingResult.StatusCode);
+            RefreshServices();
+        }
+
+        _eventsController.ControllerContext = new ControllerContext
+        {
+            HttpContext = httpContext
+        };
+
+        ActiveBookingsLimitExceededException? exception = null;
+        ObjectResult? overLimitResult = null;
+
+        try
+        {
+            overLimitResult = (await _eventsController.CreateBooking(@event.Id)) as ObjectResult;
+            Assert.Fail("Expected ActiveBookingsLimitExceededException.");
+        }
+        catch (ActiveBookingsLimitExceededException ex)
+        {
+            exception = ex;
+        }
+
+        // Assert
+        Assert.NotNull(exception);
+        Assert.Contains($"Get limit booking for user on event: {@event.Id}", exception.Message);
+        
+        if (overLimitResult != null)
+        {
+            Assert.Equal(StatusCodes.Status409Conflict, overLimitResult.StatusCode);
+            Assert.NotNull(overLimitResult.Value);
+            Assert.Contains($"Get limit booking for user on event: {@event.Id}", overLimitResult.Value.ToString());
+        }
+
+        var bookingsCount = await context.Bookings
+            .CountAsync(b => b.EventId == @event.Id && b.UserId == userId,
+                TestContext.Current.CancellationToken);
+        Assert.Equal(limit, bookingsCount);
+    }
+
+    [Fact]
+    public async Task BookingController_CreateBooking_LimitsArePerUser_NotGlobal()
+    {
+        var validDto = new EventCreateDto
+        {
+            Title = "Тестовая конференция",
+            Description = "Описание мероприятия",
+            TotalSeats = 200,
+            StartAt = DateTime.Now.AddHours(1).ToUniversalTime(),
+            EndAt = DateTime.Now.AddHours(2).ToUniversalTime()
+        };
+
+        var resultCreateEvent = (await _eventsController.Post(validDto)).Result as CreatedAtActionResult;
+        Assert.NotNull(resultCreateEvent);
+        Assert.Equal(StatusCodes.Status201Created, resultCreateEvent.StatusCode);
+
+        var @event = resultCreateEvent.Value as Event;
+        Assert.NotNull(@event);
+
+        RefreshServices();
+
+        // Регистрируем первого пользователя
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "UserA",
+            Password = "PasswordA",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+
+        var context = _serviceProvider.GetRequiredService<AppDbContext>();
+        Guid userAId = await context.Accounts
+            .Where(a => a.Login == "UserA")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
+
+        // Регистрируем второго пользователя
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "UserB",
+            Password = "PasswordB",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+
+        Guid userBId = await context.Accounts
+            .Where(a => a.Login == "UserB")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
+
+        const int limit = 10;
+
+        async Task CreateBookingsForUser(Guid userId, string login)
+        {
+            var identity = new ClaimsIdentity(new[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, userId.ToString())
+            }, login);
+
+            var principal = new ClaimsPrincipal(identity);
+            var httpContext = new DefaultHttpContext { User = principal };
+
+            for (int i = 0; i < limit; i++)
+            {
+                _eventsController.ControllerContext = new ControllerContext
+                {
+                    HttpContext = httpContext
+                };
+                var result = (await _eventsController.CreateBooking(@event.Id)) as AcceptedAtActionResult;
+                Assert.NotNull(result);
+                Assert.Equal(StatusCodes.Status202Accepted, result.StatusCode);
+                RefreshServices();
+            }
+        }
+
+        await CreateBookingsForUser(userAId, "UserA");
+        await CreateBookingsForUser(userBId, "UserB");
+
+        var countA = await context.Bookings
+            .CountAsync(b => b.EventId == @event.Id && b.UserId == userAId,
+                TestContext.Current.CancellationToken);
+        var countB = await context.Bookings
+            .CountAsync(b => b.EventId == @event.Id && b.UserId == userBId,
+                TestContext.Current.CancellationToken);
+
+        Assert.Equal(limit, countA);
+        Assert.Equal(limit, countB);
+
+        var identityA = new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userAId.ToString())
+        }, "UserA");
+
+        ActiveBookingsLimitExceededException? exceptionA = null;
+        ObjectResult? overLimitResultA = null;
+
+        try
+        {
+            _eventsController.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identityA) }
+            };
+            overLimitResultA = (await _eventsController.CreateBooking(@event.Id)) as ObjectResult;
+            Assert.Fail("Expected ActiveBookingsLimitExceededException.");
+        }
+        catch (ActiveBookingsLimitExceededException ex)
+        {
+            exceptionA = ex;
+        }
+
+        // Assert
+        Assert.NotNull(exceptionA);
+        Assert.Contains($"Get limit booking for user on event: {@event.Id}", exceptionA.Message);
+        
+        if (overLimitResultA != null)
+        {
+            Assert.Equal(StatusCodes.Status409Conflict, overLimitResultA.StatusCode);
+            Assert.NotNull(overLimitResultA.Value);
+            Assert.Contains($"Get limit booking for user on event: {@event.Id}", overLimitResultA.Value.ToString());
+        }
+
+
+        var identityB = new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userBId.ToString())
+        }, "UserB");
+
+        ActiveBookingsLimitExceededException? exceptionB = null;
+        ObjectResult? overLimitResultB = null;
+
+         try
+        {
+            _eventsController.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identityA) }
+            };
+            overLimitResultB = (await _eventsController.CreateBooking(@event.Id)) as ObjectResult;
+            Assert.Fail("Expected ActiveBookingsLimitExceededException.");
+        }
+        catch (ActiveBookingsLimitExceededException ex)
+        {
+            exceptionB = ex;
+        }
+
+        // Assert
+        Assert.NotNull(exceptionB);
+        Assert.Contains($"Get limit booking for user on event: {@event.Id}", exceptionB.Message);
+        
+        if (overLimitResultB != null)
+        {
+            Assert.Equal(StatusCodes.Status409Conflict, overLimitResultB.StatusCode);
+            Assert.NotNull(overLimitResultB.Value);
+            Assert.Contains($"Get limit booking for user on event: {@event.Id}", overLimitResultB.Value.ToString());
+        }
+
+        countA = await context.Bookings
+            .CountAsync(b => b.EventId == @event.Id && b.UserId == userAId,
+                TestContext.Current.CancellationToken);
+        countB = await context.Bookings
+            .CountAsync(b => b.EventId == @event.Id && b.UserId == userBId,
+                TestContext.Current.CancellationToken);
+
+        Assert.Equal(limit, countA);
+        Assert.Equal(limit, countB);
     }
 }

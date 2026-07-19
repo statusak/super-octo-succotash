@@ -12,7 +12,6 @@ namespace CSCourse.Application.Services
         private readonly IBookingRepository _bookings;
 
         private readonly SemaphoreSlim _processingSemaphoreBooking = new(1, 1);
-        private readonly object _bookingLock = new();
 
         public BookingService(
             IEventService eventService, IBookingRepository bookings)
@@ -20,7 +19,7 @@ namespace CSCourse.Application.Services
             _eventService = eventService;
             _bookings = bookings;
         }
-        public async Task<Booking> CreateBookingAsync(Guid eventId)
+        public async Task<Booking> CreateBookingAsync(Guid eventId, Guid userId)
         {
             bool canReserveSeats;
             // TODO: Здесь было-бы уместно использовать транзакцию
@@ -29,7 +28,16 @@ namespace CSCourse.Application.Services
             {
                 try
                 {
+                    int bookingCountOnEventByUser = await _bookings.GetCountBookingsOnEventByUserAsync(eventId, userId);
+                    if(bookingCountOnEventByUser >= 10)
+                    {
+                        throw new ActiveBookingsLimitExceededException($"Get limit booking for user on event: {eventId}");
+                    }
                     canReserveSeats = await _eventService.TryReserveSeatsAsync(eventId);
+                }
+                catch (BookingForPastEventException) 
+                {
+                    throw;
                 }
                 catch (InvalidOperationException) 
                 {
@@ -44,6 +52,7 @@ namespace CSCourse.Application.Services
                     var newBookingDto = new BookingRepositoryCreateDto
                     {
                         EventId = eventId,
+                        UserId = userId,
                         Status = BookingStatus.Pending,
                         CreatedAt = DateTime.UtcNow
                     };
@@ -52,7 +61,8 @@ namespace CSCourse.Application.Services
 
                     var newBooking = new Booking
                     {
-                        Id = bookingId, 
+                        Id = bookingId,
+                        UserId = userId, 
                         EventId = newBookingDto.EventId,
                         Status = newBookingDto.Status,
                         CreatedAt = newBookingDto.CreatedAt,
@@ -62,6 +72,54 @@ namespace CSCourse.Application.Services
                 }
 
                     throw new NoAvailableSeatsException("No available seats for this event");
+            }
+            finally
+            {
+                _processingSemaphoreBooking.Release();
+            }
+        }
+
+        public async Task<bool> CancelledBookingByIdAsync(Guid bookingId, Guid userId, AccountRole role)
+        {
+            Booking? booking;
+            // TODO: Здесь было-бы уместно использовать транзакцию
+            await _processingSemaphoreBooking.WaitAsync();
+            try
+            {
+                booking = await _bookings.GetByIdAsync(bookingId);
+
+                if(booking == null)
+                {
+                    throw new NotFoundException($"not found booking with id {bookingId}");
+                }
+
+                if(booking.Status == BookingStatus.Rejected || booking.Status == BookingStatus.Cancelled)
+                {
+                    throw new BookingAlreadyCancelledException();
+                }
+
+                if(role != AccountRole.Admin)
+                {
+                    if(userId != booking.UserId)
+                    {
+                        throw new UnauthorizedOperationException($"You can not canceled booking with id {bookingId}");
+                    }   
+                }
+
+                BookingProcessedDto bookingProcessedDto = new BookingProcessedDto
+                {
+                    Status = BookingStatus.Cancelled,
+                    ProcessedAt = DateTime.Now,
+                };
+
+                if(await UpdateProcessedBookingByIdAsync(bookingId, bookingProcessedDto))
+                {
+                    return await _eventService.ReleaseSeatsAsync(booking.EventId);
+                } else
+                {
+                    // TODO: Сделать лучшую архитектуру, для понимания почему не отменилась бронь
+                    return false;
+                }
             }
             finally
             {

@@ -20,6 +20,14 @@ namespace CSCourse.Application.Models
         public required Guid EventId { get; set; }
 
         /// <summary>
+        /// Идентификатор пользователя, к которому относится бронирование.
+        /// </summary>
+        /// <remarks>
+        /// Связывает пользователя с конкретным мероприятием в системе.
+        /// </remarks>
+        public required Guid UserId { get; set; }
+
+        /// <summary>
         /// Текущий статус бронирования.
         /// </summary>
         /// <remarks>
