@@ -229,5 +229,7 @@ namespace CSCourse.Application.Interfaces
         /// общее количество мероприятий.
         /// </returns>
         Task<int> CountAsync();
+
+        Task<List<Event>> GetActiveAsync();
     }
 }

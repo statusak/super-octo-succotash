@@ -266,5 +266,7 @@ namespace CSCourse.Application.Interfaces
         /// с помощью метода <see cref="IsEventExists(Guid)"/>.
         /// </remarks>
         Task<bool> DeleteEventAsync(Guid id);
+
+        Task<List<Event>> GetActiveEventsAsync();
     }
 }

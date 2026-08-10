@@ -89,10 +89,17 @@ public class BookingRepository : IBookingRepository
 
         return rowsAffected > 0;
     }
-    public async Task<int> GetCountBookingsOnEventByUserAsync(Guid eventId, Guid userId)
+    public async Task<int> GetCountActiveBookingsByUserAndEventIdsAsync(Guid userId, IEnumerable<Guid> eventIds)
     {
-        return await _context.Bookings
-            .CountAsync(b => b.EventId == eventId && b.UserId == userId);
-    }
+        if (!eventIds.Any())
+                return 0;
 
+        var activeStatuses = new[] { BookingStatus.Pending, BookingStatus.Confirmed };
+
+        return await _context.Bookings
+            .Where(b => b.UserId == userId
+                    && activeStatuses.Contains(b.Status)
+                    && eventIds.Contains(b.EventId))
+            .CountAsync();
+    }
 }

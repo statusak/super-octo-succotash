@@ -321,4 +321,11 @@ public class EventRepository : IEventRepository
     {
         return await _context.Events.CountAsync();
     }
+
+    public async Task<List<Event>> GetActiveAsync()
+    {
+        return await _context.Events
+                            .Where(e => e.EndAt > DateTime.UtcNow)
+                            .ToListAsync();
+    }
 }
