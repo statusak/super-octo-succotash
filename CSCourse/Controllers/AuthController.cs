@@ -24,7 +24,7 @@ public class AuthController : ControllerBase
     /// <summary>
     /// Регистрирует нового пользователя в системе. Создаёт учётную запись на основе переданных данных,
     /// включая логин, пароль и роль. Перед выполнением бизнес-операции выполняется валидация входных DTO-объектов.
-    /// При успешной регистрации возвращается статус 201 Created.
+    /// При успешной регистрации возвращается статус 204 NoContent.
     /// </summary>
     /// <remarks>
     /// В случае, если пользователь с указанным логином или email уже существует, операция завершается ошибкой 409 Conflict.
@@ -33,15 +33,15 @@ public class AuthController : ControllerBase
     /// <param name="accountRegisterDto">Объект <see cref="AccountRegisterDto"/>, содержащий данные для регистрации:
     /// логин, пароль и предполагаемую роль пользователя.</param>
     /// <returns>
-    /// Возвращает <see cref="ActionResult"/> со статусом 201 и сообщением об успешной регистрации при успешном создании учётной записи.
+    /// Возвращает <see cref="ActionResult"/> со статусом 204, что означает успешную регистрацию.
     /// При ошибках валидации возвращает 400 Bad Request с деталями ошибок.
     /// При конфликте (пользователь уже существует) возвращает 409 Conflict с поясняющим сообщением.
     /// </returns>
-    /// <response code="201">Пользователь успешно зарегистрирован, учётная запись создана.</response>
+    /// <response code="204">Пользователь успешно зарегистрирован, учётная запись создана.</response>
     /// <response code="400">Ошибка валидации входных данных либо общая ошибка при обработке запроса.</response>
     /// <response code="409">Пользователь с указанным логином или email уже зарегистрирован в системе.</response>
     [HttpPost("register")]
-    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult> Register([FromBody] AccountRegisterDto accountRegisterDto)
@@ -54,7 +54,7 @@ public class AuthController : ControllerBase
         try
         {
             await _accountService.Register(accountRegisterDto);
-            return CreatedAtAction(nameof(Register), null, new { message = "User registered successfully" });
+            return NoContent();
         }
         catch (UserAlreadyExistsException)
         {
@@ -87,7 +87,7 @@ public class AuthController : ControllerBase
     /// <response code="400">Ошибка валидации структуры входных данных.</response>
     [HttpPost("login")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(string))]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<string>> Login([FromBody] AccountSignInDto accountSignInDto)
     {
         if (!ModelState.IsValid)
