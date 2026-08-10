@@ -112,7 +112,7 @@ namespace CSCourse.Application.Services
                 BookingProcessedDto bookingProcessedDto = new BookingProcessedDto
                 {
                     Status = BookingStatus.Cancelled,
-                    ProcessedAt = DateTime.Now,
+                    ProcessedAt = DateTime.UtcNow,
                 };
 
                 if(await UpdateProcessedBookingByIdAsync(bookingId, bookingProcessedDto))

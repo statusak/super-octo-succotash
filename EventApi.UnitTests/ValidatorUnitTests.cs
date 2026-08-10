@@ -12,8 +12,8 @@ public class ValidatorUnitTests
             Title = "Тестовая конференция",
             Description = "Описание мероприятия",
             TotalSeats = 100,
-            StartAt = DateTime.Now.AddHours(2),
-            EndAt = DateTime.Now.AddHours(1)
+            StartAt = DateTime.UtcNow.AddHours(2),
+            EndAt = DateTime.UtcNow.AddHours(1)
         };
 
         var validationResults = new List<ValidationResult>();
@@ -41,8 +41,8 @@ public class ValidatorUnitTests
             Title = "Тестовая конференция",
             Description = "Описание мероприятия",
             TotalSeats = 100,
-            StartAt = DateTime.Now.AddHours(1),
-            EndAt = DateTime.Now.AddHours(2)
+            StartAt = DateTime.UtcNow.AddHours(1),
+            EndAt = DateTime.UtcNow.AddHours(2)
         };
 
         var validationResults = new List<ValidationResult>();
