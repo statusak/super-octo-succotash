@@ -4,6 +4,7 @@ using CSCourse.Application.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
+using CSCourse.Domain.Exceptions;
 
 namespace CSCourse.Controllers
 {
@@ -109,6 +110,11 @@ namespace CSCourse.Controllers
             {
                 return NotFound($"Event with index {index} not found");
             }
+            catch (UnauthorizedOperationException ex)
+            {
+                return Forbid(ex.Message); 
+            }
+
         }
     }
 }

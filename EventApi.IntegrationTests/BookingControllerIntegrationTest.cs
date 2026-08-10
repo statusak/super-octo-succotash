@@ -980,4 +980,93 @@ public class BookingControllerIntegrationTest : IAsyncLifetime
         Assert.NotNull(updatedBooking);
         Assert.Equal(BookingStatus.Cancelled, updatedBooking.Status);
     }
+
+    [Fact]
+    public async Task BookingController_DeleteOtherUserBooking_ReturnsForbidden()
+    {
+        var validDto = new EventCreateDto
+        {
+            Title = "Тестовая конференция",
+            Description = "Описание мероприятия",
+            TotalSeats = 100,
+            StartAt = DateTime.Now.AddHours(1).ToUniversalTime(),
+            EndAt = DateTime.Now.AddHours(2).ToUniversalTime()
+        };
+
+        var resultCreateEvent = (await _eventsController.Post(validDto)).Result as CreatedAtActionResult;
+        Assert.NotNull(resultCreateEvent);
+        Assert.Equal(201, resultCreateEvent.StatusCode);
+        var @event = resultCreateEvent.Value as Event;
+        Assert.NotNull(@event);
+
+        RefreshServices();
+
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "OwnerUser",
+            Password = "PasswordOwner",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+
+        var context = _serviceProvider.GetRequiredService<AppDbContext>();
+        Guid ownerId = await context.Accounts
+            .Where(a => a.Login == "OwnerUser")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
+
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "OtherUser",
+            Password = "PasswordOther",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+
+        Guid otherId = await context.Accounts
+            .Where(a => a.Login == "OtherUser")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
+
+        // Создаём бронь от имени владельца
+        var ownerIdentity = new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, ownerId.ToString()),
+            new Claim(ClaimTypes.Role, AccountRole.User.ToString())
+        }, "OwnerUser");
+
+        _eventsController.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(ownerIdentity) }
+        };
+
+        var bookingResult = (await _eventsController.CreateBooking(@event.Id)) as AcceptedAtActionResult;
+        Assert.NotNull(bookingResult);
+        var booking = bookingResult.Value as BookingResponseDto;
+        Assert.NotNull(booking);
+
+        var otherIdentity = new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, otherId.ToString()),
+            new Claim(ClaimTypes.Role, AccountRole.User.ToString())
+        }, "OtherUser");
+
+        _bookingsController.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(otherIdentity) }
+        };
+
+        // Act
+        var result = await _bookingsController.Delete(booking.Id);
+
+        // Assert
+        Assert.IsType<ForbidResult>(result);
+        
+        using var scope = _serviceProvider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var updatedBooking = await db.Bookings.SingleOrDefaultAsync(b => b.Id == booking.Id, TestContext.Current.CancellationToken);
+        
+        Assert.NotNull(updatedBooking);
+        Assert.NotEqual(BookingStatus.Cancelled, updatedBooking.Status);
+    }
 }
