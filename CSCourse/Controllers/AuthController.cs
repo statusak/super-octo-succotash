@@ -72,18 +72,18 @@ public class AuthController : ControllerBase
     /// </summary>
     /// <remarks>
     /// Если предоставленные учётные данные не соответствуют ни одной из существующих учётных записей,
-    /// операция завершается с ответом 401 Unauthorized. Перед проверкой учётных данных выполняется валидация
+    /// операция завершается с ответом 404 NotFound. Перед проверкой учётных данных выполняется валидация
     /// структуры входящего DTO-объекта.
     /// </remarks>
     /// <param name="accountSignInDto">Объект <see cref="AccountSignInDto"/>, содержащий логин и пароль пользователя
     /// для проверки подлинности.</param>
     /// <returns>
     /// Возвращает <see cref="ActionResult{T}"/> со строкой JWT-токена при успешной аутентификации (статус 200 OK).
-    /// В случае неверных учётных данных возвращает 401 Unauthorized с сообщением об ошибке.
+    /// В случае неверных учётных данных возвращает 404 Not Found с сообщением об ошибке.
     /// При ошибках валидации входных данных — 400 Bad Request.
     /// </returns>
     /// <response code="200">Аутентификация успешна, в теле ответа содержится JWT-токен для доступа к защищённым ресурсам.</response>
-    /// <response code="401">Неверные учётные данные: логин или пароль не соответствуют существующей учётной записи.</response>
+    /// <response code="404">Неверные учётные данные: логин или пароль не соответствуют существующей учётной записи.</response>
     /// <response code="400">Ошибка валидации структуры входных данных.</response>
     [HttpPost("login")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(string))]
@@ -99,7 +99,7 @@ public class AuthController : ControllerBase
 
         if (string.IsNullOrEmpty(jwtString))
         {
-            return Unauthorized(new { message = "Invalid credentials" });
+            return NotFound(new { message = "Invalid credentials" });
         }
 
         return Ok(jwtString);
