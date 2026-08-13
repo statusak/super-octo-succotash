@@ -7,12 +7,17 @@ using CSCourse.Infrastructure.Repositories;
 using CSCourse.Infrastructure.DataAccess;
 using Microsoft.EntityFrameworkCore;
 using Testcontainers.PostgreSql;
+using CSCourse.Infrastructure.Services;
+using CSCourse.Infrastructure.Models;
+using Microsoft.Extensions.Options;
 
 namespace EventApi.IntegrationTests;
 public class BookingServiceIntegrationTests : IAsyncLifetime
 {
     private EventService _eventService = null!;
     private BookingService _bookingService = null!;
+    private IAccountService _accountService = null!;
+
     private AppDbContext _context = null!;
 
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16-alpine").Build();
@@ -44,8 +49,21 @@ public class BookingServiceIntegrationTests : IAsyncLifetime
         IBookingRepository bookings = new BookingRepository(_context);
         IEventRepository events = new EventRepository(_context);
 
+        JwtSettings jwtSettings = new JwtSettings
+        {
+            Secret = "1234567890123456789012",
+            Issuer = "https://example.com",
+            Audience = "https://example.com",
+            ExpirationMinutes = 10,
+        };
+
+        var options = Options.Create(jwtSettings);
+
+        ISecurityService securityService = new SecurityService(options);
+
         _eventService = new EventService(events);
         _bookingService = new BookingService(_eventService, bookings);
+        _accountService = new AccountService(_context, securityService);
     }
 
     private void RefreshServices()
@@ -59,7 +77,7 @@ public class BookingServiceIntegrationTests : IAsyncLifetime
     {
         await using var context = CreateContext();
         await context.Database.ExecuteSqlRawAsync(
-            "TRUNCATE TABLE events, bookings RESTART IDENTITY CASCADE");
+            "TRUNCATE TABLE events, bookings, accounts RESTART IDENTITY CASCADE");
     }
     [Fact]
     public async Task CreateBookingAsync_ForExistingEvent_ReturnsBookingWithPendingStatus()
@@ -76,7 +94,21 @@ public class BookingServiceIntegrationTests : IAsyncLifetime
         });
 
         RefreshServices();
-        var result = await _bookingService.CreateBookingAsync(eventId);
+
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+        Guid userId = await _context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
+
+
+        var result = await _bookingService.CreateBookingAsync(eventId, userId);
 
         Assert.NotNull(result);
         Assert.Equal(eventId, result.EventId);
@@ -100,11 +132,23 @@ public class BookingServiceIntegrationTests : IAsyncLifetime
         
         var createdBookingIds = new HashSet<Guid>();
 
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+        Guid userId = await _context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);        
+
         for (int i = 0; i < 10; i++)
         {
             RefreshServices();
 
-            var result = await _bookingService.CreateBookingAsync(eventId);
+            var result = await _bookingService.CreateBookingAsync(eventId, userId);
 
             Assert.NotNull(result);
             Assert.Equal(eventId, result.EventId);
@@ -133,7 +177,20 @@ public class BookingServiceIntegrationTests : IAsyncLifetime
         //       возвращать не только GUID, а полный ответ от БД 
         //       (Сейчас от БД возвращается только ID, а остальные поля дозаполняются
         //        уже в методах-обертках, как в данном случае в CreateBookingAsync) 
-        var expectedBooking = await _bookingService.CreateBookingAsync(eventId);
+
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+        Guid userId = await _context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);  
+
+        var expectedBooking = await _bookingService.CreateBookingAsync(eventId, userId);
 
         RefreshServices();
         var result = await _bookingService.GetBookingByIdAsync(expectedBooking.Id);
@@ -162,7 +219,20 @@ public class BookingServiceIntegrationTests : IAsyncLifetime
 
 
         RefreshServices();
-        var booking = await _bookingService.CreateBookingAsync(eventId);
+
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+        Guid userId = await _context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);  
+
+        var booking = await _bookingService.CreateBookingAsync(eventId, userId);
 
         var processedDto = new BookingProcessedDto
         {
@@ -238,7 +308,20 @@ public class BookingServiceIntegrationTests : IAsyncLifetime
         Assert.Equal(100, initialEvent.AvailableSeats);
 
         RefreshServices();
-        var result = await _bookingService.CreateBookingAsync(eventId);
+
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+        Guid userId = await _context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);  
+
+        var result = await _bookingService.CreateBookingAsync(eventId, userId);
         Assert.NotNull(result);
 
         RefreshServices();
@@ -268,10 +351,22 @@ public class BookingServiceIntegrationTests : IAsyncLifetime
         Assert.NotNull(eventState);
         var totalSeats = eventState.TotalSeats;
 
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+        Guid userId = await _context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);  
+
         for (int i = 0; i < totalSeats; i++)
         {
             RefreshServices();
-            var result = await _bookingService.CreateBookingAsync(eventId);
+            var result = await _bookingService.CreateBookingAsync(eventId, userId);
 
             Assert.NotNull(result);
             Assert.Equal(eventId, result.EventId);
@@ -286,7 +381,7 @@ public class BookingServiceIntegrationTests : IAsyncLifetime
 
         RefreshServices();
         await Assert.ThrowsAsync<NoAvailableSeatsException>(
-            async () => await _bookingService.CreateBookingAsync(eventId)
+            async () => await _bookingService.CreateBookingAsync(eventId, userId)
         );
     }
 
@@ -305,7 +400,20 @@ public class BookingServiceIntegrationTests : IAsyncLifetime
         });
 
         RefreshServices();
-        await _bookingService.CreateBookingAsync(eventId);
+
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+        Guid userId = await _context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);  
+
+        await _bookingService.CreateBookingAsync(eventId, userId);
 
         RefreshServices();
         var updatedEvent = _eventService.GetEventById(eventId);
@@ -313,8 +421,9 @@ public class BookingServiceIntegrationTests : IAsyncLifetime
         Assert.Equal(0, updatedEvent.AvailableSeats);
 
         RefreshServices();
+
         await Assert.ThrowsAsync<NoAvailableSeatsException>(
-            async () => await _bookingService.CreateBookingAsync(eventId)
+            async () => await _bookingService.CreateBookingAsync(eventId, userId)
         );
     }
 
@@ -323,8 +432,20 @@ public class BookingServiceIntegrationTests : IAsyncLifetime
     {
         var nonExistingEventId = Guid.NewGuid();
 
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+        Guid userId = await _context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);  
+
         await Assert.ThrowsAsync <NotFoundException> (
-            async () => await _bookingService.CreateBookingAsync(nonExistingEventId)
+            async () => await _bookingService.CreateBookingAsync(nonExistingEventId, userId)
         );
     }
 
@@ -343,7 +464,20 @@ public class BookingServiceIntegrationTests : IAsyncLifetime
         });
 
         RefreshServices();
-        var firstBooking = await _bookingService.CreateBookingAsync(eventId);
+
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+        Guid userId = await _context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);  
+
+        var firstBooking = await _bookingService.CreateBookingAsync(eventId, userId);
         
         RefreshServices();
         var eventState = _eventService.GetEventById(eventId);
@@ -368,7 +502,8 @@ public class BookingServiceIntegrationTests : IAsyncLifetime
         Assert.Equal(1, eventAfterRelease.AvailableSeats);
 
         RefreshServices();
-        var secondBooking = await _bookingService.CreateBookingAsync(eventId);
+        
+        var secondBooking = await _bookingService.CreateBookingAsync(eventId, userId);
         Assert.NotNull(secondBooking);
         Assert.Equal(eventId, secondBooking.EventId);
         Assert.Equal(BookingStatus.Pending, secondBooking.Status);
@@ -398,12 +533,24 @@ public class BookingServiceIntegrationTests : IAsyncLifetime
     {
         var eventId = CreateTestEvent(5);
 
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+        Guid userId = await _context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);  
+
         var tasks = Enumerable.Range(0, 20)
             .Select(_ => Task.Run(async () =>
             {
                 try
                 {
-                    var result = await _bookingService.CreateBookingAsync(eventId);
+                    var result = await _bookingService.CreateBookingAsync(eventId, userId);
                     (bool Success, Booking? Booking, Exception? Exception) successResult =
                         (true, result, null);
                     return successResult;
@@ -439,8 +586,20 @@ public class BookingServiceIntegrationTests : IAsyncLifetime
     {   
         var eventId = CreateTestEvent(10);
 
+        await _accountService.Register(new AccountRegisterDto
+        {
+            Login = "LoginTest",
+            Password = "PasswordTest",
+            Role = AccountRole.User
+        });
+        RefreshServices();
+        Guid userId = await _context.Accounts
+            .Where(a => a.Login == "LoginTest")
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync(TestContext.Current.CancellationToken);  
+
         var tasks = Enumerable.Range(0, 10)
-            .Select(_ => Task.Run(() => _bookingService.CreateBookingAsync(eventId)))
+            .Select(_ => Task.Run(() => _bookingService.CreateBookingAsync(eventId, userId)))
             .ToArray();
 
         var results = await Task.WhenAll(tasks);

@@ -212,5 +212,11 @@ namespace CSCourse.Application.Services
         {
             return await _events.DeleteAsync(id);
         }
+        
+        public async Task<List<Event>> GetActiveEventsAsync()
+        {
+            return await _events.GetActiveAsync();
+        }
+
     }
 }

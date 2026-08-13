@@ -66,9 +66,14 @@ namespace CSCourse.Middlewares
         private static int MapStatusCode(Exception ex)
             => ex switch
             {
-                ValidationException ve => StatusCodes.Status400BadRequest,
-                NotFoundException nfe => StatusCodes.Status404NotFound,
+                ActiveBookingsLimitExceededException ablee => StatusCodes.Status409Conflict,
+                BookingAlreadyCancelledException bace => StatusCodes.Status400BadRequest,
+                BookingForPastEventException bfpee => StatusCodes.Status400BadRequest,
                 NoAvailableSeatsException nase => StatusCodes.Status409Conflict,
+                NotFoundException nfe => StatusCodes.Status404NotFound,
+                UnauthorizedOperationException uoe => StatusCodes.Status403Forbidden,
+                UserAlreadyExistsException uaee => StatusCodes.Status409Conflict,
+                ValidationException ve => StatusCodes.Status400BadRequest,
                 _ => StatusCodes.Status500InternalServerError
             };
 

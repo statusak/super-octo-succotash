@@ -18,7 +18,12 @@
         /// <summary>
         /// Бронирование отклонено.
         /// </summary>
-        Rejected
+        Rejected,
+
+        /// <summary>
+        /// Бронирование отменено.
+        /// </summary>
+        Cancelled
     }
 
     /// <summary>
@@ -44,6 +49,14 @@
         /// 
         // TODO: Во Fluent API Указать, что это ForeignKey для EventID
         public required Guid EventId { get; set; }
+
+        /// <summary>
+        /// Идентификатор пользователя, к которому относится бронирование.
+        /// </summary>
+        /// <remarks>
+        /// Связывает бронирование с конкретным пользователем в системе.
+        /// </remarks>
+        public required Guid UserId { get; set; }
 
         /// <summary>
         /// Текущий статус бронирования.
@@ -77,5 +90,9 @@
         /// </summary>
         public Event? Event { get; set; }
 
+        /// <summary>
+        /// Навигационное свойство: ссылка на пользователя, сделавшего бронирование.
+        /// </summary>
+        public Account? Account { get; set; }
     }
 }

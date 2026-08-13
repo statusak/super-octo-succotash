@@ -9,6 +9,7 @@ namespace CSCourse.Infrastructure.DataAccess
 
         public DbSet<Event> Events => Set<Event>();
         public DbSet<Booking> Bookings => Set<Booking>();
+        public DbSet<Account> Accounts => Set<Account>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

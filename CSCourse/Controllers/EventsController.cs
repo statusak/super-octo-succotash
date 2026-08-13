@@ -2,6 +2,8 @@
 using CSCourse.Application.Interfaces;
 using CSCourse.Application.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace CSCourse.Controllers
 {
@@ -9,6 +11,7 @@ namespace CSCourse.Controllers
     /// Контроллер для управления мероприятиями (Events). Предоставляет REST API endpoints для получения, создания, обновления, удаления мероприятий,
     /// а также для работы с бронированиями (создание бронирований для мероприятий).
     /// </summary>
+    [Authorize]
     [ApiController]
     [Route("/[controller]")]
     public class EventsController : ControllerBase
@@ -134,6 +137,7 @@ namespace CSCourse.Controllers
         /// <returns>HTTP статус 202 Accepted с объектом мероприятия и заголовком Location, указывающим на URL созданного ресурса.</returns>
         /// <response code="202">Мероприятие успешно создано. Возвращается объект мероприятия и ссылка на ресурс (Location header).</response>
         /// <response code="400">Ошибка валидации или некорректные данные (HTTP 400 Bad Request)</response>
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status202Accepted, Type = typeof(Event))]
         [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(string))]
@@ -193,6 +197,7 @@ namespace CSCourse.Controllers
         /// <response code="204">Данные мероприятия успешно обновлены (HTTP 204 No Content)</response>
         /// <response code="400">Некорректные данные или ошибки валидации (HTTP 400 Bad Request)</response>
         /// <response code="404">Мероприятие не найдено (HTTP 404 Not Found)</response>
+        [Authorize(Roles = "Admin")]
         [HttpPut("{index:guid}")]
         public async Task<ActionResult> Put(Guid index, [FromBody] EventUpdateDto eventDto)
         {
@@ -230,6 +235,7 @@ namespace CSCourse.Controllers
         /// </remarks>
         /// <response code="200">Мероприятие успешно удалено (HTTP 200 OK)</response>
         /// <response code="404">Мероприятие не найдено в системе (HTTP 404 Not Found)</response>
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{index:guid}")]
         public async Task<ActionResult> Delete(Guid index)
         {
@@ -288,10 +294,25 @@ namespace CSCourse.Controllers
         [ProducesResponseType(StatusCodes.Status409Conflict, Type = typeof(ProblemDetails))]
         public async Task<ActionResult> CreateBooking(Guid eventId)
         {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (userIdClaim == null)
+            {
+                return BadRequest("ID user not find");
+            }
+
+            string userIdString = userIdClaim.Value;
+            Guid userId;
+
+            if (!Guid.TryParse(userIdString, out userId))
+            {
+                return BadRequest($"Bad ID user: {userIdString}");
+            }
+
             try
             {
                 await _eventService.GetEventByIdAsync(eventId);
-                var created = await _bookingService.CreateBookingAsync(eventId);
+                var created = await _bookingService.CreateBookingAsync(eventId, userId);
 
                 BookingResponseDto response =
                 new BookingResponseDto

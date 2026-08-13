@@ -19,6 +19,7 @@ public class BookingRepository : IBookingRepository
         var newBooking = new Booking {
             Id = Guid.NewGuid(),
             EventId = booking.EventId,
+            UserId = booking.UserId,
             Status = booking.Status,
             CreatedAt = booking.CreatedAt,
             ProcessedAt = booking.ProcessedAt
@@ -42,6 +43,7 @@ public class BookingRepository : IBookingRepository
         var newBooking = new Booking {
             Id = Guid.NewGuid(),
             EventId = booking.EventId,
+            UserId = booking.UserId,
             Status = booking.Status,
             CreatedAt = booking.CreatedAt,
             ProcessedAt = booking.ProcessedAt
@@ -87,5 +89,17 @@ public class BookingRepository : IBookingRepository
 
         return rowsAffected > 0;
     }
+    public async Task<int> GetCountActiveBookingsByUserAndEventIdsAsync(Guid userId, IEnumerable<Guid> eventIds)
+    {
+        if (!eventIds.Any())
+                return 0;
 
+        var activeStatuses = new[] { BookingStatus.Pending, BookingStatus.Confirmed };
+
+        return await _context.Bookings
+            .Where(b => b.UserId == userId
+                    && activeStatuses.Contains(b.Status)
+                    && eventIds.Contains(b.EventId))
+            .CountAsync();
+    }
 }

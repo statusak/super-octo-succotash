@@ -43,8 +43,8 @@ public class EventServiceUnitTests
             Title = "Тестовая конференция",
             Description = "Описание мероприятия",
             TotalSeats = 100,
-            StartAt = DateTime.Now.AddHours(1),
-            EndAt = DateTime.Now.AddHours(2)
+            StartAt = DateTime.UtcNow.AddHours(1),
+            EndAt = DateTime.UtcNow.AddHours(2)
         };
 
         var result = (await _controller.Post(validDto)).Result as CreatedAtActionResult;
@@ -236,8 +236,8 @@ public class EventServiceUnitTests
         {
             Title = "Попытка обновления",
             Description = "Это событие не существует",
-            StartAt = DateTime.Now,
-            EndAt = DateTime.Now.AddHours(2)
+            StartAt = DateTime.UtcNow,
+            EndAt = DateTime.UtcNow.AddHours(2)
         };
 
         Guid nonExistsGuid = Guid.NewGuid();

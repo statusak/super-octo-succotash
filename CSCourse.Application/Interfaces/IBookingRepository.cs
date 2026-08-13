@@ -82,5 +82,15 @@ namespace CSCourse.Application.Interfaces
         /// Обновляются только свойства <see cref="Booking.Status"/> и <see cref="Booking.ProcessedAt"/>.
         /// </remarks>
         Task<bool> UpdateAsync(BookingRepositoryUpdateDto booking);
+
+        /// <summary>
+        /// Асинхронно подсчитывает количество бронирований, сделанных конкретным пользователем на все активные события.
+        /// Используется для проверки бизнес-правил (например, ограничение на несколько бронирований одного пользователя
+        /// на одно событие).
+        /// </summary>
+        /// <param name="eventIds">Идентификаторы активных событий (<see cref="IEnumerable<Guid>"/>.</param>
+        /// <param name="userId">Идентификатор пользователя (<see cref="Guid"/>, сделавшего бронирования.</param>
+        /// <returns>Асинхронная операция, возвращающая целочисленное значение — количество бронирований.</returns>
+        Task<int> GetCountActiveBookingsByUserAndEventIdsAsync(Guid userId, IEnumerable<Guid> eventIds);
     }
 }

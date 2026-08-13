@@ -12,6 +12,7 @@ namespace CSCourse.Application.Interfaces
         /// Создаёт новое бронирование для указанного мероприятия.
         /// </summary>
         /// <param name="eventId">Уникальный идентификатор (GUID) мероприятия, для которого создаётся бронирование.</param>
+        /// <param name="userId">Уникальный идентификатор (GUID) пользователя, для которого создаётся бронирование.</param>
         /// <returns>
         /// Асинхронная задача (<see cref="Task{T}"/>), которая возвращает объект <see cref="Booking"/>
         /// после успешного создания бронирования.
@@ -19,7 +20,7 @@ namespace CSCourse.Application.Interfaces
         /// <exception cref="InvalidOperationException">
         /// Выбрасывается, если мероприятие с указанным идентификатором не найдено.
         /// </exception>
-        Task<Booking> CreateBookingAsync(Guid eventId);
+        Task<Booking> CreateBookingAsync(Guid eventId, Guid userId);
 
         /// <summary>
         /// Получает информацию о бронировании по его уникальному идентификатору.
@@ -37,13 +38,28 @@ namespace CSCourse.Application.Interfaces
         /// <param name="bookingId">Уникальный идентификатор (GUID) бронирования, которое необходимо обновить.</param>
         /// <param name="booking">Объект <see cref="BookingProcessedDto"/> с обновлёнными данными бронирования.</param>
         /// <returns>
-        /// Асинхронная задача (<see cref="Task{T}"/>), которая возвращает обновлённый объект <see cref="Booking"/>,
-        /// если бронирование найдено и успешно обновлено; в противном случае возвращает <c>null</c>.
+        /// Асинхронная задача (<see cref="Task{T}"/>), которая возвращает <see cref="true"/>,
+        /// если бронирование найдено и успешно обновлено; в противном случае возвращает <see cref="false"/>
         /// </returns>
         /// <remarks>
         /// Метод предназначен для обновления бронирований после их обработки системой.
         /// </remarks>
         Task<bool> UpdateProcessedBookingByIdAsync(Guid bookingId, BookingProcessedDto booking);
+
+        /// <summary>
+        /// Отменяет бронирование по его идентификатору, 
+        /// </summary>
+        /// <param name="bookingId">Уникальный идентификатор (GUID) бронирования, которое необходимо отменить.</param>
+        /// <param name="userId">Уникальный идентификатор (GUID) пользователя.</param>
+        /// <param name="role">AccountRole: User/Admin</param>
+        /// <returns>
+        /// Асинхронная задача (<see cref="Task{T}"/>), которая возвращает <see cref="true"/>,
+        /// если бронирование найдено и успешно обновлено; в противном случае возвращает <see cref="false"/>
+        /// </returns>
+        /// <remarks>
+        /// Метод предназначен для отмены бронирования. Администратор может отменить любые бронирования, Пользователь - только свои
+        /// </remarks>
+        Task<bool> CancelledBookingByIdAsync(Guid bookingId, Guid userId, AccountRole role);
 
         /// <summary>
         /// Возвращает коллекцию всех бронирований со статусом «ожидает обработки» (Pending).
