@@ -1,4 +1,4 @@
-﻿using CSCourse.Domain.Models;
+﻿using Bookings.Service.Domain.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

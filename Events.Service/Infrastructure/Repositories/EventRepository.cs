@@ -1,11 +1,11 @@
-using CSCourse.Domain.Models;
-using CSCourse.Domain.Exceptions;
-using CSCourse.Application.Interfaces;
-using CSCourse.Application.Models;
-using CSCourse.Infrastructure.DataAccess;
+using Events.Service.Domain.Models;
+using Events.Service.Domain.Exceptions;
+using Events.Service.Application.Interfaces;
+using Events.Service.Application.Models;
+using Events.Service.Infrastructure.DataAccess;
 using Microsoft.EntityFrameworkCore;
 
-namespace CSCourse.Infrastructure.Repositories;
+namespace Events.Service.Infrastructure.Repositories;
 
 public class EventRepository : IEventRepository
 {
