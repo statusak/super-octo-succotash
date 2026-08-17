@@ -1,12 +1,13 @@
-﻿using Identity.Service.Domain.Models;
+﻿using Events.Service.Domain.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace Identity.Service.Infrastructure.DataAccess
+namespace Events.Service.Infrastructure.DataAccess
 {
     public sealed class AppDbContext : DbContext
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
-        public DbSet<Account> Accounts => Set<Account>();
+
+        public DbSet<Event> Events => Set<Event>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

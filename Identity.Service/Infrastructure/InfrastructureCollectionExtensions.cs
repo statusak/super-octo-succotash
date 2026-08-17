@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore.Design;
 using Identity.Service.Infrastructure.Services;
-using CSCourse.Infrastructure.DataAccess;
+using Identity.Service.Infrastructure.DataAccess;
 
 namespace Identity.Service.Infrastructure;
 

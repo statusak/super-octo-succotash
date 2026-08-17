@@ -1,13 +1,11 @@
-using CSCourse.Infrastructure.DataAccess;
-using CSCourse.Infrastructure.Repositories;
-using CSCourse.Application.Interfaces;
+using Events.Service.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using CSCourse.Application.Services;
 using Microsoft.EntityFrameworkCore.Design;
-using CSCourse.Infrastructure.Services;
+using Events.Service.Infrastructure.Services;
+using Events.Infrastructure.DataAccess;
 
-namespace CSCourse.Infrastructure;
+namespace Events.Service.Infrastructure;
 
 public static class InfrastructureCollectionExtensions
 {
@@ -29,16 +27,10 @@ public static class InfrastructureCollectionExtensions
         //         o.EnableRetryOnFailure();
         //     }));
         ///
+        /// 
+        services.AddScoped<IEventRepository, EventRepository>();
 
         services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
-
-        // services.AddScoped<IEventRepository, EventRepository>();
-        services.AddScoped<IBookingRepository, BookingRepository>();
-
-        services.AddHostedService<BookingBackgroundService>();
-
-        // services.AddScoped<ISecurityService, SecurityService>();
-        // services.AddScoped<IAccountService, AccountService>();
         
         return services;
     }
