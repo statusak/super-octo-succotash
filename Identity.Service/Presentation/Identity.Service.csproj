@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../Application/Identity.Service.Application.csproj" />
+    <ProjectReference Include="../../Contracts/CSCourse.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

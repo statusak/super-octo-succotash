@@ -1,4 +1,4 @@
-namespace CSCourse.Application.Models;
+namespace Identity.Service.Application.Models;
 
 /// <summary>
 /// DTO для передачи учётных данных при попытке входа в систему. Содержит логин и пароль,

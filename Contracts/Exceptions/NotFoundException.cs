@@ -1,4 +1,4 @@
-namespace CSCourse.Domain.Exceptions;
+namespace CSCourse.Contracts.Exceptions;
 
 public class NotFoundException : Exception
 {
