@@ -1,9 +1,9 @@
-﻿using CSCourse.Domain.Models;
-using CSCourse.Domain.Exceptions;
-using CSCourse.Application.Interfaces;
-using CSCourse.Application.Models;
+﻿using Bookings.Service.Domain.Models;
+using Bookings.Service.Domain.Exceptions;
+using Bookings.Service.Application.Interfaces;
+using Bookings.Service.Application.Models;
 
-namespace CSCourse.Application.Services
+namespace Bookings.Service.Application.Services
 {
     public class BookingService : IBookingService
     {

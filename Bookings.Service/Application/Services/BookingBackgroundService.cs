@@ -1,12 +1,12 @@
-﻿using CSCourse.Application.Interfaces;
-using CSCourse.Domain.Models;
+﻿using Bookings.Service.Application.Interfaces;
+using Bookings.Service.Domain.Models;
 
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using CSCourse.Application.Models;
+using Bookings.Service.Application.Models;
 
-namespace CSCourse.Application.Services
+namespace Bookings.Service.Application.Services
 {
     public class BookingBackgroundService : BackgroundService
     {

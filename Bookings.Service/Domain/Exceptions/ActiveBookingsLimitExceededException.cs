@@ -1,4 +1,4 @@
-namespace CSCourse.Domain.Exceptions;
+namespace Bookings.Service.Domain.Exceptions;
 
 /// <summary>
 /// Выбрасывается, когда у пользователя превышен лимит активных броней.

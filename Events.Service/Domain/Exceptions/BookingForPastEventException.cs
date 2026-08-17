@@ -1,4 +1,4 @@
-namespace CSCourse.Domain.Exceptions;
+namespace Events.Service.Domain.Exceptions;
 
 /// <summary>
 /// Выбрасывается, когда пытаются забронировать уже прошедшее событие.

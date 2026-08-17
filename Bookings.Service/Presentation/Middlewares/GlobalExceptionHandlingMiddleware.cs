@@ -1,12 +1,9 @@
-﻿using CSCourse.Domain.Exceptions;
+﻿using Bookings.Service.Domain.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
 
-namespace CSCourse.Middlewares
+namespace Bookings.Service.Middlewares
 {
-    
-
-
     public class GlobalExceptionHandlingMiddleware
     {
         private readonly RequestDelegate _next;

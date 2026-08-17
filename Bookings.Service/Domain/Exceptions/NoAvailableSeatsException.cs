@@ -1,4 +1,4 @@
-namespace CSCourse.Domain.Exceptions;
+namespace Bookings.Service.Domain.Exceptions;
 
 public class NoAvailableSeatsException : Exception
 {

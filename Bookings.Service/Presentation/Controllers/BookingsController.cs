@@ -1,12 +1,12 @@
-﻿using CSCourse.Domain.Models;
-using CSCourse.Application.Interfaces;
-using CSCourse.Application.Models;
+﻿using Bookings.Service.Domain.Models;
+using Bookings.Service.Application.Interfaces;
+using Bookings.Service.Application.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
-using CSCourse.Domain.Exceptions;
+using Bookings.Service.Domain.Exceptions;
 
-namespace CSCourse.Controllers
+namespace Bookings.Service.Controllers
 {
 
     /// <summary>
