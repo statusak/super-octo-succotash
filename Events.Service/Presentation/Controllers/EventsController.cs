@@ -1,11 +1,11 @@
-﻿using CSCourse.Domain.Models;
-using CSCourse.Application.Interfaces;
-using CSCourse.Application.Models;
+﻿using Identity.Service.Domain.Models;
+using Identity.Service.Application.Interfaces;
+using Identity.Service.Application.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 
-namespace CSCourse.Controllers
+namespace Identity.Service.Controllers
 {
     /// <summary>
     /// Контроллер для управления мероприятиями (Events). Предоставляет REST API endpoints для получения, создания, обновления, удаления мероприятий,
@@ -18,16 +18,19 @@ namespace CSCourse.Controllers
     {
 
         private readonly IEventService _eventService;
-        private readonly IBookingService _bookingService;
+            
+        // TODO: здесь зависимость от Kafka
+        // private readonly IBookingService _bookingService;
         private readonly ILogger<EventsController> _logger;
 
         public EventsController(
             IEventService eventService,
-            IBookingService bookingService,
+            // IBookingService bookingService,
             ILogger<EventsController> logger)
         {
             _eventService = eventService;
-            _bookingService = bookingService;
+            // TODO: здесь зависимость от Kafka
+            // _bookingService = bookingService; 
             _logger = logger;
         }
 
@@ -312,7 +315,9 @@ namespace CSCourse.Controllers
             try
             {
                 await _eventService.GetEventByIdAsync(eventId);
-                var created = await _bookingService.CreateBookingAsync(eventId, userId);
+                
+                // TODO: здесь зависимость от Kafka
+                // var created = await _bookingService.CreateBookingAsync(eventId, userId);
 
                 BookingResponseDto response =
                 new BookingResponseDto

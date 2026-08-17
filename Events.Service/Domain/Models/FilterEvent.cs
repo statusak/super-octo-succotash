@@ -1,4 +1,4 @@
-﻿namespace CSCourse.Domain.Models
+﻿namespace Events.Service.Domain.Models
 {
     /// <summary>
     /// Модель для фильтрации мероприятий на уровне бизнес‑логики и доступа к данным.

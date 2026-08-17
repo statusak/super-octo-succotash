@@ -1,7 +1,7 @@
-using CSCourse.Domain.Models;
-using CSCourse.Application.Models;
+using Events.Service.Domain.Models;
+using Events.Service.Application.Models;
 
-namespace CSCourse.Application.Interfaces
+namespace Events.Service.Application.Interfaces
 {
     /// <summary>
     /// Репозиторий для работы с данными мероприятий: создание, получение, обновление, удаление и фильтрация событий в хранилище.

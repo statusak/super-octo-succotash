@@ -1,4 +1,4 @@
-﻿namespace CSCourse.Domain.Models
+﻿namespace Events.Service.Domain.Models
 {
     /// <summary>
     /// Класс, содержащий информацию о мероприятии.

@@ -1,4 +1,4 @@
-﻿namespace CSCourse.Domain.Models
+﻿namespace Events.Service.Domain.Models
 {
     /// <summary>
     /// Представляет результат пагинации для списка мероприятий.
