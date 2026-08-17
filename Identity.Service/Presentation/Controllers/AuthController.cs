@@ -1,10 +1,10 @@
-using CSCourse.Application.Interfaces;
-using CSCourse.Application.Models;
+using Identity.Service.Application.Interfaces;
+using Identity.Service.Application.Models;
 using Microsoft.AspNetCore.Mvc;
-using CSCourse.Domain.Exceptions;
+using Identity.Service.Domain.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 
-namespace CSCourse.Controllers;
+namespace Identity.Service.Controllers;
 
 /// <summary>
 /// Контроллер для работы с бронированиями.

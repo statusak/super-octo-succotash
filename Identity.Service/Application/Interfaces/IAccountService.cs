@@ -1,6 +1,6 @@
-using CSCourse.Application.Models;
+using Identity.Service.Application.Models;
 
-namespace CSCourse.Application.Interfaces;
+namespace Identity.Service.Application.Interfaces;
 
 /// <summary>
 /// Интерфейс сервиса учётных записей, определяющий базовые операции по управлению пользователями:

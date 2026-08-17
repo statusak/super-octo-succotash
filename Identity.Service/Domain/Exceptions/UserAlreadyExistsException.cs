@@ -1,4 +1,4 @@
-namespace CSCourse.Domain.Exceptions;
+namespace Identity.Service.Domain.Exceptions;
 
 public class UserAlreadyExistsException : Exception
 {
