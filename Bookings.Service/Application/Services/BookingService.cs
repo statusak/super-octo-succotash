@@ -7,74 +7,52 @@ namespace Bookings.Service.Application.Services
 {
     public class BookingService : IBookingService
     {
-        private readonly IEventService _eventService;
+        private readonly IBookingKafkaPublisher _kafkaPublisher;
 
         private readonly IBookingRepository _bookings;
 
         private readonly SemaphoreSlim _processingSemaphoreBooking = new(1, 1);
 
         public BookingService(
-            IEventService eventService, IBookingRepository bookings)
+            IBookingKafkaPublisher kafkaPublisher, IBookingRepository bookings)
         {
-            _eventService = eventService;
+            _kafkaPublisher = kafkaPublisher;
             _bookings = bookings;
         }
         public async Task<Booking> CreateBookingAsync(Guid eventId, Guid userId)
         {
-            bool canReserveSeats;
-            // TODO: Здесь было-бы уместно использовать транзакцию
             await _processingSemaphoreBooking.WaitAsync();
             try
             {
-                try
+                var dto = new BookingRepositoryCreateDto
                 {
-                    var activeEvents = await _eventService.GetActiveEventsAsync();
-                    var activeEventIds = activeEvents.Select(e => e.Id).ToList();
+                    EventId = eventId,
+                    UserId = userId,
+                    Status = BookingStatus.Pending,
+                    CreatedAt = DateTime.UtcNow
+                };
 
-                    int bookingCountByUser = await _bookings.GetCountActiveBookingsByUserAndEventIdsAsync(userId, activeEventIds);
-                    if(bookingCountByUser >= 10)
-                    {
-                        throw new ActiveBookingsLimitExceededException($"Get limit booking for user on event: {eventId}");
-                    }
-                    canReserveSeats = await _eventService.TryReserveSeatsAsync(eventId);
-                }
-                catch (BookingForPastEventException) 
+                var bookingId = await _bookings.CreateAsync(dto);
+
+                var booking = new Booking
                 {
-                    throw;
-                }
-                catch (InvalidOperationException) 
+                    Id = bookingId,
+                    EventId = eventId,
+                    UserId = userId,
+                    Status = BookingStatus.Pending,
+                    CreatedAt = dto.CreatedAt
+                };
+
+                // Отправляем событие в Kafka
+                await _kafkaPublisher.PublishBookingCreatedAsync(new BookingCreatedRequest
                 {
-                    throw new NotFoundException($"not found event with id {eventId}");
-                }
-                catch
-                {
-                    throw;
-                }
-                if (canReserveSeats)
-                {
-                    var newBookingDto = new BookingRepositoryCreateDto
-                    {
-                        EventId = eventId,
-                        UserId = userId,
-                        Status = BookingStatus.Pending,
-                        CreatedAt = DateTime.UtcNow
-                    };
+                    Id = booking.Id,
+                    EventId = booking.EventId,
+                    UserId = booking.UserId,
+                    CreatedAt = booking.CreatedAt
+                });
 
-                    Guid bookingId = await _bookings.CreateAsync(newBookingDto);
-
-                    var newBooking = new Booking
-                    {
-                        Id = bookingId,
-                        UserId = userId, 
-                        EventId = newBookingDto.EventId,
-                        Status = newBookingDto.Status,
-                        CreatedAt = newBookingDto.CreatedAt,
-                    };
-
-                    return newBooking;
-                }
-
-                    throw new NoAvailableSeatsException("No available seats for this event");
+                return booking;
             }
             finally
             {
