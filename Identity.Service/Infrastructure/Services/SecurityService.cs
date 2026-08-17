@@ -1,10 +1,9 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using CSCourse.Contracts.Models;
 using Identity.Service.Application.Interfaces;
 using Identity.Service.Application.Models;
-using Identity.Service.Domain.Models;
-using Identity.Service.Infrastructure.Models;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 

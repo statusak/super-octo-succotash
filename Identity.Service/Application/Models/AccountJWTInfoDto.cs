@@ -1,6 +1,6 @@
-using CSCourse.Domain.Models;
+using Identity.Service.Domain.Models;
 
-namespace CSCourse.Application.Models;
+namespace Identity.Service.Application.Models;
 
 /// <summary>
 /// DTO, содержащий информацию о пользователе, необходимую для генерации JWT-токена.

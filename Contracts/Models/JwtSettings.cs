@@ -1,4 +1,4 @@
-namespace Identity.Service.Infrastructure.Models;
+namespace CSCourse.Contracts.Models;
 
 public class JwtSettings
 {

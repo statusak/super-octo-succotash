@@ -1,10 +1,13 @@
 using Identity.Service.Middlewares;
-using Identity.Service.Infrastructure.Models;
+using Identity.Service.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Reflection;
 using System.Text;
+using CSCourse.Infrastructure.DataAccess;
+using Microsoft.EntityFrameworkCore;
+using CSCourse.Contracts.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 

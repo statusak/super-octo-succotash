@@ -1,11 +1,9 @@
-using Identity.Service.Infrastructure.DataAccess;
-using Identity.Service.Infrastructure.Repositories;
 using Identity.Service.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Identity.Service.Application.Services;
 using Microsoft.EntityFrameworkCore.Design;
 using Identity.Service.Infrastructure.Services;
+using CSCourse.Infrastructure.DataAccess;
 
 namespace Identity.Service.Infrastructure;
 
@@ -32,12 +30,7 @@ public static class InfrastructureCollectionExtensions
 
         services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
 
-        // services.AddScoped<IEventRepository, EventRepository>();
-        // services.AddScoped<IBookingRepository, BookingRepository>();
-
-        // services.AddHostedService<BookingBackgroundService>();
-
-        // services.AddScoped<ISecurityService, SecurityService>();
+        services.AddScoped<ISecurityService, SecurityService>();
         services.AddScoped<IIdentityService, IdentityService>();
         
         return services;
