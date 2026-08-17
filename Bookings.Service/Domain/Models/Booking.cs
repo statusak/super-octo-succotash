@@ -84,15 +84,5 @@
         /// Имеет значение <c>null</c>, если бронирование ещё не обработано (статус <c>Pending</c>).
         /// </remarks>
         public DateTime? ProcessedAt { get; set; }
-
-        /// <summary>
-        /// Навигационное свойство: ссылка на связанное мероприятие.
-        /// </summary>
-        public Event? Event { get; set; }
-
-        /// <summary>
-        /// Навигационное свойство: ссылка на пользователя, сделавшего бронирование.
-        /// </summary>
-        public Account? Account { get; set; }
     }
 }

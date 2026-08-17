@@ -21,9 +21,6 @@ namespace CSCourse.Infrastructure.DataAccess.Configurations
 
             builder.Property(b => b.CreatedAt).IsRequired().HasColumnType("timestamp with time zone");
             builder.Property(b => b.ProcessedAt).HasColumnType("timestamp with time zone");
-
-            builder.HasOne(e => e.Event).WithMany(b => b.Bookings).HasForeignKey(b => b.EventId);
-            builder.HasOne(b => b.Account).WithMany().HasForeignKey(b => b.UserId);
         }
     }
 }

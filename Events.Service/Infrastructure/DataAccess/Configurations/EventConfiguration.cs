@@ -21,8 +21,6 @@ namespace Events.Service.Infrastructure.DataAccess.Configurations
 
             builder.Property(e => e.StartAt).IsRequired().HasColumnType("timestamp with time zone");
             builder.Property(e => e.EndAt).IsRequired().HasColumnType("timestamp with time zone");
-
-            builder.HasMany(e => e.Bookings).WithOne(b => b.Event).HasForeignKey(b => b.EventId);
         }
     }
 }
