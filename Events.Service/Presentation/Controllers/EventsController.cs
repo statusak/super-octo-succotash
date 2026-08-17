@@ -1,6 +1,6 @@
-﻿using Identity.Service.Domain.Models;
-using Identity.Service.Application.Interfaces;
-using Identity.Service.Application.Models;
+﻿using Events.Service.Domain.Models;
+using Events.Service.Application.Interfaces;
+using Events.Service.Application.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
@@ -325,7 +325,7 @@ namespace Identity.Service.Controllers
                     Id = created.Id,
                     EventId = created.EventId,
                     CreatedAt = created.CreatedAt,
-                    Status = created.Status,
+                    // Status = created.Status,
                 };
 
                 return AcceptedAtAction(

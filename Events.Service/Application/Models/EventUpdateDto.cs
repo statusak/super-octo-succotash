@@ -1,16 +1,12 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace CSCourse.Application.Models
+namespace Events.Service.Application.Models
 {
     /// <summary>
-    /// Класс Dto, содержащий информацию о мероприятии для обновления в БД.
+    /// Класс Dto, содержащий информацию о мероприятии.
     /// </summary>
-    public class EventRepositoryUpdateDto : IValidatableObject
+    public class EventUpdateDto : IValidatableObject
     {
-        /// <summary>
-        /// Уникальный идентификатор мероприятия.
-        /// </summary>
-        public required Guid Id { get; set; }
         /// <summary>
         /// Название мероприятия.
         /// </summary>

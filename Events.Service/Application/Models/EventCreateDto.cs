@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace CSCourse.Application.Models
+namespace Events.Service.Application.Models
 {
     /// <summary>
     /// Класс Dto, содержащий информацию о мероприятии.
