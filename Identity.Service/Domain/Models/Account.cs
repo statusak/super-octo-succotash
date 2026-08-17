@@ -1,4 +1,4 @@
-namespace CSCourse.Domain.Models;
+namespace Identity.Service.Domain.Models;
 
 /// <summary>
 /// Роль учётной записи в системе.

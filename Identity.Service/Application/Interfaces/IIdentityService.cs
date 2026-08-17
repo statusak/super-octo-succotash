@@ -8,7 +8,7 @@ namespace Identity.Service.Application.Interfaces;
 /// Реализуется в инфраструктурном слое (Infrastructure) с использованием механизмов хеширования паролей
 /// и генерации JWT-токенов.
 /// </summary>
-public interface IAccountService
+public interface IIdentityService
 {
     /// <summary>
     /// Регистрирует нового пользователя на основе предоставленных данных. Выполняет необходимые проверки

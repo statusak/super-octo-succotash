@@ -8,6 +8,12 @@
   
   <ItemGroup>
     <ProjectReference Include="../Domain/Identity.Service.Domain.csproj" />
+    <ProjectReference Include="../Application/Identity.Service.Application.csproj" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.11" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
   </ItemGroup>
 
 </Project>

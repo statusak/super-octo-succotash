@@ -1,7 +1,7 @@
-using CSCourse.Domain.Models;
-using CSCourse.Application.Models;
+using Identity.Service.Domain.Models;
+using Identity.Service.Application.Models;
 
-namespace CSCourse.Application.Interfaces;
+namespace Identity.Service.Application.Interfaces;
 
 /// <summary>
 /// Сервис безопасности, предоставляющий низкоуровневые криптографические операции:

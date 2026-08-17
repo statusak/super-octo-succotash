@@ -1,18 +1,18 @@
-using CSCourse.Application.Interfaces;
-using CSCourse.Application.Models;
-using CSCourse.Domain.Exceptions;
-using CSCourse.Domain.Models;
+using Identity.Service.Application.Interfaces;
+using Identity.Service.Application.Models;
+using Identity.Service.Domain.Exceptions;
+using Identity.Service.Domain.Models;
 using CSCourse.Infrastructure.DataAccess;
 using Microsoft.EntityFrameworkCore;
 
-namespace CSCourse.Infrastructure.Services;
+namespace Identity.Service.Infrastructure.Services;
 
-public class AccountService : IAccountService
+public class IdentityService : IIdentityService
 {
     private readonly AppDbContext _context;
     private readonly ISecurityService _securityService;
 
-    public AccountService(AppDbContext context, ISecurityService securityService)
+    public IdentityService(AppDbContext context, ISecurityService securityService)
     {
         _context = context;
         _securityService = securityService;

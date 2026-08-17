@@ -1,14 +1,14 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using CSCourse.Application.Interfaces;
-using CSCourse.Application.Models;
-using CSCourse.Domain.Models;
-using CSCourse.Infrastructure.Models;
+using Identity.Service.Application.Interfaces;
+using Identity.Service.Application.Models;
+using Identity.Service.Domain.Models;
+using Identity.Service.Infrastructure.Models;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
-namespace CSCourse.Infrastructure.Services;
+namespace Identity.Service.Infrastructure.Services;
 
 public class SecurityService : ISecurityService
 {
