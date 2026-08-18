@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Bookings.Service.Application.Services;
 using Microsoft.EntityFrameworkCore.Design;
-using Bookings.Service.Infrastructure.Services;
 
 namespace Bookings.Service.Infrastructure;
 

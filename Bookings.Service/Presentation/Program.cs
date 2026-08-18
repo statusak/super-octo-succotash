@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text;
+using Bookings.Service.Infrastructure.DataAccess;
 using Bookings.Service.Middlewares;
 using CSCourse.Contracts.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
