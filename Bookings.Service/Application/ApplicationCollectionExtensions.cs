@@ -1,8 +1,8 @@
-using CSCourse.Application.Interfaces;
-using CSCourse.Application.Services;
+using Bookings.Service.Application.Interfaces;
+using Bookings.Service.Application.Services;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CSCourse.Application;
+namespace Bookings.Service.Application;
 
 public static class ApplicationCollectionExtensions
 {

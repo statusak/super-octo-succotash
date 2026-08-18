@@ -21,7 +21,8 @@ public class BookingKafkaPublisher : IBookingKafkaPublisher, IDisposable
         var config = new ProducerConfig
         {
             BootstrapServers = bootstrapServers,
-            Acks = Acks.All
+            Acks = Acks.All,
+            ClientId = "booking-kafka-publisher"
         };
 
         _producer = new ProducerBuilder<string, string>(config).Build();
@@ -41,12 +42,17 @@ public class BookingKafkaPublisher : IBookingKafkaPublisher, IDisposable
 
     private async Task ProduceAsync<T>(string topic, T payload)
     {
-        var value = JsonSerializer.Serialize(payload);
+        var value = JsonSerializer.Serialize(payload, new JsonSerializerOptions
+        {
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+
         var key = payload switch
         {
             BookingCreatedRequest bcr => bcr.Id.ToString(),
-            CSCourse.Contracts.Models.BookingConfirmed bcf => bcf.Id.ToString(),
-            BookingRejectedEvent bre => bre.BookingId.ToString(),
+            BookingConfirmed bcf => bcf.Id.ToString(),
+            BookingRejectedEvent bre => bre.Id.ToString(),
             _ => Guid.NewGuid().ToString()
         };
 
@@ -56,13 +62,14 @@ public class BookingKafkaPublisher : IBookingKafkaPublisher, IDisposable
             Value = value
         };
 
-        // Key важен: все брони на одно событие попадут в один партишн — это защитит от гонки за места
         var result = await _producer.ProduceAsync(topic, message);
-        // В продакшене тут можно логировать Partition/Offset для трассировки
+
+        // logger.LogInformation("Kafka message sent: Topic={Topic}, Partition={Partition}, Offset={Offset}",
+        //     topic, result.Partition, result.Offset);
     }
 
     public void Dispose()
     {
-        _producer.Dispose();
+        _producer?.Dispose();
     }
 }

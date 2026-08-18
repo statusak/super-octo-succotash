@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Bookings.Service.Application.Services;
 using Microsoft.EntityFrameworkCore.Design;
+using Bookings.Service.Infrastructure.Services;
 
 namespace Bookings.Service.Infrastructure;
 
@@ -32,6 +33,7 @@ public static class InfrastructureCollectionExtensions
         services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
 
         services.AddScoped<IBookingRepository, BookingRepository>();
+        services.AddScoped<IBookingKafkaPublisher, BookingKafkaPublisher>();
 
         services.AddHostedService<BookingBackgroundService>();
         
