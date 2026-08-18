@@ -2,7 +2,7 @@ using Identity.Service.Application.Interfaces;
 using Identity.Service.Application.Models;
 using Identity.Service.Domain.Exceptions;
 using Identity.Service.Domain.Models;
-using CSCourse.Infrastructure.DataAccess;
+using Identity.Service.Infrastructure.DataAccess;
 using Microsoft.EntityFrameworkCore;
 
 namespace Identity.Service.Infrastructure.Services;

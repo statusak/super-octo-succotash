@@ -5,7 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Reflection;
 using System.Text;
-using CSCourse.Infrastructure.DataAccess;
+using Identity.Service.Infrastructure.DataAccess;
 using Microsoft.EntityFrameworkCore;
 using CSCourse.Contracts.Models;
 

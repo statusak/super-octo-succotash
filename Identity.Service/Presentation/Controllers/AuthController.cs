@@ -14,11 +14,11 @@ namespace Identity.Service.Controllers;
 [Route("/[controller]")]
 public class AuthController : ControllerBase
 {
-    private readonly IAccountService _accountService;
+    private readonly IIdentityService _identityService;
 
-    public AuthController(IAccountService accountService)
+    public AuthController(IIdentityService identityService)
     {
-        _accountService = accountService;
+        _identityService = identityService;
     }
 
     /// <summary>
@@ -53,7 +53,7 @@ public class AuthController : ControllerBase
 
         try
         {
-            await _accountService.Register(accountRegisterDto);
+            await _identityService.Register(accountRegisterDto);
             return NoContent();
         }
         catch (UserAlreadyExistsException)
@@ -95,7 +95,7 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = "Validation failed", errors = ModelState });
         }
 
-        string? jwtString = await _accountService.SignIn(accountSignInDto);
+        string? jwtString = await _identityService.SignIn(accountSignInDto);
 
         if (string.IsNullOrEmpty(jwtString))
         {

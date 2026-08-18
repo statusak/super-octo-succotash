@@ -67,6 +67,8 @@ public class SecurityService : ISecurityService
             new Claim(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         };
 
+        
+
         var token = new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(
             issuer: _jwtSettings.Issuer,
             audience: _jwtSettings.Audience,
