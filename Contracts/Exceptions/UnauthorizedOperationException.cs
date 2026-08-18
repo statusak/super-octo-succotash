@@ -1,4 +1,4 @@
-namespace CSCourse.Domain.Exceptions;
+namespace CSCourse.Contracts.Exceptions;
 
 /// <summary>
 /// Выбрасывается, когда у текущего пользователя нет прав на выполнение операции.

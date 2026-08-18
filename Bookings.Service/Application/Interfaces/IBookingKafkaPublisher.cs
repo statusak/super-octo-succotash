@@ -7,4 +7,5 @@ public interface IBookingKafkaPublisher
     Task PublishBookingCreatedAsync(BookingCreatedRequest request);
     Task PublishBookingConfirmedAsync(BookingConfirmed request);
     Task PublishBookingRejectedAsync(BookingRejectedEvent request);
+    Task PublishBookingCancelledAsync(BookingCancelledEvent request);
 }

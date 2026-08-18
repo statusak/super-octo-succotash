@@ -11,12 +11,14 @@ public class BookingKafkaPublisher : IBookingKafkaPublisher, IDisposable
     private readonly string _topicCreated;
     private readonly string _topicConfirmed;
     private readonly string _topicRejected;
+    private readonly string _topicCancelled; // новый топик
 
     public BookingKafkaPublisher(
         string bootstrapServers,
         string topicCreated,
         string topicConfirmed,
-        string topicRejected)
+        string topicRejected,
+        string topicCancelled) // добавлен параметр
     {
         var config = new ProducerConfig
         {
@@ -29,16 +31,20 @@ public class BookingKafkaPublisher : IBookingKafkaPublisher, IDisposable
         _topicCreated = topicCreated;
         _topicConfirmed = topicConfirmed;
         _topicRejected = topicRejected;
+        _topicCancelled = topicCancelled;
     }
 
     public async Task PublishBookingCreatedAsync(BookingCreatedRequest request)
         => await ProduceAsync(_topicCreated, request);
 
-    public async Task PublishBookingConfirmedAsync(BookingConfirmed request)
+    public async Task PublishBookingConfirmedAsync(CSCourse.Contracts.Models.BookingConfirmed request)
         => await ProduceAsync(_topicConfirmed, request);
 
     public async Task PublishBookingRejectedAsync(BookingRejectedEvent request)
         => await ProduceAsync(_topicRejected, request);
+
+    public async Task PublishBookingCancelledAsync(BookingCancelledEvent request)
+        => await ProduceAsync(_topicCancelled, request);
 
     private async Task ProduceAsync<T>(string topic, T payload)
     {
@@ -53,6 +59,7 @@ public class BookingKafkaPublisher : IBookingKafkaPublisher, IDisposable
             BookingCreatedRequest bcr => bcr.Id.ToString(),
             BookingConfirmed bcf => bcf.Id.ToString(),
             BookingRejectedEvent bre => bre.Id.ToString(),
+            BookingCancelledEvent bce => bce.Id.ToString(), // ключ по Id брони
             _ => Guid.NewGuid().ToString()
         };
 
@@ -62,10 +69,7 @@ public class BookingKafkaPublisher : IBookingKafkaPublisher, IDisposable
             Value = value
         };
 
-        var result = await _producer.ProduceAsync(topic, message);
-
-        // logger.LogInformation("Kafka message sent: Topic={Topic}, Partition={Partition}, Offset={Offset}",
-        //     topic, result.Partition, result.Offset);
+        await _producer.ProduceAsync(topic, message);
     }
 
     public void Dispose()

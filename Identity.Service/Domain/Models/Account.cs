@@ -1,20 +1,6 @@
+using CSCourse.Contracts.Models;
+
 namespace Identity.Service.Domain.Models;
-
-/// <summary>
-/// Роль учётной записи в системе.
-/// </summary>
-public enum AccountRole
-{
-    /// <summary>
-    /// Обычный пользователь.
-    /// </summary>
-    User,
-
-    /// <summary>
-    /// Администратор системы.
-    /// </summary>
-    Admin
-}
 
 /// <summary>
 /// Учётная запись пользователя (аккаунт) в системе.

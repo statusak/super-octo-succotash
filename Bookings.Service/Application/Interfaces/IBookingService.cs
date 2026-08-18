@@ -1,5 +1,6 @@
 ﻿using Bookings.Service.Domain.Models;
 using Bookings.Service.Application.Models;
+using CSCourse.Contracts.Models;
 
 namespace Bookings.Service.Application.Interfaces
 {
