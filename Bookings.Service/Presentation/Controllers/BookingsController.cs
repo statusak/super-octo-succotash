@@ -53,30 +53,35 @@ namespace Bookings.Service.Controllers
                 return BadRequest("User ID not found in claims");
 
             var role = GetCurrentUserRole();
-            if(role == null)
+            if (role == null)
                 return BadRequest("User role not found");
 
             try
             {
-                Booking newBooking = await _bookingService.CreateBookingAsync(eventId, userId.Value);
+                // Инициируем бронирование: сохраняем в БД (Pending) + отправляем событие в Kafka
+                var booking = await _bookingService.InitiateBookingAsync(eventId, userId.Value);
 
-                _logger.LogInformation(
-                    "Booking initiated. Id={BookingId}, EventId={EventId}, UserId={UserId}",
-                    newBooking.Id, eventId, userId);
+                _logger.LogInformation("Booking initiated. Id={BookingId}, EventId={EventId}", booking.Id, eventId);
 
                 var response = new BookingResponseDto
                 {
-                    Id = newBooking.Id,
-                    EventId = eventId,
-                    CreatedAt = newBooking.CreatedAt,
-                    Status = newBooking.Status
+                    Id = booking.Id,
+                    EventId = booking.EventId,
+                    CreatedAt = booking.CreatedAt,
+                    Status = booking.Status,
+                    ProcessedAt = booking.ProcessedAt
                 };
 
                 return AcceptedAtAction(
                     actionName: nameof(GetById),
                     controllerName: nameof(BookingsController).Replace("Controller", ""),
-                    routeValues: new { id = newBooking.Id },
-                    value: response);
+                    routeValues: new { id = booking.Id },
+                    value: response
+                );
+            }
+            catch (UnauthorizedOperationException ex)
+            {
+                return Forbid(ex.Message);
             }
             catch (Exception ex)
             {
@@ -85,47 +90,61 @@ namespace Bookings.Service.Controllers
             }
         }
 
+
         /// <summary>
         /// Получает информацию о бронировании по его уникальному идентификатору.
         /// </summary>
-        /// <param name="index">Уникальный идентификатор (GUID) бронирования, которое необходимо получить.</param>
+        /// <param name="id">Уникальный идентификатор (GUID) бронирования, которое необходимо получить.</param>
         /// <returns>
         /// Возвращает <see cref="ActionResult"/> с данными бронирования, если запись найдена;
         /// в противном случае возвращает ответ 404 Not Found с текстовым сообщением об ошибке.
         /// </returns>
         /// <response code="200">Успешно получен объект бронирования.</response>
         /// <response code="404">Бронирование с указанным идентификатором не найдено.</response>
-        [HttpGet("{index:Guid}")]
+        [HttpGet("{id:Guid}")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Booking))]
         [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(string))]
-        public async Task<ActionResult> GetById(Guid index)
+        public async Task<ActionResult> GetById(Guid id)
         {
             var userId = GetCurrentUserId();
             if (userId == null)
                 return BadRequest("User ID not found in claims");
 
             var role = GetCurrentUserRole();
-            if(role == null)
+            if (role == null)
                 return BadRequest("User role not found");
-            
-            Booking? booking = await _bookingService.GetBookingByIdAsync(index);
-            if (booking != null && booking.UserId == userId)
+
+            try
             {
-                BookingResponseDto response =
-                new BookingResponseDto{
+                var booking = await _bookingService.GetBookingByIdAsync(id, userId.Value, role);
+                if (booking == null)
+                    return NotFound($"Booking with id {id} not found");
+
+                var response = new BookingResponseDto
+                {
                     Id = booking.Id,
                     EventId = booking.EventId,
                     CreatedAt = booking.CreatedAt,
                     ProcessedAt = booking.ProcessedAt,
-                    Status = booking.Status,
+                    Status = booking.Status
                 };
+
                 return Ok(response);
             }
-            return NotFound($"Booking with index {index} not found");
+            catch (UnauthorizedOperationException ex)
+            {
+                return Forbid(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while getting booking by id");
+                return StatusCode(500, "Internal server error");
+            }
+
         }
 
-        [HttpDelete("{index:guid}")]
-        public async Task<ActionResult> Delete(Guid index)
+        [HttpDelete("{id:guid}")]
+        public async Task<ActionResult> Cancel(Guid id)
         {
             var userId = GetCurrentUserId();
             if (userId == null)
@@ -137,24 +156,33 @@ namespace Bookings.Service.Controllers
 
             try
             {
-                if(await _bookingService.CancelledBookingByIdAsync(index, userId.Value, role.Value))
+                await _bookingService.CancelBookingAsync(id, userId.Value, role.Value);
+                _logger.LogInformation("Cancel request initiated for booking {BookingId}", id);
+
+                return Accepted(new
                 {
-                    return Ok();
-                }
-                else
-                {
-                    return NotFound($"Booking with index {index} not found");
-                }
+                    id,
+                    status = "Cancelling",
+                    message = "Cancel request sent to queue."
+                });
             }
-            catch (InvalidOperationException)
+            catch (NotFoundException ex)
             {
-                return NotFound($"Booking with index {index} not found");
+                return NotFound(ex.Message);
             }
             catch (UnauthorizedOperationException ex)
             {
-                return Forbid(ex.Message); 
+                return Forbid(ex.Message);
             }
-
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error while cancelling booking");
+                return StatusCode(500, "Internal server error");
+            }
         }
 
         #region Helpers
