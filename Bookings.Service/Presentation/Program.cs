@@ -15,6 +15,9 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
+var bootstrapServers = builder.Configuration.GetConnectionString("BootstrapServers") 
+    ?? throw new InvalidOperationException("Connection string 'BootstrapServers' not found.");
+
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 
 builder.Services.AddAuthorization();
@@ -80,6 +83,10 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+// --------- INIT KAFKA --------- //
+await KafkaTopicInitializer.EnsureTopicsAsync(bootstrapServers);
+// ---------           --------- //
 
 app.UseAuthentication();
 app.UseAuthorization();
