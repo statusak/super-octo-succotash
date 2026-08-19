@@ -4,7 +4,8 @@ using Bookings.Service.Application.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
-using Bookings.Service.Domain.Exceptions;
+using CSCourse.Contracts.Models;
+using CSCourse.Contracts.Exceptions;
 
 namespace Bookings.Service.Controllers
 {
@@ -15,8 +16,75 @@ namespace Bookings.Service.Controllers
     [Authorize]
     [ApiController]
     [Route("/[controller]")]
-    public class BookingsController(IBookingService _bookingService) : ControllerBase
+    public class BookingsController : ControllerBase
     {
+        private readonly IBookingService _bookingService;
+        private readonly ILogger<BookingsController> _logger;
+
+        public BookingsController(
+            IBookingService bookingService,
+            ILogger<BookingsController> logger)
+        {
+            _bookingService = bookingService;
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// Инициирует бронирование мероприятия.
+        /// </summary>
+        /// <param name="eventId">Идентификатор мероприятия, на которое запрашивается бронирование.</param>
+        /// <remarks>
+        /// Метод НЕ проверяет существование мероприятия заранее. Вместо этого:
+        /// 1. Создаётся запись бронирования со статусом Pending.
+        /// 2. В Kafka публикуется событие BookingCreated.
+        /// 3. Ответ клиенту — 202 Accepted.
+        ///
+        /// Финальное решение (подтверждение или отказ) принимается Event.Service асинхронно
+        /// и фиксируется в БД через BookingBackgroundService.
+        /// </remarks>
+        [HttpPost("{eventId:Guid}/book")]
+        [ProducesResponseType(StatusCodes.Status202Accepted, Type = typeof(BookingResponseDto))]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        public async Task<ActionResult<BookingResponseDto>> CreateBooking(Guid eventId)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == null)
+                return BadRequest("User ID not found in claims");
+
+            var role = GetCurrentUserRole();
+            if(role == null)
+                return BadRequest("User role not found");
+
+            try
+            {
+                Booking newBooking = await _bookingService.CreateBookingAsync(eventId, userId.Value);
+
+                _logger.LogInformation(
+                    "Booking initiated. Id={BookingId}, EventId={EventId}, UserId={UserId}",
+                    newBooking.Id, eventId, userId);
+
+                var response = new BookingResponseDto
+                {
+                    Id = newBooking.Id,
+                    EventId = eventId,
+                    CreatedAt = newBooking.CreatedAt,
+                    Status = newBooking.Status
+                };
+
+                return AcceptedAtAction(
+                    actionName: nameof(GetById),
+                    controllerName: nameof(BookingsController).Replace("Controller", ""),
+                    routeValues: new { id = newBooking.Id },
+                    value: response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error while creating booking");
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
         /// <summary>
         /// Получает информацию о бронировании по его уникальному идентификатору.
         /// </summary>
@@ -32,20 +100,13 @@ namespace Bookings.Service.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(string))]
         public async Task<ActionResult> GetById(Guid index)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            var userId = GetCurrentUserId();
+            if (userId == null)
+                return BadRequest("User ID not found in claims");
 
-            if (userIdClaim == null)
-            {
-                return BadRequest("ID user not find");
-            }
-
-            string userIdString = userIdClaim.Value;
-            Guid userId;
-
-            if (!Guid.TryParse(userIdString, out userId))
-            {
-                return BadRequest($"Bad ID user: {userIdString}");
-            }
+            var role = GetCurrentUserRole();
+            if(role == null)
+                return BadRequest("User role not found");
             
             Booking? booking = await _bookingService.GetBookingByIdAsync(index);
             if (booking != null && booking.UserId == userId)
@@ -66,49 +127,28 @@ namespace Bookings.Service.Controllers
         [HttpDelete("{index:guid}")]
         public async Task<ActionResult> Delete(Guid index)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            var userId = GetCurrentUserId();
+            if (userId == null)
+                return BadRequest("User ID not found in claims");
 
-            if (userIdClaim == null)
-            {
-                return BadRequest("ID user not find");
-            }
-
-            string userIdString = userIdClaim.Value;
-            Guid userId;
-
-            if (!Guid.TryParse(userIdString, out userId))
-            {
-                return BadRequest($"Bad ID user: {userIdString}");
-            }
-
-
-            var userAccountRoleClaim = User.FindFirst(ClaimTypes.Role);
-
-            if (userAccountRoleClaim == null || string.IsNullOrWhiteSpace(userAccountRoleClaim.Value))
-            {
+            var role = GetCurrentUserRole();
+            if(role == null)
                 return BadRequest("User role not found");
-            }
-
-            if (!Enum.TryParse<AccountRole>(userAccountRoleClaim.Value, ignoreCase: true, out var role))
-            {
-                return BadRequest($"Invalid role value: {userAccountRoleClaim.Value}");
-            }
-
 
             try
             {
-                if(await _bookingService.CancelledBookingByIdAsync(index, userId, role))
+                if(await _bookingService.CancelledBookingByIdAsync(index, userId.Value, role.Value))
                 {
                     return Ok();
                 }
                 else
                 {
-                    return NotFound($"Event with index {index} not found");
+                    return NotFound($"Booking with index {index} not found");
                 }
             }
             catch (InvalidOperationException)
             {
-                return NotFound($"Event with index {index} not found");
+                return NotFound($"Booking with index {index} not found");
             }
             catch (UnauthorizedOperationException ex)
             {
@@ -116,5 +156,29 @@ namespace Bookings.Service.Controllers
             }
 
         }
+
+        #region Helpers
+
+        private Guid? GetCurrentUserId()
+        {
+            var claim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (claim == null || !Guid.TryParse(claim.Value, out var userId))
+                return null;
+            return userId;
+        }
+
+        private AccountRole? GetCurrentUserRole()
+        {
+            var claim = User.FindFirst(ClaimTypes.Role);
+            if (claim == null || string.IsNullOrWhiteSpace(claim.Value))
+                return null;
+
+            if (!Enum.TryParse<AccountRole>(claim.Value, ignoreCase: true, out var role))
+                return null;
+
+            return role;
+        }
+
+        #endregion
     }
 }
