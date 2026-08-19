@@ -135,12 +135,4 @@ public class BookingService : IBookingService
     {
         return await _bookings.GetPendingAsync();
     }
-
-    /// <summary>
-    /// Возвращает список бронирований со статусом Cancelling для фоновой обработки.
-    /// </summary>
-    public async Task<IEnumerable<Booking>> GetCancellingAsync()
-    {
-        return await _bookings.GetCancellingAsync();
-    }
 }

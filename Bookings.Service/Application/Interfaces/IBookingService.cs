@@ -57,11 +57,5 @@ namespace Bookings.Service.Application.Interfaces
         /// </summary>
         /// <returns>Коллекция бронирований в статусе Pending.</returns>
         Task<IEnumerable<Booking>> GetPendingAsync();
-
-        /// <summary>
-        /// Возвращает список бронирований со статусом Cancelling для обработки фоновым воркером.
-        /// </summary>
-        /// <returns>Коллекция бронирований в статусе Cancelling.</returns>
-        Task<IEnumerable<Booking>> GetCancellingAsync();
     }
 }

@@ -116,7 +116,7 @@ namespace Bookings.Service.Controllers
 
             try
             {
-                var booking = await _bookingService.GetBookingByIdAsync(id, userId.Value, role);
+                var booking = await _bookingService.GetBookingByIdAsync(id, userId.Value, role.Value);
                 if (booking == null)
                     return NotFound($"Booking with id {id} not found");
 
