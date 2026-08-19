@@ -92,18 +92,5 @@ namespace Bookings.Service.Application.Interfaces
         /// <param name="userId">Идентификатор пользователя (<see cref="Guid"/>, сделавшего бронирования.</param>
         /// <returns>Асинхронная операция, возвращающая целочисленное значение — количество бронирований.</returns>
         Task<int> GetCountActiveBookingsByUserAndEventIdsAsync(Guid userId, IEnumerable<Guid> eventIds);
-
-        /// <summary>
-        /// Асинхронно получает коллекцию всех бронирований со статусом «ожидает обработки» (Canceled).
-        /// </summary>
-        /// <returns>
-        /// Асинхронная задача (<see cref="Task{T}"/>), которая возвращает коллекцию объектов <see cref="Booking"/>,
-        /// у которых свойство <see cref="Booking.Status"/> имеет значение <see cref="BookingStatus.Pending"/>.
-        /// </returns>
-        /// <remarks>
-        /// Метод позволяет асинхронно получить список всех незавершённых бронирований,
-        /// которые ещё не были обработаны системой.
-        /// </remarks>
-        Task<IEnumerable<Booking>> GetCancellingAsync();
     }
 }

@@ -38,7 +38,7 @@ public class BookingRepository : IBookingRepository
             return Create(booking);
         }
     }
-    public async Task<Guid> CreateAsync(BookingRepositoryCreateDto booking)
+    public async Task<Booking> CreateAsync(BookingRepositoryCreateDto booking)
     {
         var newBooking = new Booking {
             Id = Guid.NewGuid(),
@@ -54,7 +54,7 @@ public class BookingRepository : IBookingRepository
         try
         {
             await _context.SaveChangesAsync();
-            return newBooking.Id;
+            return newBooking;
         }
         catch (DbUpdateException)
         {
