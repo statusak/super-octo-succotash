@@ -1,11 +1,11 @@
-namespace CSCourse.Contracts.Models;
+namespace CSCourse.Contracts.Kafka;
 
 /// <summary>
 /// Событие об отмене бронирования.
 /// Публикуется через Kafka, когда бронирование успешно отменено.
 /// Другой сервис (или фоновый воркер) реагирует на это событие и освобождает места.
 /// </summary>
-public record BookingCancelledEvent
+public record BookingCancellation
 {
     /// <summary>
     /// Уникальный идентификатор бронирования, которое было отменено.
@@ -18,12 +18,14 @@ public record BookingCancelledEvent
     public required Guid EventId { get; init; }
 
     /// <summary>
-    /// Идентификатор пользователя, который отменил бронирование.
+    /// Причина отмены бронирования.
+    /// Позволяет принимающей стороне понять контекст и применить нужную логику (например, вернуть деньги, не возвращать, занести в отчёт).
     /// </summary>
-    public required Guid UserId { get; init; }
+    public string? Reason { get; set; }
 
     /// <summary>
     /// Дата и время отмены бронирования.
+    /// Фиксируется в момент публикации события.
     /// </summary>
-    public required DateTime CancelledAt { get; init; }
+    public DateTime CancelledAt { get; init; } = DateTime.UtcNow;
 }
