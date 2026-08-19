@@ -68,36 +68,23 @@ public class BookingService : IBookingService
         try
         {
             var booking = await _bookings.GetByIdAsync(bookingId);
-
-            if (booking == null)
-            {
-                throw new NotFoundException($"Not found booking with id {bookingId}");
-            }
-
+            if (booking == null) throw new NotFoundException(...);
             if (booking.Status is BookingStatus.Rejected or BookingStatus.Cancelled)
-            {
                 throw new BookingAlreadyCancelledException();
-            }
 
             if (role != AccountRole.Admin && userId != booking.UserId)
-            {
-                throw new UnauthorizedOperationException(
-                    $"You cannot cancel booking with id {bookingId}");
-            }
+                throw new UnauthorizedOperationException(...);
 
-            var bookingProcessedDto = new BookingProcessedDto
+            var dto = new BookingProcessedDto
             {
                 Status = BookingStatus.Cancelled,
                 ProcessedAt = DateTime.UtcNow,
             };
 
-            var updated = await UpdateProcessedBookingByIdAsync(bookingId, bookingProcessedDto);
-            if (!updated)
-            {
+            if (!await UpdateProcessedBookingByIdAsync(bookingId, dto))
                 return false;
-            }
 
-            // Публикуем событие: другой сервис освободит места
+            // ТОЛЬКО публикация события. Никаких вызовов Event.Service
             await _kafkaPublisher.PublishBookingCancelledAsync(new BookingCancelledEvent
             {
                 Id = booking.Id,
@@ -113,7 +100,6 @@ public class BookingService : IBookingService
             _processingSemaphoreBooking.Release();
         }
     }
-
     public IEnumerable<Booking> GetPending()
     {
         return _bookings.GetPending();
