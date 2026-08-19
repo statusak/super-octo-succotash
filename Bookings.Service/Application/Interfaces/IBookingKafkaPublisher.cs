@@ -1,11 +1,11 @@
-using CSCourse.Contracts.Models;
+using CSCourse.Contracts.Kafka;
 
 namespace Bookings.Service.Application.Interfaces;
 
 public interface IBookingKafkaPublisher
 {
-    Task PublishBookingCreatedAsync(BookingCreatedRequest request);
-    Task PublishBookingConfirmedAsync(BookingConfirmed request);
-    Task PublishBookingRejectedAsync(BookingRejectedEvent request);
-    Task PublishBookingCancelledAsync(BookingCancelledEvent request);
+    Task PublishBookingCreatedAsync(BookingCreated request);
+    Task PublishBookingCancellationAsync(BookingCancellation request);
+    Task PublishBookingRejectedAsync(BookingRejected request);
+    Task PublishBookingCancelledAsync(BookingCancelled request);
 }

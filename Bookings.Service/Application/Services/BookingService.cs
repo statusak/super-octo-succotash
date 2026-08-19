@@ -1,9 +1,9 @@
 ﻿using Bookings.Service.Domain.Models;
-using Bookings.Service.Domain.Exceptions;
 using Bookings.Service.Application.Interfaces;
-using Bookings.Service.Application.Models;
 using CSCourse.Contracts.Models;
+using CSCourse.Contracts.Kafka;
 using CSCourse.Contracts.Exceptions;
+using Bookings.Service.Application.Models;
 
 namespace Bookings.Service.Application.Services;
 
@@ -20,32 +20,24 @@ public class BookingService : IBookingService
         _kafkaPublisher = kafkaPublisher;
         _bookings = bookings;
     }
-
-    public async Task<Booking> CreateBookingAsync(Guid eventId, Guid userId)
+    
+    public async Task<Booking> InitiateBookingAsync(Guid eventId, Guid userId)
     {
         await _processingSemaphoreBooking.WaitAsync();
         try
         {
-            var dto = new BookingRepositoryCreateDto
-            {
+            BookingRepositoryCreateDto dto = new BookingRepositoryCreateDto{
                 EventId = eventId,
                 UserId = userId,
                 Status = BookingStatus.Pending,
                 CreatedAt = DateTime.UtcNow
             };
 
-            var bookingId = await _bookings.CreateAsync(dto);
+            // Сохраняем бронь в БД через репозиторий
+            Booking booking = await _bookings.CreateAsync(dto);
 
-            var booking = new Booking
-            {
-                Id = bookingId,
-                EventId = eventId,
-                UserId = userId,
-                Status = BookingStatus.Pending,
-                CreatedAt = dto.CreatedAt
-            };
-
-            await _kafkaPublisher.PublishBookingCreatedAsync(new BookingCreatedRequest
+            // Публикуем событие в Kafka
+            await _kafkaPublisher.PublishBookingCreatedAsync(new BookingCreated
             {
                 Id = booking.Id,
                 EventId = booking.EventId,
@@ -62,67 +54,93 @@ public class BookingService : IBookingService
         }
     }
 
-    public async Task<bool> CancelledBookingByIdAsync(Guid bookingId, Guid userId, AccountRole role)
+    public async Task<Booking?> GetBookingByIdAsync(Guid bookingId, Guid userId, AccountRole role)
     {
+        var booking = await _bookings.GetByIdAsync(bookingId);
+        if (booking == null)
+            throw new NotFoundException($"Booking with id {bookingId} not found");
+
+        if (role != AccountRole.Admin && booking.UserId != userId)
+            throw new UnauthorizedOperationException("You can only access your own bookings");
+
+        return booking;
+    }
+
+    public async Task CancelBookingAsync(Guid bookingId, Guid userId, AccountRole role)
+    {
+        // Race condition defender
         await _processingSemaphoreBooking.WaitAsync();
         try
         {
             var booking = await _bookings.GetByIdAsync(bookingId);
-            if (booking == null) throw new NotFoundException(...);
-            if (booking.Status is BookingStatus.Rejected or BookingStatus.Cancelled)
-                throw new BookingAlreadyCancelledException();
+            if (booking == null)
+                throw new NotFoundException($"Booking with id {bookingId} not found");
 
-            if (role != AccountRole.Admin && userId != booking.UserId)
-                throw new UnauthorizedOperationException(...);
+            if (role != AccountRole.Admin && booking.UserId != userId)
+                throw new UnauthorizedOperationException("You can only cancel your own bookings");
 
-            var dto = new BookingProcessedDto
+            if (booking.Status != BookingStatus.Confirmed)
+                throw new InvalidOperationException("Can cancel only confirmed booking");
+
+            BookingRepositoryUpdateDto dto = new BookingRepositoryUpdateDto
             {
+                Id = booking.Id,
                 Status = BookingStatus.Cancelled,
-                ProcessedAt = DateTime.UtcNow,
+                ProcessedAt = DateTime.UtcNow
             };
 
-            if (!await UpdateProcessedBookingByIdAsync(bookingId, dto))
-                return false;
+            await _bookings.UpdateAsync(dto);
 
-            // ТОЛЬКО публикация события. Никаких вызовов Event.Service
-            await _kafkaPublisher.PublishBookingCancelledAsync(new BookingCancelledEvent
+            await _kafkaPublisher.PublishBookingCancellationAsync(new BookingCancellation
             {
                 Id = booking.Id,
                 EventId = booking.EventId,
-                UserId = booking.UserId,
-                CancelledAt = DateTime.UtcNow
+                CancelledAt = dto.ProcessedAt,
+                Reason = "User requested cancellation"
             });
-
-            return true;
         }
         finally
         {
             _processingSemaphoreBooking.Release();
         }
     }
-    public IEnumerable<Booking> GetPending()
+    public async Task UpdateBookingStatusAsync(Guid bookingId, BookingStatus status, string? message = null)
     {
-        return _bookings.GetPending();
+        await _processingSemaphoreBooking.WaitAsync();
+        try
+        {
+            var booking = await _bookings.GetByIdAsync(bookingId);
+            if (booking == null)
+                throw new NotFoundException($"Booking with id {bookingId} not found");
+
+            BookingRepositoryUpdateDto dto = new BookingRepositoryUpdateDto
+            {
+                Id = booking.Id,
+                Status = status,
+                ProcessedAt = DateTime.UtcNow
+            };
+
+            await _bookings.UpdateAsync(dto);
+        }
+        finally
+        {
+            _processingSemaphoreBooking.Release();
+        }
     }
 
+    /// <summary>
+    /// Возвращает список бронирований со статусом Pending для фоновой обработки.
+    /// </summary>
     public async Task<IEnumerable<Booking>> GetPendingAsync()
     {
         return await _bookings.GetPendingAsync();
     }
 
-    public async Task<Booking?> GetBookingByIdAsync(Guid bookingId)
+    /// <summary>
+    /// Возвращает список бронирований со статусом Cancelling для фоновой обработки.
+    /// </summary>
+    public async Task<IEnumerable<Booking>> GetCancellingAsync()
     {
-        return await _bookings.GetByIdAsync(bookingId);
-    }
-
-    public async Task<bool> UpdateProcessedBookingByIdAsync(Guid bookingId, BookingProcessedDto booking)
-    {
-        var dto = new BookingRepositoryUpdateDto
-        {
-            Id = bookingId,
-            Status = booking.Status,
-            ProcessedAt = booking.ProcessedAt,
-        };
-        return await _bookings.UpdateAsync(dto);
+        return await _bookings.GetCancellingAsync();
     }
 }

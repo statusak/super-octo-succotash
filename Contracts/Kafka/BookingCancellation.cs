@@ -27,5 +27,5 @@ public record BookingCancellation
     /// Дата и время отмены бронирования.
     /// Фиксируется в момент публикации события.
     /// </summary>
-    public DateTime CancelledAt { get; init; } = DateTime.UtcNow;
+    public DateTime CancelledAt { get; init; }
 }
