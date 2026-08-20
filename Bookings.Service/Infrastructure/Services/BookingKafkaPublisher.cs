@@ -1,36 +1,44 @@
 using System.Text.Json;
 using Bookings.Service.Application.Interfaces;
+using Bookings.Service.Infrastructure.Config;
 using Confluent.Kafka;
 using CSCourse.Contracts.Kafka;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Bookings.Service.Infrastructure.Services;
 
 public class BookingKafkaPublisher : IBookingKafkaPublisher
 {
-    private readonly ProducerConfig _producerConfig;
+    private readonly IProducer<string, string> _producer;
     private readonly ILogger<BookingKafkaPublisher> _logger;
+    private bool _disposed;
 
     public BookingKafkaPublisher(
         ILogger<BookingKafkaPublisher> logger,
-        string bootstrapServers)
+        IOptions<KafkaSettings> kafkaOptions)
     {
         _logger = logger;
 
-        _producerConfig = new ProducerConfig
+        var bootstrapServers = kafkaOptions.Value.BootstrapServers;
+        if (string.IsNullOrWhiteSpace(bootstrapServers))
+            throw new InvalidOperationException("BootstrapServers не настроены в KafkaSettings.");
+
+        var producerConfig = new ProducerConfig
         {
             BootstrapServers = bootstrapServers,
             Acks = Acks.All
         };
+
+        _producer = new ProducerBuilder<string, string>(producerConfig).Build();
     }
+
 
     public async Task PublishBookingCreatedAsync(BookingCreated request)
     {
-        using var producer = new ProducerBuilder<string, string>(_producerConfig).Build();
-
         try
         {
-            var result = await producer.ProduceAsync(KafkaTopics.BookingCreated, new Message<string, string>
+            var result = await _producer.ProduceAsync(KafkaTopics.BookingCreated, new Message<string, string>
             {
                 Key = request.Id.ToString(),
                 Value = JsonSerializer.Serialize(request)
@@ -51,11 +59,9 @@ public class BookingKafkaPublisher : IBookingKafkaPublisher
 
     public async Task PublishBookingCancellationAsync(BookingCancellation request)
     {
-        using var producer = new ProducerBuilder<string, string>(_producerConfig).Build();
-
         try
         {
-            var result = await producer.ProduceAsync(KafkaTopics.BookingCancellation, new Message<string, string>
+            var result = await _producer.ProduceAsync(KafkaTopics.BookingCancellation, new Message<string, string>
             {
                 Key = request.Id.ToString(),
                 Value = JsonSerializer.Serialize(request)
@@ -73,4 +79,14 @@ public class BookingKafkaPublisher : IBookingKafkaPublisher
             throw;
         }
     }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        _producer?.Dispose();
+        _disposed = true;
+    }
+
 }

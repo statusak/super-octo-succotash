@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore.Design;
 using Bookings.Service.Infrastructure.Services;
+using Bookings.Service.Infrastructure.Config;
 
 namespace Bookings.Service.Infrastructure;
 
@@ -12,7 +13,8 @@ public static class InfrastructureCollectionExtensions
 {
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
-        string connectionString)
+        string connectionString, 
+        string bootstrapServers)
     {
         /// Из-за настройки o.EnableRetryOnFailure() вылетает ошибка, 
         // потому что NpgsqlRetryingExecutionStrategy (автоматически включается
@@ -30,6 +32,12 @@ public static class InfrastructureCollectionExtensions
         ///
 
         services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
+
+        services.Configure<KafkaSettings>(options =>
+        {
+            options.BootstrapServers = bootstrapServers;
+        });
+
 
         services.AddScoped<IBookingRepository, BookingRepository>();
         services.AddScoped<IBookingKafkaPublisher, BookingKafkaPublisher>();
