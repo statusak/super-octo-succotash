@@ -16,7 +16,7 @@ public class BookingBackgroundService : BackgroundService
 {
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly ILogger<BookingBackgroundService> _logger;
-    private readonly IBookingKafkaPublisher<BookingKafkaPublisher> _kafkaPublisher;
+    private readonly IBookingKafkaPublisher _kafkaPublisher;
     private readonly string _topicName = KafkaTopics.BookingResponse;
 
     private readonly ConsumerConfig _consumerConfig;
@@ -24,7 +24,7 @@ public class BookingBackgroundService : BackgroundService
     public BookingBackgroundService(
         IServiceScopeFactory serviceScopeFactory,
         ILogger<BookingBackgroundService> logger,
-        IBookingKafkaPublisher<BookingKafkaPublisher> kafkaPublisher,
+        IBookingKafkaPublisher kafkaPublisher,
         IOptions<KafkaSettings> kafkaOptions)
     {
         _serviceScopeFactory = serviceScopeFactory;
