@@ -1,3 +1,4 @@
+using CSCourse.Contracts.Models;
 using Identity.Service.Domain.Models;
 
 namespace Identity.Service.Application.Models;
