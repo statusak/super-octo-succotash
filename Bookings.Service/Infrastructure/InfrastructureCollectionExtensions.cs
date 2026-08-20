@@ -41,8 +41,7 @@ public static class InfrastructureCollectionExtensions
 
         services.AddScoped<IBookingRepository, BookingRepository>();
         services.AddScoped<IBookingKafkaPublisher, BookingKafkaPublisher>();
-        services.AddScoped<IBookingKafkaConsumer, BookingKafkaConsumer>();
-
+        
         services.AddHostedService<BookingBackgroundService>();
         
         return services;
