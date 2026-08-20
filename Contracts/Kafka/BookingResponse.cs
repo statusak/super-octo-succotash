@@ -37,6 +37,11 @@ public record BookingResponse
     public required Guid Id { get; init; }
 
     /// <summary>
+    /// Уникальный идентификатор мероприятия.
+    /// </summary>
+    public required Guid EventId { get; init; }
+
+    /// <summary>
     /// Дата и время обработки запроса сервисом событий.
     /// Фиксируется в Event.Service в момент принятия решения (подтверждение/отказ/ошибка).
     /// </summary>

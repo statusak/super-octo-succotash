@@ -8,6 +8,7 @@ using CSCourse.Contracts.Kafka;
 using Bookings.Service.Application.Interfaces;
 using Bookings.Service.Domain.Models;
 using Bookings.Service.Infrastructure.Config;
+using CSCourse.Contracts.Exceptions;
 
 namespace Bookings.Service.Infrastructure.Services;
 
@@ -15,36 +16,39 @@ public class BookingBackgroundService : BackgroundService
 {
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly ILogger<BookingBackgroundService> _logger;
-    private readonly IConsumer<string, string> _consumer;
-    private readonly string _topicName;
+    private readonly IBookingKafkaPublisher<BookingKafkaPublisher> _kafkaPublisher;
+    private readonly string _topicName = KafkaTopics.BookingResponse;
+
+    private readonly ConsumerConfig _consumerConfig;
 
     public BookingBackgroundService(
         IServiceScopeFactory serviceScopeFactory,
         ILogger<BookingBackgroundService> logger,
+        IBookingKafkaPublisher<BookingKafkaPublisher> kafkaPublisher,
         IOptions<KafkaSettings> kafkaOptions)
     {
         _serviceScopeFactory = serviceScopeFactory;
+        _kafkaPublisher = kafkaPublisher;
         _logger = logger;
 
         var bootstrapServers = kafkaOptions.Value.BootstrapServers;
         if (string.IsNullOrWhiteSpace(bootstrapServers))
             throw new InvalidOperationException("BootstrapServers не настроены в KafkaSettings.");
 
-        var consumerConfig = new ConsumerConfig
+        _consumerConfig = new ConsumerConfig
         {
             BootstrapServers = bootstrapServers,
-            GroupId = kafkaOptions.Value.GroupId ?? "booking-consumer-group",
+            GroupId = "booking-consumer-group",
             AutoOffsetReset = AutoOffsetReset.Earliest,
             EnableAutoCommit = false // ручное подтверждение смещения
         };
 
-        _consumer = new ConsumerBuilder<string, string>(consumerConfig).Build();
         _topicName = KafkaTopics.BookingResponse;
 
         _logger.LogInformation(
             "Kafka consumer подготовлен: BootstrapServers={Bootstrap}, GroupId={GroupId}, Topic={Topic}",
             bootstrapServers,
-            consumerConfig.GroupId,
+            _consumerConfig.GroupId,
             _topicName);
     }
 
@@ -55,9 +59,10 @@ public class BookingBackgroundService : BackgroundService
         return Task.Run(() => Consume(stoppingToken), stoppingToken);
     }
 
-    private void Consume(CancellationToken stoppingToken)
+    private async Task Consume(CancellationToken stoppingToken)
     {
-        _consumer.Subscribe(_topicName);
+        using var consumer = new ConsumerBuilder<string, string>(_consumerConfig).Build();
+        consumer.Subscribe(_topicName);
 
         _logger.LogInformation("Kafka consumer запущен. Ожидание сообщений из топика '{Topic}'...", _topicName);
 
@@ -65,7 +70,7 @@ public class BookingBackgroundService : BackgroundService
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                var consumeResult = _consumer.Consume(stoppingToken);
+                var consumeResult = consumer.Consume(stoppingToken);
 
                 if (consumeResult?.Message == null)
                     continue;
@@ -75,33 +80,45 @@ public class BookingBackgroundService : BackgroundService
 
                 try
                 {
-                    // Сначала читаем тип события, чтобы понять, как десериализовать
-                    using var doc = JsonDocument.Parse(message);
-                    var root = doc.RootElement;
-                    string eventType = root.TryGetProperty("EventType", out var typeProp)
-                        ? typeProp.GetString()
-                        : "Unknown";
+                    var eventMessage = JsonSerializer.Deserialize<BookingResponse>(consumeResult.Message.Value);
 
-                    if (eventType == "BookingConfirmed")
+                    if (eventMessage == null)
                     {
-                        var confirmed = JsonSerializer.Deserialize<BookingConfirmed>(message);
-                        ProcessBookingConfirmed(confirmed, consumeResult);
+                        _logger.LogWarning("Сообщение BookingConfirmed пришло без данных.");
+                        return;
                     }
-                    else if (eventType == "BookingRejected")
+
+
+                    _logger.LogInformation(
+                        "Получен ответ на бронирование [{Offset}] Id={Id}, ProcessedAt={ProcessedAt}, Status={Status}, Message={Message}",
+                        consumeResult.TopicPartitionOffset,
+                        eventMessage.Id,
+                        eventMessage?.ProcessedAt,
+                        eventMessage?.Status, 
+                        eventMessage?.Message);
+
+                    switch (eventMessage.Status)
                     {
-                        var rejected = JsonSerializer.Deserialize<BookingRejected>(message);
-                        ProcessBookingRejected(rejected, consumeResult);
-                    }
-                    else
-                    {
-                        _logger.LogWarning("Неизвестный тип события: {Type}. Сообщение будет пропущено.", eventType);
-                        _consumer.StoreOffset(consumeResult);
+                        case BookingResponseStatus.Confirmed:
+                            await ProcessBookingConfirmed(eventMessage);
+                            break;
+                        case BookingResponseStatus.Rejected:
+                            await ProcessBookingRejected(eventMessage);
+                            break;
+                        case BookingResponseStatus.Error:
+                            await ProcessBookingError(eventMessage);
+                            break;  
+                        default:
+                            break;
                     }
                 }
                 catch (JsonException ex)
                 {
                     _logger.LogError(ex, "Ошибка десериализации сообщения: {Msg}", message);
-                    _consumer.StoreOffset(consumeResult); // в учебном проекте просто пропускаем
+                    consumer.StoreOffset(consumeResult);
+                } finally
+                {
+                    consumer.StoreOffset(consumeResult);
                 }
             }
         }
@@ -115,100 +132,85 @@ public class BookingBackgroundService : BackgroundService
         }
     }
 
-    // Dispose для корректного закрытия consumer (BackgroundService реализует IDisposable)
-    public override void Dispose()
+    private async Task ProcessBookingConfirmed(BookingResponse eventMessage)
     {
-        _consumer?.Close();
-        _consumer?.Dispose();
-        base.Dispose();
-    }
-
-    private void ProcessBookingConfirmed(BookingConfirmed? eventMessage, ConsumeResult<string, string> consumeResult)
-    {
-        if (eventMessage == null)
-        {
-            _logger.LogWarning("Сообщение BookingConfirmed пришло без данных.");
-            return;
-        }
-
         using var scope = _serviceScopeFactory.CreateScope();
         var bookingService = scope.ServiceProvider.GetRequiredService<IBookingService>();
 
-        _logger.LogInformation(
-            "Обработка подтверждения бронирования: BookingId={BookingId}, EventId={EventId}",
-            eventMessage.BookingId,
-            eventMessage.EventId);
+        _logger.LogInformation("Обработка подтверждения бронирования: BookingId={BookingId}", eventMessage.Id);
 
         try
         {
-            bookingService.UpdateBookingStatusAsync(
-                eventMessage.BookingId,
-                BookingStatus.Confirmed,
-                message: "Confirmed by Event Service")
-                .GetAwaiter().GetResult();
+            await bookingService.UpdateBookingStatusAsync(eventMessage.Id, BookingStatus.Confirmed);
 
-            _logger.LogInformation("Бронирование {BookingId} успешно подтверждено.", eventMessage.BookingId);
-            _consumer.StoreOffset(consumeResult);
+            _logger.LogInformation("Бронирование {BookingId} успешно подтверждено.", eventMessage.Id);
         }
         catch (NotFoundException)
         {
-            _logger.LogWarning(
-                "Бронирование {BookingId} не найдено при обработке подтверждения. Возможно, оно было удалено.",
-                eventMessage.BookingId);
-            _consumer.StoreOffset(consumeResult);
+            _logger.LogWarning("Бронирование {BookingId} не найдено при обработке подтверждения. Возможно, оно было удалено.",
+                                                                                                             eventMessage.Id);
+            await _kafkaPublisher.PublishBookingCancellationAsync(new BookingCancellation
+            {
+                Id = eventMessage.Id,
+                EventId = eventMessage.EventId,
+                CancelledAt = eventMessage.ProcessedAt,
+                Reason = "Error on UpdateBookingStatusAsync: NotFoundException"
+            });
         }
         catch (Exception ex)
         {
-            _logger.LogError(
-                ex,
-                "Не удалось обновить статус бронирования {BookingId}.",
-                eventMessage.BookingId);
-            // В учебном проекте коммитим, чтобы не блокировать топик
-            _consumer.StoreOffset(consumeResult);
+            _logger.LogError(ex, "Не удалось обновить статус бронирования {BookingId}.", eventMessage.Id);
+            await _kafkaPublisher.PublishBookingCancellationAsync(new BookingCancellation
+            {
+                Id = eventMessage.Id,
+                EventId = eventMessage.EventId,
+                CancelledAt = eventMessage.ProcessedAt,
+                Reason = $"Error on UpdateBookingStatusAsync: {ex.Message}"
+            });
         }
     }
 
-    private void ProcessBookingRejected(BookingRejected? eventMessage, ConsumeResult<string, string> consumeResult)
+    private async Task ProcessBookingRejected(BookingResponse eventMessage)
     {
-        if (eventMessage == null)
-        {
-            _logger.LogWarning("Сообщение BookingRejected пришло без данных.");
-            return;
-        }
-
         using var scope = _serviceScopeFactory.CreateScope();
         var bookingService = scope.ServiceProvider.GetRequiredService<IBookingService>();
 
-        _logger.LogWarning(
-            "Обработка отклонения бронирования: BookingId={BookingId}, Причина={Reason}",
-            eventMessage.BookingId,
-            eventMessage.Reason);
-
+        _logger.LogWarning("Обработка отклонения бронирования: BookingId={BookingId}, Причина={Reason}",
+                                                                 eventMessage.Id, eventMessage.Message);
         try
         {
-            bookingService.UpdateBookingStatusAsync(
-                eventMessage.BookingId,
-                BookingStatus.Rejected,
-                message: eventMessage.Reason ?? "Rejected by Event Service")
-                .GetAwaiter().GetResult();
-
-            _logger.LogInformation("Бронирование {BookingId} отклонено.", eventMessage.BookingId);
-            _consumer.StoreOffset(consumeResult);
+            await bookingService.UpdateBookingStatusAsync(eventMessage.Id, BookingStatus.Rejected);
+            _logger.LogInformation("Бронирование {BookingId} отклонено.", eventMessage.Id);
         }
         catch (NotFoundException)
         {
-            _logger.LogWarning(
-                "Бронирование {BookingId} не найдено при обработке отклонения.",
-                eventMessage.BookingId);
-            _consumer.StoreOffset(consumeResult);
+            _logger.LogWarning("Бронирование {BookingId} не найдено при обработке отклонения.", eventMessage.Id);
         }
         catch (Exception ex)
         {
-            _logger.LogError(
-                ex,
-                "Не удалось обновить статус отклонения бронирования {BookingId}.",
-                eventMessage.BookingId);
-            _consumer.StoreOffset(consumeResult);
+            _logger.LogError(ex, "Не удалось обновить статус отклонения бронирования {BookingId}.", eventMessage.Id);
+        }
+    }
+
+    private async Task ProcessBookingError(BookingResponse eventMessage)
+    {
+        using var scope = _serviceScopeFactory.CreateScope();
+        var bookingService = scope.ServiceProvider.GetRequiredService<IBookingService>();
+
+        _logger.LogWarning("Обработка отклонения бронирования: BookingId={BookingId}, Причина={Reason}",
+                                                                 eventMessage.Id, eventMessage.Message);
+        try
+        {
+            await bookingService.UpdateBookingStatusAsync(eventMessage.Id, BookingStatus.Rejected);
+            _logger.LogInformation("Бронирование {BookingId} отклонено.", eventMessage.Id);
+        }
+        catch (NotFoundException)
+        {
+            _logger.LogWarning("Бронирование {BookingId} не найдено при обработке отклонения.", eventMessage.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Не удалось обновить статус отклонения бронирования {BookingId}.", eventMessage.Id);
         }
     }
 }
