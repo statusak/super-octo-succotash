@@ -1,15 +1,11 @@
 using Confluent.Kafka;
 using Bookings.Service.Application.Interfaces;
-using CSCourse.Contracts.Kafka;
-using Newtonsoft.Json;
-using System.Text;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
-using Bookings.Service.Application.Services;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Bookings.Service.Infrastructure.Kafka;
+namespace Bookings.Service.Infrastructure.Services;
 
 public class BookingKafkaConsumer : IBookingKafkaConsumer
 {

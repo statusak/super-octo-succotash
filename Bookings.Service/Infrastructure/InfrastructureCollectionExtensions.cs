@@ -3,7 +3,6 @@ using Bookings.Service.Infrastructure.Repositories;
 using Bookings.Service.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Bookings.Service.Application.Services;
 using Microsoft.EntityFrameworkCore.Design;
 using Bookings.Service.Infrastructure.Services;
 
@@ -34,6 +33,7 @@ public static class InfrastructureCollectionExtensions
 
         services.AddScoped<IBookingRepository, BookingRepository>();
         services.AddScoped<IBookingKafkaPublisher, BookingKafkaPublisher>();
+        services.AddScoped<IBookingKafkaConsumer, BookingKafkaConsumer>();
 
         services.AddHostedService<BookingBackgroundService>();
         

@@ -2,12 +2,11 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using CSCourse.Contracts.Kafka; // Твои контракты событий
-using System.Threading;
+using CSCourse.Contracts.Kafka;
 using CSCourse.Contracts.Exceptions;
 using Bookings.Service.Domain.Models;
 
-namespace Bookings.Service.Application.Services;
+namespace Bookings.Service.Infrastructure.Services;
 
 public class BookingBackgroundService : BackgroundService
 {
