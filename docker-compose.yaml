@@ -6,6 +6,9 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+      - zookeeper-logs:/var/lib/zookeeper/log
     healthcheck:
       test: ["CMD-SHELL", "nc -z localhost 2181 || exit 1"]
       interval: 10s
@@ -19,24 +22,23 @@ services:
       zookeeper:
         condition: service_healthy
     ports:
-      # Внешний listener для подключения с хоста (например, из dotnet run локально).
       - "9092:9092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      # Два listener'а: INTERNAL — для сервисов внутри сети Docker, EXTERNAL — для хоста.
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092
       KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
     healthcheck:
       test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:29092 --list || exit 1"]
       interval: 10s
       timeout: 10s
       retries: 15
-
   # ─────────────────────────── Базы данных (по одной на сервис) ───────────────────────────
   users-db:
     image: postgres:16
@@ -89,6 +91,9 @@ services:
       timeout: 5s
       retries: 10
 volumes:
+  zookeeper-data:
+  zookeeper-logs:
+  kafka-data:
   users-db-data:
   events-db-data:
   bookings-db-data:
