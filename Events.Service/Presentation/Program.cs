@@ -2,8 +2,10 @@ using System.Reflection;
 using System.Text;
 using CSCourse.Contracts.Models;
 using Events.Service.Infrastructure;
+using Events.Service.Infrastructure.DataAccess;
 using Events.Service.Middlewares;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 
@@ -49,7 +51,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
 });
 
-builder.Services.AddInfrastructure(connectionString);
+builder.Services.AddInfrastructure(connectionString, bootstrapServers);
 builder.Services.AddApplication();
 
 builder.Services.AddSwaggerGen(options =>

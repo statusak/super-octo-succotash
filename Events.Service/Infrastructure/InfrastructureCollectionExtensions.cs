@@ -3,7 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore.Design;
 using Events.Service.Infrastructure.Services;
-using Events.Infrastructure.DataAccess;
+using Events.Service.Infrastructure.DataAccess;
+using Events.Service.Infrastructure.Config;
+using Events.Service.Infrastructure.Repositories;
 
 namespace Events.Service.Infrastructure;
 
@@ -11,7 +13,8 @@ public static class InfrastructureCollectionExtensions
 {
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
-        string connectionString)
+        string connectionString, 
+        string bootstrapServers)
     {
         /// Из-за настройки o.EnableRetryOnFailure() вылетает ошибка, 
         // потому что NpgsqlRetryingExecutionStrategy (автоматически включается
@@ -28,9 +31,20 @@ public static class InfrastructureCollectionExtensions
         //     }));
         ///
         /// 
-        services.AddScoped<IEventRepository, EventRepository>();
+        
 
         services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
+
+        services.Configure<KafkaSettings>(options =>
+        {
+            options.BootstrapServers = bootstrapServers;
+        });
+
+
+        services.AddScoped<IEventRepository, EventRepository>();
+        services.AddScoped<IEventKafkaPublisher, EventKafkaPublisher>();
+        
+        services.AddHostedService<EventBackgroundService>();
         
         return services;
     }
