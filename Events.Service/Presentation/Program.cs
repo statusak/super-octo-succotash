@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text;
 using CSCourse.Contracts.Models;
+using Events.Service.Application;
 using Events.Service.Infrastructure;
 using Events.Service.Infrastructure.DataAccess;
 using Events.Service.Middlewares;
