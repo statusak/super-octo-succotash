@@ -59,7 +59,7 @@ public class EventBackgroundService : BackgroundService
     {
         using var consumer = new ConsumerBuilder<string, string>(_consumerConfig).Build();
 
-        consumer.Subscribe(new[] { _bookingCreatedTopic, _bookingCancellationTopic });
+        consumer.Subscribe([_bookingCreatedTopic, _bookingCancellationTopic]);
 
         _logger.LogInformation(
             "Kafka consumer запущен. Ожидание сообщений из топиков '{Topic1}' и '{Topic2}'...",
