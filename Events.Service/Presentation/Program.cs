@@ -31,6 +31,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             throw new InvalidOperationException("JwtSettings are not configured.");           
         }
 
+        options.MapInboundClaims = false;
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -82,13 +84,14 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
-var app = builder.Build();
 
 // --------- INIT KAFKA --------- //
 await KafkaTopicInitializer.EnsureTopicsAsync(bootstrapServers);
 // ---------           --------- //
+var app = builder.Build();
 
 
+app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -98,7 +101,6 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
 } 
 
-app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {

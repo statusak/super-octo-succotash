@@ -40,7 +40,8 @@ public class BookingBackgroundService : BackgroundService
             BootstrapServers = bootstrapServers,
             GroupId = "booking-consumer-group",
             AutoOffsetReset = AutoOffsetReset.Earliest,
-            EnableAutoCommit = false
+            EnableAutoCommit = false,
+            EnableAutoOffsetStore = false
         };
 
         _topicName = KafkaTopics.BookingResponse;
@@ -119,7 +120,7 @@ public class BookingBackgroundService : BackgroundService
                 }
                 finally
                 {
-                    consumer.StoreOffset(consumeResult);
+                    consumer.Commit(consumeResult);
                 }
             }
         }

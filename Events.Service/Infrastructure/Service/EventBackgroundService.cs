@@ -39,7 +39,8 @@ public class EventBackgroundService : BackgroundService
             BootstrapServers = bootstrapServers,
             GroupId = "event-consumer-group",
             AutoOffsetReset = AutoOffsetReset.Earliest,
-            EnableAutoCommit = false
+            EnableAutoCommit = false,
+            EnableAutoOffsetStore = false
         };
 
         _logger.LogInformation(
@@ -89,7 +90,7 @@ public class EventBackgroundService : BackgroundService
                         if (bookingCreated == null)
                         {
                             _logger.LogWarning("Сообщение BookingCreated пришло без данных.");
-                            consumer.StoreOffset(consumeResult);
+                            consumer.Commit(consumeResult);
                             continue;
                         }
 
@@ -110,7 +111,7 @@ public class EventBackgroundService : BackgroundService
                         if (cancellation == null)
                         {
                             _logger.LogWarning("Сообщение BookingCancellation пришло без данных.");
-                            consumer.StoreOffset(consumeResult);
+                            consumer.Commit(consumeResult);
                             continue;
                         }
 
@@ -139,7 +140,7 @@ public class EventBackgroundService : BackgroundService
                 }
                 finally
                 {
-                    consumer.StoreOffset(consumeResult);
+                    consumer.Commit(consumeResult);
                 }
             }
         }
