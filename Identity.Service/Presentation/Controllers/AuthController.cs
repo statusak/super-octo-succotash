@@ -16,10 +16,15 @@ public class AuthController : ControllerBase
 {
     private readonly IIdentityService _identityService;
 
+    /// <summary>
+    /// Инициализирует новый экземпляр контроллера <see cref="AuthController"/> с указанной реализацией сервиса идентификации.
+    /// </summary>
+    /// <param name="identityService">Реализация сервиса <see cref="IIdentityService"/>, предоставляющая бизнес‑логику регистрации и аутентификации.</param>
     public AuthController(IIdentityService identityService)
     {
         _identityService = identityService;
     }
+
 
     /// <summary>
     /// Регистрирует нового пользователя в системе. Создаёт учётную запись на основе переданных данных,
