@@ -42,7 +42,7 @@ namespace Bookings.Service.Controllers
         /// Финальное решение (подтверждение или отказ) принимается Event.Service асинхронно
         /// и фиксируется в БД через BookingBackgroundService.
         /// </remarks>
-        [HttpPost("{eventId:Guid}/book")]
+        [HttpPost("{eventId:Guid}")]
         [ProducesResponseType(StatusCodes.Status202Accepted, Type = typeof(BookingResponseDto))]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
