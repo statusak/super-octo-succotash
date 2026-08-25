@@ -12,6 +12,10 @@ using CSCourse.Contracts.Exceptions;
 
 namespace Bookings.Service.Infrastructure.Services;
 
+/// <summary>
+/// Фоновый сервис, который потребляет ответы на бронирования из топика Kafka
+/// и обновляет статусы бронирований в базе данных.
+/// </summary>
 public class BookingBackgroundService : BackgroundService
 {
     private readonly IServiceScopeFactory _serviceScopeFactory;
@@ -21,6 +25,14 @@ public class BookingBackgroundService : BackgroundService
 
     private readonly ConsumerConfig _consumerConfig;
 
+    /// <summary>
+    /// Инициализирует новый экземпляр <see cref="BookingBackgroundService"/>.
+    /// </summary>
+    /// <param name="serviceScopeFactory">Фабрика scopes для разрешения scoped-сервисов (например, <see cref="IBookingService"/>).</param>
+    /// <param name="logger">Логгер.</param>
+    /// <param name="kafkaPublisher">Издатель Kafka для отправки отмен бронирований.</param>
+    /// <param name="kafkaOptions">Настройки Kafka, содержащие <see cref="KafkaSettings.BootstrapServers"/>.</param>
+    /// <exception cref="InvalidOperationException">Выбрасывается, если BootstrapServers не заданы.</exception>
     public BookingBackgroundService(
         IServiceScopeFactory serviceScopeFactory,
         ILogger<BookingBackgroundService> logger,
@@ -53,6 +65,11 @@ public class BookingBackgroundService : BackgroundService
             _topicName);
     }
 
+    /// <summary>
+    /// Запускает консьюмер Kafka в фоновом потоке при старте хоста.
+    /// </summary>
+    /// <param name="stoppingToken">Токен отмены для остановки сервиса.</param>
+    /// <returns>Задача, представляющую работу фонового сервиса.</returns>
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
         return Task.Run(() => Consume(stoppingToken), stoppingToken);

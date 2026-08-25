@@ -9,19 +9,30 @@ using Bookings.Service.Infrastructure.Config;
 
 namespace Bookings.Service.Infrastructure;
 
+/// <summary>
+/// Методы расширения для регистрации инфраструктурных зависимостей сервиса бронирований.
+/// </summary>
 public static class InfrastructureCollectionExtensions
 {
+    /// <summary>
+    /// Регистрирует в DI-контейнере контекст базы данных, репозитории,
+    /// Kafka-издателя и фоновый сервис бронирований.
+    /// </summary>
+    /// <param name="services">Коллекция сервисов DI.</param>
+    /// <param name="connectionString">Строка подключения к PostgreSQL.</param>
+    /// <param name="bootstrapServers">Адреса серверов Kafka в формате host:port.</param>
+    /// <returns>Обновлённая коллекция сервисов для цепочки вызовов.</returns>
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         string connectionString, 
         string bootstrapServers)
     {
-        /// Из-за настройки o.EnableRetryOnFailure() вылетает ошибка, 
+        // Из-за настройки o.EnableRetryOnFailure() вылетает ошибка,
         // потому что NpgsqlRetryingExecutionStrategy (автоматически включается
         // при использовании UseNpgsql с retry-политикой) не умеет работать
-        // с транзакциями, которые начали вручную через BeginTransactionAsync. 
-        // EF Core требует, чтобы вся транзакция выполнялась внутри стратегии 
-        // повторных попыток — иначе при transient-ошибке (например, таймаут 
+        // с транзакциями, которые начали вручную через BeginTransactionAsync.
+        // EF Core требует, чтобы вся транзакция выполнялась внутри стратегии
+        // повторных попыток — иначе при transient-ошибке (например, таймаут
         // соединения) повтор не сработает корректно.
         //
         // services.AddDbContext<AppDbContext>(options =>
@@ -29,7 +40,6 @@ public static class InfrastructureCollectionExtensions
         //     {
         //         o.EnableRetryOnFailure();
         //     }));
-        ///
 
         services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
 
@@ -37,7 +47,6 @@ public static class InfrastructureCollectionExtensions
         {
             options.BootstrapServers = bootstrapServers;
         });
-
 
         services.AddScoped<IBookingRepository, BookingRepository>();
         services.AddSingleton<IBookingKafkaPublisher, BookingKafkaPublisher>();
@@ -48,8 +57,18 @@ public static class InfrastructureCollectionExtensions
     }
 }
 
+/// <summary>
+/// Фабрика для создания <see cref="AppDbContext"/> во время разработки (миграции, scaffolding).
+/// Используется инструментами EF Core, когда приложение не запущено.
+/// </summary>
 public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
 {
+    /// <summary>
+    /// Создаёт экземпляр <see cref="AppDbContext"/> с параметрами из переменной окружения
+    /// или строкой подключения по умолчанию.
+    /// </summary>
+    /// <param name="args">Аргументы командной строки (не используются).</param>
+    /// <returns>Настроенный экземпляр <see cref="AppDbContext"/>.</returns>
     public AppDbContext CreateDbContext(string[] args)
     {
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
@@ -65,4 +84,3 @@ public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
         return new AppDbContext(optionsBuilder.Options);
     }
 }
-
