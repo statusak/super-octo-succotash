@@ -16,24 +16,21 @@ namespace Identity.Service.Controllers
     [Route("/[controller]")]
     public class EventsController : ControllerBase
     {
-
         private readonly IEventService _eventService;
-            
-        // TODO: здесь зависимость от Kafka
-        // private readonly IBookingService _bookingService;
         private readonly ILogger<EventsController> _logger;
 
+        /// <summary>
+        /// Инициализирует новый экземпляр контроллера <see cref="EventsController"/>.
+        /// </summary>
+        /// <param name="eventService">Сервис для работы с мероприятиями.</param>
+        /// <param name="logger">Логгер для записи событий контроллера.</param>
         public EventsController(
             IEventService eventService,
-            // IBookingService bookingService,
             ILogger<EventsController> logger)
         {
             _eventService = eventService;
-            // TODO: здесь зависимость от Kafka
-            // _bookingService = bookingService; 
             _logger = logger;
         }
-
         /// <summary>
         /// Получает список мероприятий с возможностью фильтрации и пагинации.
         /// </summary>

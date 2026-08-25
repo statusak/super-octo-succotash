@@ -29,7 +29,7 @@ public class EventKafkaPublisher : IEventKafkaPublisher
             BootstrapServers = bootstrapServers,
             Acks = Acks.All,
             EnableIdempotence = true,
-            MaxInFlight = 5
+            MaxInFlight = 5,
         };
 
         _producer = new ProducerBuilder<string, string>(config).Build();
