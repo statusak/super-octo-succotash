@@ -70,23 +70,23 @@ Event Manager — распределённая система на стеке .N
 
 ```txt
 ├── Bookings.Service # Микросервис бронирований
-│ ├── Application # Интерфейсы, DTO, сервисы
-│ ├── Domain # Модели и исключения домена
-│ ├── Infrastructure # EF Core, репозитории, миграции, Kafka-клиенты
-│ └── Presentation # Контроллеры, middleware, Program.cs
+│     ├── Application # Интерфейсы, DTO, сервисы
+│     ├── Domain # Модели и исключения домена
+│     ├── Infrastructure # EF Core, репозитории, миграции, Kafka-клиенты
+│     └── Presentation # Контроллеры, middleware, Program.cs
 ├── Contracts # Общие контракты: исключения, DTO, Kafka-топики
 ├── docker-compose.yaml # Оркестрация контейнеров (PostgreSQL, Kafka, сервисы)
 ├── Events.Service # Микросервис мероприятий
-│ ├── Application
-│ ├── Domain
-│ ├── Infrastructure
-│ └── Presentation
-├── Identity.Service # Микросервис идентификации
-│ ├── Application
-│ ├── Domain
-│ ├── Infrastructure
-│ └── Presentation
-└── README.md # Эта документация
+│     ├── Infrastructure
+│     ├── Application
+│     ├── Domain
+│     └── Presentation
+└── Identity.Service # Микросервис идентификации
+      ├── Application
+      ├── Domain
+      ├── Infrastructure
+      └── Presentation
+
 ```
 
 ---
