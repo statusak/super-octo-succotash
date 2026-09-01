@@ -6,6 +6,7 @@ using Events.Service.Infrastructure.Services;
 using Events.Service.Infrastructure.DataAccess;
 using Events.Service.Infrastructure.Config;
 using Events.Service.Infrastructure.Repositories;
+using StackExchange.Redis;
 
 namespace Events.Service.Infrastructure;
 
@@ -14,7 +15,8 @@ public static class InfrastructureCollectionExtensions
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         string connectionString, 
-        string bootstrapServers)
+        string bootstrapServers,
+        string cacheServers)
     {
         /// Из-за настройки o.EnableRetryOnFailure() вылетает ошибка, 
         // потому что NpgsqlRetryingExecutionStrategy (автоматически включается
@@ -39,6 +41,10 @@ public static class InfrastructureCollectionExtensions
         {
             options.BootstrapServers = bootstrapServers;
         });
+
+        services.AddSingleton<IConnectionMultiplexer>(
+            ConnectionMultiplexer.Connect(cacheServers)
+        ); 
 
 
         services.AddScoped<IEventRepository, EventRepository>();

@@ -18,6 +18,9 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 var bootstrapServers = builder.Configuration.GetConnectionString("BootstrapServers") 
     ?? throw new InvalidOperationException("Connection string 'BootstrapServers' not found.");
 
+var cacheServers = builder.Configuration.GetConnectionString("CacheServers") 
+    ?? throw new InvalidOperationException("Connection string 'CacheServers' not found.");
+
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 
 builder.Services.AddAuthorization();
@@ -54,7 +57,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
 });
 
-builder.Services.AddInfrastructure(connectionString, bootstrapServers);
+builder.Services.AddInfrastructure(connectionString, bootstrapServers, cacheServers);
 builder.Services.AddApplication();
 
 builder.Services.AddSwaggerGen(options =>
