@@ -7,6 +7,7 @@ using Events.Service.Infrastructure.DataAccess;
 using Events.Service.Infrastructure.Config;
 using Events.Service.Infrastructure.Repositories;
 using StackExchange.Redis;
+using Microsoft.Extensions.Options;
 
 namespace Events.Service.Infrastructure;
 
@@ -15,8 +16,7 @@ public static class InfrastructureCollectionExtensions
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         string connectionString, 
-        string bootstrapServers,
-        string cacheServers)
+        string bootstrapServers)
     {
         /// Из-за настройки o.EnableRetryOnFailure() вылетает ошибка, 
         // потому что NpgsqlRetryingExecutionStrategy (автоматически включается
@@ -42,10 +42,21 @@ public static class InfrastructureCollectionExtensions
             options.BootstrapServers = bootstrapServers;
         });
 
-        services.AddSingleton<IConnectionMultiplexer>(
-            ConnectionMultiplexer.Connect(cacheServers)
-        ); 
+        services.AddSingleton<IConnectionMultiplexer>(provider =>
+        {
+            var options = provider.GetRequiredService<IOptions<RedisSettings>>().Value;
 
+            var configOptions = new ConfigurationOptions
+            {
+                EndPoints = { options.Servers },
+                Password = options.Password,
+                ConnectTimeout = options.ConnectTimeout,
+                SyncTimeout = options.SyncTimeout,
+                AbortOnConnectFail = options.AbortOnConnectFail
+            };
+
+            return ConnectionMultiplexer.Connect(configOptions);
+        });
 
         services.AddScoped<IEventRepository, EventRepository>();
         services.AddSingleton<IEventKafkaPublisher, EventKafkaPublisher>();

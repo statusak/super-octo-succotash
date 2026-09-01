@@ -57,7 +57,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
 });
 
-builder.Services.AddInfrastructure(connectionString, bootstrapServers, cacheServers);
+builder.Services.AddInfrastructure(connectionString, bootstrapServers);
 builder.Services.AddApplication();
 
 builder.Services.AddSwaggerGen(options =>
