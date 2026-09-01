@@ -156,7 +156,6 @@ namespace Events.Service.Application.Services
             {
                 throw new ValidationException("@event.TotalSeats <= 0");
             }
-            // CACHE: CAHNGE CACHE
 
             return await _events.CreateAsync(@event);
         }
@@ -184,8 +183,8 @@ namespace Events.Service.Application.Services
                 StartAt = @event.StartAt,
                 EndAt = @event.EndAt,
             };
-            // CACHE: UPDATE KEY
-            return await _events.UpdateAsync(eventRepositoryUpdateDto);
+            
+            return await _eventCacheRepository.UpdateAsync(eventRepositoryUpdateDto);
         }
 
         public bool UpdateEvent(Guid id, string Title, string? Description, DateTime StartAt, DateTime EndAt)
@@ -220,9 +219,13 @@ namespace Events.Service.Application.Services
 
         public async Task<bool> DeleteEventAsync(Guid id)
         {
-            // CACHE: DELETE KEY
-            // CACHE: DELETE TOP10
-            return await _events.DeleteAsync(id);
+            if(await _events.DeleteAsync(id))
+            {
+                await _eventCacheRepository.DeleteValueByIdAsync(id);
+                await _eventCacheRepository.DeleteValueTop10Async();
+                return true;
+            }
+            return false;
         }
         
         public async Task<List<Event>> GetActiveEventsAsync()

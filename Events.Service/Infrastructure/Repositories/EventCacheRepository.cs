@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Events.Service.Application.Interfaces;
+using Events.Service.Application.Models;
 using Events.Service.Domain.Models;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
@@ -78,5 +79,78 @@ public class EventCacheRepository : IEventCacheRepository
         }
 
         return events;
+    }
+
+    public async Task<bool> DeleteValueByIdAsync(Guid id)
+    {
+        var key = $"event:{id}";
+
+        try
+        {
+            var deleted = await _redis.KeyDeleteAsync(key);
+            if (deleted)
+            {
+                _logger.LogInformation("Ключ {Key} удалён из Redis", key);
+            }
+            return deleted;
+        }
+        catch (RedisException ex)
+        {
+            _logger.LogError(ex, "Ошибка удаления ключа {Key} из Redis", key);
+            return false;
+        }
+    }
+
+    public async Task<bool> DeleteValueTop10Async()
+    {
+        const string cacheKey = "events:top10";
+
+        try
+        {
+            var deleted = await _redis.KeyDeleteAsync(cacheKey);
+            if (deleted)
+            {
+                _logger.LogInformation("Ключ {Key} (top10) удалён из Redis", cacheKey);
+            }
+            return deleted;
+        }
+        catch (RedisException ex)
+        {
+            _logger.LogError(ex, "Ошибка удаления ключа {Key} (top10) из Redis", cacheKey);
+            return false;
+        }
+    }
+
+    public async Task<bool> UpdateAsync(EventRepositoryUpdateDto dto)
+    {
+        var updated = await _repository.UpdateAsync(dto);
+        if (!updated)
+        {
+            return false;
+        }
+
+        var idKey = $"event:{dto.Id}";
+        try
+        {
+            await _redis.KeyDeleteAsync(idKey);
+            _logger.LogDebug("Инвалидирован кэш для события с ID {Id}", dto.Id);
+        }
+        catch (RedisException ex)
+        {
+            _logger.LogWarning(ex, "Не удалось инвалидировать кэш для события с ID {Id}", dto.Id);
+        }
+
+        const string top10Key = "events:top10";
+        try
+        {
+            await _redis.KeyDeleteAsync(top10Key);
+            _logger.LogDebug("Инвалидирован кэш top10 событий");
+        }
+        catch (RedisException ex)
+        {
+            _logger.LogWarning(ex, "Не удалось инвалидировать кэш top10 событий");
+        }
+
+        return true;
     }
 }
