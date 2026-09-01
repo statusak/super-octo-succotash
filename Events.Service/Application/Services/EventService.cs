@@ -221,5 +221,10 @@ namespace Events.Service.Application.Services
             return await _events.GetActiveAsync();
         }
 
+        public async Task<List<Event>> GetTop10Async()
+        {
+            return await _eventCacheRepository.GetTop10Async();
+        }
+
     }
 }

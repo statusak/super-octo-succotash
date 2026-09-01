@@ -5,5 +5,5 @@ namespace Events.Service.Application.Interfaces;
 public interface IEventCacheRepository
 {
     Task<Event?> GetByIdAsync(Guid id);
-    Task<List<Event>> GetTopAsync(int count=10);
+    Task<List<Event>> GetTop10Async();
 }

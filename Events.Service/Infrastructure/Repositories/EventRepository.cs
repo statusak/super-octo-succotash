@@ -328,4 +328,13 @@ public class EventRepository : IEventRepository
                             .Where(e => e.EndAt > DateTime.UtcNow)
                             .ToListAsync();
     }
+
+    public async Task<List<Event>> GetTop10Async()
+    {
+        return await _context.Events
+                            .Where(e => e.TotalSeats > 0)
+                            .OrderByDescending(e => (e.TotalSeats - e.AvailableSeats) / (double)e.TotalSeats)
+                            .Take(10)
+                            .ToListAsync();
+    }
 }

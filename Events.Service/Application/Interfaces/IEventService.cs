@@ -268,5 +268,7 @@ namespace Events.Service.Application.Interfaces
         Task<bool> DeleteEventAsync(Guid id);
 
         Task<List<Event>> GetActiveEventsAsync();
+
+        Task<List<Event>> GetTop10Async();
     }
 }

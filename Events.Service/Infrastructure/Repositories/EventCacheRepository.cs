@@ -1,20 +1,21 @@
 using System.Text.Json;
 using Events.Service.Application.Interfaces;
 using Events.Service.Domain.Models;
-using Microsoft.EntityFrameworkCore.Storage;
+using StackExchange.Redis;
 
 namespace Events.Service.Infrastructure.Repositories;
 
 public class EventCacheRepository : IEventCacheRepository
 {
     private readonly IDatabase _redis;
-    private readonly IEventRepository _events;
-    private static readonly TimeSpan Expiry = TimeSpan.FromMinutes(10);
+    private readonly IEventRepository _repository;
+    private static readonly TimeSpan ExpiryEventById = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan ExpiryTop10Events = TimeSpan.FromMinutes(1);
 
-    public EventCacheRepository(IConnectionMultiplexer connection, IEventRepository events)
+    public EventCacheRepository(IConnectionMultiplexer connection, IEventRepository repository)
     {
         _redis = connection.GetDatabase();
-        _events = events;
+        _repository = repository;
     }
 
 
@@ -26,18 +27,34 @@ public class EventCacheRepository : IEventCacheRepository
         if (cached.HasValue)
             return JsonSerializer.Deserialize<Event>(cached!);
 
-        var @event = await _events.GetByIdAsync(id);
+        var @event = await _repository.GetByIdAsync(id);
         if (@event is null)
             return null;
 
         var serialized = JsonSerializer.Serialize(@event);
-        await _redis.StringSetAsync(key, serialized, Expiry);
+        await _redis.StringSetAsync(key, serialized, ExpiryEventById);
 
         return @event;
     }
 
-    public async Task<List<Event>> GetTopAsync(int count = 10)
+    public async Task<List<Event>> GetTop10Async()
     {
-        return null;
+        const string cacheKey = "events:top10";
+
+        var cached = await _redis.StringGetAsync(cacheKey);
+        if (cached.HasValue)
+        {
+            return JsonSerializer.Deserialize<List<Event>>(cached!)!;
+        }
+
+        var events = await _repository.GetTop10Async();
+
+        await _redis.StringSetAsync(
+            cacheKey,
+            JsonSerializer.Serialize(events),
+            ExpiryTop10Events
+        );
+
+        return events;
     }
 }

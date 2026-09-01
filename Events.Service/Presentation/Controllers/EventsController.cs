@@ -112,6 +112,14 @@ namespace Identity.Service.Controllers
             }
         }
 
+        [HttpGet("top")]
+        public async Task<ActionResult<List<Event>>> GetTop10()
+        {
+            var eventItems = await _eventService.GetTop10Async();
+            // TODO: Возвращать EventInfoDto, т.к. выводится поле Booking 
+            return Ok(eventItems);
+        }
+
         /// <summary>
         /// Создаёт новое мероприятие в системе.
         /// </summary>
