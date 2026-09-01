@@ -2,7 +2,9 @@ using System.Text.Json;
 using Events.Service.Application.Interfaces;
 using Events.Service.Application.Models;
 using Events.Service.Domain.Models;
+using Events.Service.Infrastructure.Config;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 
 namespace Events.Service.Infrastructure.Repositories;
@@ -12,14 +14,23 @@ public class EventCacheRepository : IEventCacheRepository
     private readonly IDatabase _redis;
     private readonly IEventRepository _repository;
     private readonly ILogger _logger;
-    private static readonly TimeSpan ExpiryEventById = TimeSpan.FromMinutes(10);
-    private static readonly TimeSpan ExpiryTop10Events = TimeSpan.FromMinutes(1);
+    private readonly TimeSpan _expiryEventById = TimeSpan.FromMinutes(10);
+    private readonly TimeSpan _expiryTop10Events = TimeSpan.FromMinutes(1);
 
-    public EventCacheRepository(IConnectionMultiplexer connection, IEventRepository repository, ILogger logger)
+    public EventCacheRepository(
+        IConnectionMultiplexer connection,
+        IEventRepository repository,
+        IOptions<RedisSettings> redisSettings,
+        ILogger logger)
     {
         _redis = connection.GetDatabase();
         _repository = repository;
         _logger = logger;
+
+        var settings = redisSettings.Value;
+        _expiryEventById = TimeSpan.FromMinutes(settings.ExpiryEventByIdMinutes);
+        _expiryTop10Events = TimeSpan.FromMinutes(settings.ExpiryTop10EventsMinutes);
+
     }
 
 
@@ -39,7 +50,7 @@ public class EventCacheRepository : IEventCacheRepository
 
 
         try{
-            await _redis.StringSetAsync(key, serialized, ExpiryEventById);
+            await _redis.StringSetAsync(key, serialized, _expiryEventById);
         } catch (RedisException ex)
         {
             _logger.LogError(ex, $"Ошибка установки ключа {key} в Redis");
@@ -71,7 +82,7 @@ public class EventCacheRepository : IEventCacheRepository
             await _redis.StringSetAsync(
                 cacheKey,
                 JsonSerializer.Serialize(events),
-                ExpiryTop10Events
+                _expiryTop10Events
             );
         } catch (RedisException ex)
         {
@@ -129,27 +140,8 @@ public class EventCacheRepository : IEventCacheRepository
             return false;
         }
 
-        var idKey = $"event:{dto.Id}";
-        try
-        {
-            await _redis.KeyDeleteAsync(idKey);
-            _logger.LogDebug("Инвалидирован кэш для события с ID {Id}", dto.Id);
-        }
-        catch (RedisException ex)
-        {
-            _logger.LogWarning(ex, "Не удалось инвалидировать кэш для события с ID {Id}", dto.Id);
-        }
-
-        const string top10Key = "events:top10";
-        try
-        {
-            await _redis.KeyDeleteAsync(top10Key);
-            _logger.LogDebug("Инвалидирован кэш top10 событий");
-        }
-        catch (RedisException ex)
-        {
-            _logger.LogWarning(ex, "Не удалось инвалидировать кэш top10 событий");
-        }
+        await DeleteValueByIdAsync(dto.Id);
+        await DeleteValueTop10Async();
 
         return true;
     }
