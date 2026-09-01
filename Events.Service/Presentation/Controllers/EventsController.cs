@@ -112,7 +112,36 @@ namespace Identity.Service.Controllers
             }
         }
 
+        /// <summary>
+        /// Получает топ‑10 мероприятий по популярности.
+        /// </summary>
+        /// <remarks>
+        /// Возвращает список из 10 наиболее востребованных мероприятий. Критерий отбора («топ») определяется внутренней логикой сервиса 
+        /// (например, по количеству бронирований, рейтингу или посещаемости). Порядок элементов — от наиболее популярного к менее популярному.
+        ///
+        /// Пример запроса:
+        /// GET /Events/top
+        ///
+        /// Пример ответа (HTTP 200 OK):
+        /// <code>
+        /// [
+        ///   {
+        ///     "id": "308dd020-a855-4e80-b29e-b3582b6de65c",
+        ///     "title": "Конференция разработчиков",
+        ///     "description": "Ежегодная конференция...",
+        ///     "totalSeats": 10,
+        ///     "availableSeats": 3,
+        ///     "startAt": "2023-12-01T10:00:00",
+        ///     "endAt": "2023-12-01T18:00:00"
+        ///   },
+        ///   ...
+        /// ]
+        /// </code>
+        /// </remarks>
+        /// <response code="200">Успешный ответ: список топ‑10 мероприятий (HTTP 200 OK)</response>
+        /// <returns>Список из до 10 объектов мероприятий</returns>
         [HttpGet("top")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<Event>))]
         public async Task<ActionResult<List<Event>>> GetTop10()
         {
             var eventItems = await _eventService.GetTop10Async();
