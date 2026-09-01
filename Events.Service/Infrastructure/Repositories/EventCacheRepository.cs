@@ -21,7 +21,7 @@ public class EventCacheRepository : IEventCacheRepository
         IConnectionMultiplexer connection,
         IEventRepository repository,
         IOptions<RedisSettings> redisSettings,
-        ILogger logger)
+        ILogger<EventCacheRepository> logger)
     {
         _redis = connection.GetDatabase();
         _repository = repository;

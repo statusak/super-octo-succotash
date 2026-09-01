@@ -60,6 +60,7 @@ public static class InfrastructureCollectionExtensions
 
         services.AddScoped<IEventRepository, EventRepository>();
         services.AddSingleton<IEventKafkaPublisher, EventKafkaPublisher>();
+        services.AddScoped<IEventCacheRepository, EventCacheRepository>();
         
         services.AddHostedService<EventBackgroundService>();
         

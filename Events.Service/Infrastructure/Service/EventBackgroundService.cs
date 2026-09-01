@@ -16,8 +16,6 @@ public class EventBackgroundService : BackgroundService
     private readonly ILogger<EventBackgroundService> _logger;
     private readonly IEventKafkaPublisher _kafkaPublisher;
     private readonly ConsumerConfig _consumerConfig;
-    private readonly IEventCacheRepository _eventCacheRepository;
-
     private readonly string _bookingCreatedTopic = KafkaTopics.BookingCreated;
     private readonly string _bookingCancellationTopic = KafkaTopics.BookingCancellation;
 
@@ -25,13 +23,11 @@ public class EventBackgroundService : BackgroundService
         IServiceScopeFactory serviceScopeFactory,
         ILogger<EventBackgroundService> logger,
         IEventKafkaPublisher kafkaPublisher,
-        IOptions<KafkaSettings> kafkaOptions,
-        IEventCacheRepository eventCacheRepository)
+        IOptions<KafkaSettings> kafkaOptions)
     {
         _serviceScopeFactory = serviceScopeFactory;
         _logger = logger;
         _kafkaPublisher = kafkaPublisher;
-        _eventCacheRepository = eventCacheRepository;
 
         var bootstrapServers = kafkaOptions.Value.BootstrapServers;
         if (string.IsNullOrWhiteSpace(bootstrapServers))
@@ -196,7 +192,8 @@ public class EventBackgroundService : BackgroundService
                     bookingCreated.EventId,
                     bookingCreated.Id);
 
-                await _eventCacheRepository.DeleteValueByIdAsync(bookingCreated.Id);
+                var cacheRepo = scope.ServiceProvider.GetRequiredService<IEventCacheRepository>();
+                await cacheRepo.DeleteValueByIdAsync(bookingCreated.Id);
 
                 await _kafkaPublisher.PublishBookingResponseAsync(new BookingResponse
                 {
@@ -263,7 +260,8 @@ public class EventBackgroundService : BackgroundService
 
             if (released)
             {
-                await _eventCacheRepository.DeleteValueByIdAsync(cancellation.Id);
+                var cacheRepo = scope.ServiceProvider.GetRequiredService<IEventCacheRepository>();
+                await cacheRepo.DeleteValueByIdAsync(cancellation.Id);
 
                 _logger.LogInformation(
                     "Места для мероприятия {EventId} освобождены. Бронирование {BookingId} отменено.",
