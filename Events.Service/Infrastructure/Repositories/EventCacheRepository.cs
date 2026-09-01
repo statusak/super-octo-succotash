@@ -25,7 +25,7 @@ public class EventCacheRepository : IEventCacheRepository
 
         var cached = await _redis.StringGetAsync(key);
         if (cached.HasValue)
-            return JsonSerializer.Deserialize<Event>(cached!);
+            return JsonSerializer.Deserialize<Event>(cached.ToString());
 
         var @event = await _repository.GetByIdAsync(id);
         if (@event is null)
@@ -44,7 +44,7 @@ public class EventCacheRepository : IEventCacheRepository
         var cached = await _redis.StringGetAsync(cacheKey);
         if (cached.HasValue)
         {
-            return JsonSerializer.Deserialize<List<Event>>(cached!)!;
+            return JsonSerializer.Deserialize<List<Event>>(cached.ToString())!;
         }
 
         var events = await _repository.GetTop10Async();
