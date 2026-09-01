@@ -9,13 +9,16 @@ namespace Events.Service.Application.Services
     {
         private readonly IEventRepository _events;
 
+        private readonly IEventCacheRepository _eventCacheRepository;
+
         private readonly object _lockCreateEvent = new object();
 
         private readonly SemaphoreSlim _processingSemaphoreEvent = new(1, 1);
 
-        public EventService(IEventRepository events)
+        public EventService(IEventRepository events, IEventCacheRepository eventCacheRepository)
         {
             _events = events;
+            _eventCacheRepository = eventCacheRepository;
         }
 
         public PaginatedResult GetAll(int page, int pageSize)
@@ -72,12 +75,12 @@ namespace Events.Service.Application.Services
 
         public Event? GetEventById(Guid id)
         {
-            return _events.GetById(id);
+            return _eventCacheRepository.GetByIdAsync(id).Result;
         }
 
         public async Task<Event?> GetEventByIdAsync(Guid id)
         {
-            return await _events.GetByIdAsync(id);
+            return await _eventCacheRepository.GetByIdAsync(id);
         }
 
         public bool IsEventExists(Guid id)
