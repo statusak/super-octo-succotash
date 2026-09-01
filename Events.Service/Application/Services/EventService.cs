@@ -73,14 +73,19 @@ namespace Events.Service.Application.Services
             };
         }
 
+        public async Task<Event?> GetEventByIdCacheAsync(Guid id)
+        {
+            return await _eventCacheRepository.GetByIdAsync(id);
+        }
+
         public Event? GetEventById(Guid id)
         {
-            return _eventCacheRepository.GetByIdAsync(id).Result;
+            return _events.GetByIdAsync(id).Result;
         }
 
         public async Task<Event?> GetEventByIdAsync(Guid id)
         {
-            return await _eventCacheRepository.GetByIdAsync(id);
+            return await _events.GetByIdAsync(id);
         }
 
         public bool IsEventExists(Guid id)
@@ -151,6 +156,7 @@ namespace Events.Service.Application.Services
             {
                 throw new ValidationException("@event.TotalSeats <= 0");
             }
+            // CACHE: CAHNGE CACHE
 
             return await _events.CreateAsync(@event);
         }
@@ -178,6 +184,7 @@ namespace Events.Service.Application.Services
                 StartAt = @event.StartAt,
                 EndAt = @event.EndAt,
             };
+            // CACHE: UPDATE KEY
             return await _events.UpdateAsync(eventRepositoryUpdateDto);
         }
 
@@ -213,6 +220,8 @@ namespace Events.Service.Application.Services
 
         public async Task<bool> DeleteEventAsync(Guid id)
         {
+            // CACHE: DELETE KEY
+            // CACHE: DELETE TOP10
             return await _events.DeleteAsync(id);
         }
         

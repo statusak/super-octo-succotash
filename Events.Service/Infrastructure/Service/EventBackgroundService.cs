@@ -193,6 +193,8 @@ public class EventBackgroundService : BackgroundService
                     bookingCreated.EventId,
                     bookingCreated.Id);
 
+                // CACHE: delete key id by id
+
                 await _kafkaPublisher.PublishBookingResponseAsync(new BookingResponse
                 {
                     Id = bookingCreated.Id,
@@ -258,6 +260,8 @@ public class EventBackgroundService : BackgroundService
 
             if (released)
             {
+                // CACHE: delete key id by id
+
                 _logger.LogInformation(
                     "Места для мероприятия {EventId} освобождены. Бронирование {BookingId} отменено.",
                     cancellation.EventId,

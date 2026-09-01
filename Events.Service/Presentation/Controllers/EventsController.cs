@@ -102,7 +102,7 @@ namespace Identity.Service.Controllers
         {
             try
             {
-                var eventItem = await _eventService.GetEventByIdAsync(index);
+                var eventItem = await _eventService.GetEventByIdCacheAsync(index);
                 // TODO: Возвращать EventInfoDto, т.к. выводится поле Booking 
                 return Ok(eventItem);
             }
