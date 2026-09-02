@@ -100,8 +100,8 @@ services:
       dockerfile: Events.Service/Dockerfile
       network: host
       args:
-        HTTP_PROXY: "http://192.168.57.4:8118"
-        HTTPS_PROXY: "http://192.168.57.4:8118"
+        HTTP_PROXY: ${HTTP_PROXY-}
+        HTTPS_PROXY: ${HTTPS_PROXY-}
 
     container_name: eventapi-events-service
     ports:
@@ -146,8 +146,8 @@ services:
       dockerfile: Bookings.Service/Dockerfile
       network: host
       args:
-        HTTP_PROXY: "http://192.168.57.4:8118"
-        HTTPS_PROXY: "http://192.168.57.4:8118"
+        HTTP_PROXY: ${HTTP_PROXY-}
+        HTTPS_PROXY: ${HTTPS_PROXY-}
 
     container_name: eventapi-bookings-service
     ports:
@@ -182,8 +182,8 @@ services:
       dockerfile: Identity.Service/Dockerfile
       network: host
       args:
-        HTTP_PROXY: "http://192.168.57.4:8118"
-        HTTPS_PROXY: "http://192.168.57.4:8118"
+        HTTP_PROXY: ${HTTP_PROXY-}
+        HTTPS_PROXY: ${HTTPS_PROXY-}
 
     container_name: eventapi-identity-service
     ports:
