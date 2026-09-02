@@ -106,15 +106,21 @@ services:
     build:
       context: .
       dockerfile: Events.Service/Dockerfile
+      network: host
+      args:
+        HTTP_PROXY: "http://192.168.57.4:8118"
+        HTTPS_PROXY: "http://192.168.57.4:8118"
+
     container_name: eventapi-events-service
     ports:
       - "127.0.0.1:8080:8080"
     environment:
+
       # База данных
-      ConnectionStrings__EventsDb: "Host=events-db;Port=5432;Database=events;Username=postgres;Password=postgres"
+      ConnectionStrings__DefaultConnection: "Host=events-db;Port=5432;Database=events;Username=postgres;Password=postgres"
       
       # Kafka (важно: внутренний порт 29092, а не 9092)
-      Kafka__BootstrapServers: "kafka:29092"
+      ConnectionStrings__BootstrapServers: "kafka:29092"
       
       # Redis
       Redis__Servers: "redis:6379"
