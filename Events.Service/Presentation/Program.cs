@@ -3,6 +3,7 @@ using System.Text;
 using CSCourse.Contracts.Models;
 using Events.Service.Application;
 using Events.Service.Infrastructure;
+using Events.Service.Infrastructure.Config;
 using Events.Service.Infrastructure.DataAccess;
 using Events.Service.Middlewares;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -18,6 +19,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 var bootstrapServers = builder.Configuration.GetConnectionString("BootstrapServers") 
     ?? throw new InvalidOperationException("Connection string 'BootstrapServers' not found.");
 
+builder.Services.Configure<RedisSettings>(builder.Configuration.GetSection("Redis"));
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 
 builder.Services.AddAuthorization();

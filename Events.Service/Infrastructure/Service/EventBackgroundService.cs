@@ -16,7 +16,6 @@ public class EventBackgroundService : BackgroundService
     private readonly ILogger<EventBackgroundService> _logger;
     private readonly IEventKafkaPublisher _kafkaPublisher;
     private readonly ConsumerConfig _consumerConfig;
-
     private readonly string _bookingCreatedTopic = KafkaTopics.BookingCreated;
     private readonly string _bookingCancellationTopic = KafkaTopics.BookingCancellation;
 
@@ -193,6 +192,9 @@ public class EventBackgroundService : BackgroundService
                     bookingCreated.EventId,
                     bookingCreated.Id);
 
+                var cacheRepo = scope.ServiceProvider.GetRequiredService<IEventCacheRepository>();
+                await cacheRepo.DeleteValueByIdAsync(bookingCreated.Id);
+
                 await _kafkaPublisher.PublishBookingResponseAsync(new BookingResponse
                 {
                     Id = bookingCreated.Id,
@@ -258,6 +260,9 @@ public class EventBackgroundService : BackgroundService
 
             if (released)
             {
+                var cacheRepo = scope.ServiceProvider.GetRequiredService<IEventCacheRepository>();
+                await cacheRepo.DeleteValueByIdAsync(cancellation.Id);
+
                 _logger.LogInformation(
                     "Места для мероприятия {EventId} освобождены. Бронирование {BookingId} отменено.",
                     cancellation.EventId,

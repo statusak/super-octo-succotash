@@ -9,13 +9,16 @@ namespace Events.Service.Application.Services
     {
         private readonly IEventRepository _events;
 
+        private readonly IEventCacheRepository _eventCacheRepository;
+
         private readonly object _lockCreateEvent = new object();
 
         private readonly SemaphoreSlim _processingSemaphoreEvent = new(1, 1);
 
-        public EventService(IEventRepository events)
+        public EventService(IEventRepository events, IEventCacheRepository eventCacheRepository)
         {
             _events = events;
+            _eventCacheRepository = eventCacheRepository;
         }
 
         public PaginatedResult GetAll(int page, int pageSize)
@@ -70,9 +73,14 @@ namespace Events.Service.Application.Services
             };
         }
 
+        public async Task<Event?> GetEventByIdCacheAsync(Guid id)
+        {
+            return await _eventCacheRepository.GetByIdAsync(id);
+        }
+
         public Event? GetEventById(Guid id)
         {
-            return _events.GetById(id);
+            return _events.GetByIdAsync(id).Result;
         }
 
         public async Task<Event?> GetEventByIdAsync(Guid id)
@@ -175,7 +183,8 @@ namespace Events.Service.Application.Services
                 StartAt = @event.StartAt,
                 EndAt = @event.EndAt,
             };
-            return await _events.UpdateAsync(eventRepositoryUpdateDto);
+            
+            return await _eventCacheRepository.UpdateAsync(eventRepositoryUpdateDto);
         }
 
         public bool UpdateEvent(Guid id, string Title, string? Description, DateTime StartAt, DateTime EndAt)
@@ -210,12 +219,23 @@ namespace Events.Service.Application.Services
 
         public async Task<bool> DeleteEventAsync(Guid id)
         {
-            return await _events.DeleteAsync(id);
+            if(await _events.DeleteAsync(id))
+            {
+                await _eventCacheRepository.DeleteValueByIdAsync(id);
+                await _eventCacheRepository.DeleteValueTop10Async();
+                return true;
+            }
+            return false;
         }
         
         public async Task<List<Event>> GetActiveEventsAsync()
         {
             return await _events.GetActiveAsync();
+        }
+
+        public async Task<List<Event>> GetTop10Async()
+        {
+            return await _eventCacheRepository.GetTop10Async();
         }
 
     }

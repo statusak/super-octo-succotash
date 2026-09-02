@@ -95,6 +95,8 @@ namespace Events.Service.Application.Interfaces
         /// </remarks>
         Task<Event?> GetEventByIdAsync(Guid id);
 
+        Task<Event?> GetEventByIdCacheAsync(Guid id);
+
         /// <summary>
         /// Пытается зарезервировать указанное количество мест на мероприятии.
         /// </summary>
@@ -268,5 +270,7 @@ namespace Events.Service.Application.Interfaces
         Task<bool> DeleteEventAsync(Guid id);
 
         Task<List<Event>> GetActiveEventsAsync();
+
+        Task<List<Event>> GetTop10Async();
     }
 }
