@@ -40,18 +40,20 @@ public class CacheUnitTests
     }
 
     // ── GetByIdAsync: попадание в кеш ──
+
     [Fact]
     public async Task GetByIdAsync_CacheHit_ReturnsFromCacheAndDoesNotCallRepository()
     {
         var id = Guid.NewGuid();
+        var now = DateTime.UtcNow;
         var cachedEvent = new Event
         {
             Id = id,
             Title = "Cached",
             TotalSeats = 100,
             AvailableSeats = 50,
-            StartAt = DateTime.UtcNow,
-            EndAt = DateTime.UtcNow.AddHours(2)
+            StartAt = now,
+            EndAt = now.AddHours(2)
         };
         var serialized = JsonSerializer.Serialize(cachedEvent);
 
@@ -66,23 +68,27 @@ public class CacheUnitTests
     }
 
     // ── GetByIdAsync: промах ──
+
     [Fact]
     public async Task GetByIdAsync_CacheMiss_GetsFromRepositoryAndSavesToCache()
     {
         var id = Guid.NewGuid();
+        var now = DateTime.UtcNow;
         var repoEvent = new Event
         {
             Id = id,
             Title = "From Repo",
             TotalSeats = 200,
             AvailableSeats = 80,
-            StartAt = DateTime.UtcNow,
-            EndAt = DateTime.UtcNow.AddHours(3)
+            StartAt = now,
+            EndAt = now.AddHours(3)
         };
 
         _redis.StringGetAsync(Arg.Any<RedisKey>(), Arg.Any<CommandFlags>())
             .Returns(RedisValue.Null);
-        _repository.GetByIdAsync(id).Returns(repoEvent);
+#pragma warning disable CS8620
+        _repository.GetByIdAsync(id).Returns((Event?)repoEvent);
+#pragma warning restore CS8620
 
         var result = await _sut.GetByIdAsync(id);
 
@@ -92,13 +98,11 @@ public class CacheUnitTests
         await _redis.Received(1).StringSetAsync(
             Arg.Is<RedisKey>(k => k.ToString() == $"event:{id}"),
             Arg.Any<RedisValue>(),
-            Arg.Any<TimeSpan?>(),
-            Arg.Any<When>(),
-            Arg.Any<CommandFlags>()
-        );
+            Arg.Any<Expiration>());
     }
 
     // ── GetByIdAsync: промах, репозиторий вернул null ──
+
     [Fact]
     public async Task GetByIdAsync_CacheMissRepoReturnsNull_DoesNotSaveToCache()
     {
@@ -106,7 +110,9 @@ public class CacheUnitTests
 
         _redis.StringGetAsync(Arg.Any<RedisKey>(), Arg.Any<CommandFlags>())
             .Returns(RedisValue.Null);
+#pragma warning disable CS8620
         _repository.GetByIdAsync(id).Returns((Event?)null);
+#pragma warning restore CS8620
 
         var result = await _sut.GetByIdAsync(id);
 
@@ -114,13 +120,11 @@ public class CacheUnitTests
         await _redis.DidNotReceive().StringSetAsync(
             Arg.Any<RedisKey>(),
             Arg.Any<RedisValue>(),
-            Arg.Any<TimeSpan?>(),
-            Arg.Any<When>(),
-            Arg.Any<CommandFlags>()
-        );
+            Arg.Any<Expiration>());
     }
 
     // ── GetTop10Async: попадание в кеш ──
+
     [Fact]
     public async Task GetTop10Async_CacheHit_ReturnsFromCacheAndDoesNotCallRepository()
     {
@@ -158,6 +162,7 @@ public class CacheUnitTests
     }
 
     // ── GetTop10Async: промах ──
+
     [Fact]
     public async Task GetTop10Async_CacheMiss_GetsFromRepositoryAndSavesToCache()
     {
@@ -195,13 +200,11 @@ public class CacheUnitTests
         await _redis.Received(1).StringSetAsync(
             Arg.Is<RedisKey>(k => k.ToString() == "events:top10"),
             Arg.Any<RedisValue>(),
-            Arg.Any<TimeSpan?>(),
-            Arg.Any<When>(),
-            Arg.Any<CommandFlags>()
-        );
+            Arg.Any<Expiration>());
     }
 
     // ── DeleteValueByIdAsync ──
+
     [Fact]
     public async Task DeleteValueByIdAsync_CallsRedisKeyDeleteWithCorrectKey()
     {
@@ -214,11 +217,11 @@ public class CacheUnitTests
         Assert.True(result);
         await _redis.Received(1).KeyDeleteAsync(
             Arg.Is<RedisKey>(k => k.ToString() == $"event:{id}"),
-            Arg.Any<CommandFlags>()
-        );
+            Arg.Any<CommandFlags>());
     }
 
     // ── DeleteValueTop10Async ──
+
     [Fact]
     public async Task DeleteValueTop10Async_CallsRedisKeyDeleteWithCorrectKey()
     {
@@ -230,21 +233,22 @@ public class CacheUnitTests
         Assert.True(result);
         await _redis.Received(1).KeyDeleteAsync(
             Arg.Is<RedisKey>(k => k.ToString() == "events:top10"),
-            Arg.Any<CommandFlags>()
-        );
+            Arg.Any<CommandFlags>());
     }
 
     // ── UpdateAsync: репозиторий обновил → кеш инвалидируется ──
+
     [Fact]
     public async Task UpdateAsync_RepoSucceeds_InvalidatesBothByIdAndTop10Cache()
     {
         var id = Guid.NewGuid();
+        var now = DateTime.UtcNow;
         var dto = new EventRepositoryUpdateDto
         {
             Id = id,
             Title = "Updated Title",
-            StartAt = DateTime.UtcNow,
-            EndAt = DateTime.UtcNow.AddHours(4)
+            StartAt = now,
+            EndAt = now.AddHours(4)
         };
 
         _repository.UpdateAsync(dto).Returns(true);
@@ -257,24 +261,24 @@ public class CacheUnitTests
         await _repository.Received(1).UpdateAsync(dto);
         await _redis.Received(1).KeyDeleteAsync(
             Arg.Is<RedisKey>(k => k.ToString() == $"event:{id}"),
-            Arg.Any<CommandFlags>()
-        );
+            Arg.Any<CommandFlags>());
         await _redis.Received(1).KeyDeleteAsync(
             Arg.Is<RedisKey>(k => k.ToString() == "events:top10"),
-            Arg.Any<CommandFlags>()
-        );
+            Arg.Any<CommandFlags>());
     }
 
     // ── UpdateAsync: репозиторий не обновил → кеш не трогается ──
+
     [Fact]
     public async Task UpdateAsync_RepoFails_DoesNotInvalidateCache()
     {
+        var now = DateTime.UtcNow;
         var dto = new EventRepositoryUpdateDto
         {
             Id = Guid.NewGuid(),
             Title = "Failed Update",
-            StartAt = DateTime.UtcNow,
-            EndAt = DateTime.UtcNow.AddHours(5)
+            StartAt = now,
+            EndAt = now.AddHours(5)
         };
 
         _repository.UpdateAsync(dto).Returns(false);
@@ -285,7 +289,6 @@ public class CacheUnitTests
         await _repository.Received(1).UpdateAsync(dto);
         await _redis.DidNotReceive().KeyDeleteAsync(
             Arg.Any<RedisKey>(),
-            Arg.Any<CommandFlags>()
-        );
+            Arg.Any<CommandFlags>());
     }
 }
