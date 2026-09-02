@@ -86,9 +86,8 @@ public class CacheUnitTests
 
         _redis.StringGetAsync(Arg.Any<RedisKey>(), Arg.Any<CommandFlags>())
             .Returns(RedisValue.Null);
-#pragma warning disable CS8620
-        _repository.GetByIdAsync(id).Returns((Event?)repoEvent);
-#pragma warning restore CS8620
+
+        _repository.GetByIdAsync(id).Returns(Task.FromResult<Event?>(repoEvent)!);
 
         var result = await _sut.GetByIdAsync(id);
 
@@ -110,9 +109,9 @@ public class CacheUnitTests
 
         _redis.StringGetAsync(Arg.Any<RedisKey>(), Arg.Any<CommandFlags>())
             .Returns(RedisValue.Null);
-#pragma warning disable CS8620
-        _repository.GetByIdAsync(id).Returns((Event?)null);
-#pragma warning restore CS8620
+
+        _repository.GetByIdAsync(id)
+            .Returns(Task.FromResult<Event?>(null)!);
 
         var result = await _sut.GetByIdAsync(id);
 
