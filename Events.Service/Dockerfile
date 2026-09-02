@@ -16,8 +16,7 @@ RUN dotnet restore "Events.Service/Presentation/Events.Service.csproj" --verbosi
 
 COPY .. .
 WORKDIR "/src/Events.Service/Presentation"
-# RUN dotnet publish "Events.Service.csproj" -c Release -o /app/publish /p:UseAppHost=false
-RUN dotnet publish "Events.Service.csproj" -c Debug -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "Events.Service.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app
