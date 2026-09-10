@@ -9,11 +9,17 @@ using StackExchange.Redis;
 
 namespace Events.Service.Infrastructure.Repositories;
 
+public static class EventCacheKeys
+{
+    public static string ById(Guid id) => $"event:{id}";
+    public const string Top10 = "events:top10";
+}
+
 public class EventCacheRepository : IEventCacheRepository
 {
     private readonly IDatabase _redis;
     private readonly IEventRepository _repository;
-    private readonly ILogger _logger;
+    private readonly ILogger<EventCacheRepository> _logger;
     private readonly TimeSpan _expiryEventById = TimeSpan.FromMinutes(10);
     private readonly TimeSpan _expiryTop10Events = TimeSpan.FromMinutes(1);
 
@@ -30,19 +36,19 @@ public class EventCacheRepository : IEventCacheRepository
         var settings = redisSettings.Value;
         _expiryEventById = TimeSpan.FromMinutes(settings.ExpiryEventByIdMinutes);
         _expiryTop10Events = TimeSpan.FromMinutes(settings.ExpiryTop10EventsMinutes);
-
     }
-
 
     public async Task<Event?> GetByIdAsync(Guid id)
     {
-        var key = $"event:{id}";
+        var key = EventCacheKeys.ById(id);
 
         try
         {
             var cached = await _redis.StringGetAsync(key);
             if (cached.HasValue)
+            {
                 return JsonSerializer.Deserialize<Event>(cached.ToString());
+            }
         }
         catch (RedisException ex)
         {
@@ -63,12 +69,13 @@ public class EventCacheRepository : IEventCacheRepository
         {
             _logger.LogError(ex, "Ошибка установки ключа {Key} в Redis", key);
         }
+
         return @event;
     }
 
     public async Task<List<Event>> GetTop10Async()
     {
-        const string cacheKey = "events:top10";
+        var cacheKey = EventCacheKeys.Top10;
 
         try
         {
@@ -80,7 +87,7 @@ public class EventCacheRepository : IEventCacheRepository
         }
         catch (RedisException ex)
         {
-            _logger.LogError(ex, $"Ошибка получения ключа {cacheKey} из Redis при получении top10");
+            _logger.LogError(ex, "Ошибка получения ключа {Key} из Redis при получении top10", cacheKey);
         }
 
         var events = await _repository.GetTop10Async();
@@ -95,7 +102,7 @@ public class EventCacheRepository : IEventCacheRepository
         }
         catch (RedisException ex)
         {
-            _logger.LogError(ex, $"Ошибка установки ключа {cacheKey} в Redis");
+            _logger.LogError(ex, "Ошибка установки ключа {Key} в Redis", cacheKey);
         }
 
         return events;
@@ -103,7 +110,7 @@ public class EventCacheRepository : IEventCacheRepository
 
     public async Task<bool> DeleteValueByIdAsync(Guid id)
     {
-        var key = $"event:{id}";
+        var key = EventCacheKeys.ById(id);
 
         try
         {
@@ -123,7 +130,7 @@ public class EventCacheRepository : IEventCacheRepository
 
     public async Task<bool> DeleteValueTop10Async()
     {
-        const string cacheKey = "events:top10";
+        var cacheKey = EventCacheKeys.Top10;
 
         try
         {
