@@ -173,45 +173,11 @@ namespace Events.Service.Application.Services
             return _events.Update(eventRepositoryUpdateDto);
         }
 
-        public async Task<bool> UpdateEventAsync(Guid id, Event @event)
+        public async Task<bool> UpdateEventAsync(Guid id, EventRepositoryUpdateDto @event)
         {
-            var eventRepositoryUpdateDto = new EventRepositoryUpdateDto
-            {
-                Id = id,
-                Title = @event.Title,
-                Description = @event.Description,
-                StartAt = @event.StartAt,
-                EndAt = @event.EndAt,
-            };
-            
-            return await _eventCacheRepository.UpdateAsync(eventRepositoryUpdateDto);
+            return await _eventCacheRepository.UpdateAsync(@event);
         }
 
-        public bool UpdateEvent(Guid id, string Title, string? Description, DateTime StartAt, DateTime EndAt)
-        {
-            var eventRepositoryUpdateDto = new EventRepositoryUpdateDto
-            {
-                Id = id,
-                Title = Title,
-                Description = Description,
-                StartAt = StartAt,
-                EndAt = EndAt,
-            };
-            return _events.Update(eventRepositoryUpdateDto);
-        }
-
-        public async Task<bool> UpdateEventAsync(Guid id, string Title, string? Description, DateTime StartAt, DateTime EndAt)
-        {
-            var eventRepositoryUpdateDto = new EventRepositoryUpdateDto
-            {
-                Id = id,
-                Title = Title,
-                Description = Description,
-                StartAt = StartAt,
-                EndAt = EndAt,
-            };
-            return await _events.UpdateAsync(eventRepositoryUpdateDto);
-        }
         public bool DeleteEvent(Guid id)
         {
             return _events.Delete(id);

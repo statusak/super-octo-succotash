@@ -245,11 +245,20 @@ namespace Identity.Service.Controllers
 
             try
             {
-                bool res = await _eventService.UpdateEventAsync(index, eventDto.Title, eventDto.Description, eventDto.StartAt, eventDto.EndAt);
+                var dto = new EventRepositoryUpdateDto
+                {
+                    Id = index,
+                    Title = eventDto.Title,
+                    Description = eventDto.Description,
+                    StartAt = eventDto.StartAt,
+                    EndAt = eventDto.EndAt
+                };
+
+                bool res = await _eventService.UpdateEventAsync(index, dto);
                 if (res)
                 {
                     return NoContent();
-                } 
+                }
                 return NotFound($"Event with index {index} not found");
             }
             catch (InvalidOperationException)
@@ -257,6 +266,8 @@ namespace Identity.Service.Controllers
                 return NotFound($"Event with index {index} not found");
             }
         }
+
+
 
         /// <summary>
         /// Удаляет мероприятие из системы по его идентификатору.
