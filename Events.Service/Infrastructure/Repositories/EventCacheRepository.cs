@@ -38,9 +38,16 @@ public class EventCacheRepository : IEventCacheRepository
     {
         var key = $"event:{id}";
 
-        var cached = await _redis.StringGetAsync(key);
-        if (cached.HasValue)
-            return JsonSerializer.Deserialize<Event>(cached.ToString());
+        try
+        {
+            var cached = await _redis.StringGetAsync(key);
+            if (cached.HasValue)
+                return JsonSerializer.Deserialize<Event>(cached.ToString());
+        }
+        catch (RedisException ex)
+        {
+            _logger.LogError(ex, "Ошибка получения ключа {Key} из Redis", key);
+        }
 
         var @event = await _repository.GetByIdAsync(id);
         if (@event is null)
@@ -48,12 +55,13 @@ public class EventCacheRepository : IEventCacheRepository
 
         var serialized = JsonSerializer.Serialize(@event);
 
-
-        try{
-            await _redis.StringSetAsync(key, serialized, _expiryEventById);
-        } catch (RedisException ex)
+        try
         {
-            _logger.LogError(ex, $"Ошибка установки ключа {key} в Redis");
+            await _redis.StringSetAsync(key, serialized, _expiryEventById);
+        }
+        catch (RedisException ex)
+        {
+            _logger.LogError(ex, "Ошибка установки ключа {Key} в Redis", key);
         }
         return @event;
     }
