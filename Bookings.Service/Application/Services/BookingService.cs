@@ -20,13 +20,14 @@ public class BookingService : IBookingService
         _kafkaPublisher = kafkaPublisher;
         _bookings = bookings;
     }
-    
+
     public async Task<Booking> InitiateBookingAsync(Guid eventId, Guid userId)
     {
         await _processingSemaphoreBooking.WaitAsync();
         try
         {
-            BookingRepositoryCreateDto dto = new BookingRepositoryCreateDto{
+            BookingRepositoryCreateDto dto = new BookingRepositoryCreateDto
+            {
                 EventId = eventId,
                 UserId = userId,
                 Status = BookingStatus.Pending,

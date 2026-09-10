@@ -10,7 +10,7 @@ namespace Bookings.Service.Infrastructure;
 /// с корректными настройками партиций и фактора репликации.
 /// </summary>
 public static class KafkaTopicInitializer
-{   
+{
     /// <summary>
     /// Асинхронно создаёт или проверяет существование всех топиков, объявленных в <see cref="KafkaTopics.All"/>.
     /// Если топик уже существует — ошибка игнорируется; другие ошибки пробрасываются дальше.
@@ -48,7 +48,7 @@ public static class KafkaTopicInitializer
         {
             if (!e.Results.All(r => r.Error.Code == ErrorCode.TopicAlreadyExists))
                 throw;
-            
+
             Console.WriteLine("[KAFKA] Topics already exist.");
         }
     }
