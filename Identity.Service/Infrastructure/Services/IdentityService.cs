@@ -23,7 +23,7 @@ public class IdentityService : IIdentityService
     {
         var existing = await _context.Accounts.FirstOrDefaultAsync(a => a.Login == accountRegisterDto.Login);
 
-        if(existing != null)
+        if (existing != null)
         {
             throw new UserAlreadyExistsException();
         }
@@ -48,7 +48,7 @@ public class IdentityService : IIdentityService
     {
         var account = await _context.Accounts.FirstOrDefaultAsync(a => a.Login == accountSignInDto.Login);
 
-        if(account == null)
+        if (account == null)
         {
             return null;
         }

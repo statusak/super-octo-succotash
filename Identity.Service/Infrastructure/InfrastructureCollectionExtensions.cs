@@ -32,7 +32,7 @@ public static class InfrastructureCollectionExtensions
 
         services.AddScoped<ISecurityService, SecurityService>();
         services.AddScoped<IIdentityService, IdentityService>();
-        
+
         return services;
     }
 }
