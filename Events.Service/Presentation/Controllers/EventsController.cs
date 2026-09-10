@@ -100,17 +100,16 @@ namespace Identity.Service.Controllers
         [HttpGet("{index:guid}")]
         public async Task<ActionResult<Event>> GetById(Guid index)
         {
-            try
-            {
-                var eventItem = await _eventService.GetEventByIdCacheAsync(index);
-                // TODO: Возвращать EventInfoDto, т.к. выводится поле Booking 
-                return Ok(eventItem);
-            }
-            catch (InvalidOperationException)
+            var eventItem = await _eventService.GetEventByIdCacheAsync(index);
+            // TODO: Возвращать EventInfoDto
+            if (eventItem == null)
             {
                 return NotFound($"Event with index {index} not found");
             }
+
+            return Ok(eventItem);
         }
+
 
         /// <summary>
         /// Получает топ‑10 мероприятий по популярности.
@@ -171,12 +170,12 @@ namespace Identity.Service.Controllers
         /// }
         /// </code>
         /// </remarks>
-        /// <returns>HTTP статус 202 Accepted с объектом мероприятия и заголовком Location, указывающим на URL созданного ресурса.</returns>
-        /// <response code="202">Мероприятие успешно создано. Возвращается объект мероприятия и ссылка на ресурс (Location header).</response>
+        /// <returns>HTTP статус 201 Created с объектом мероприятия и заголовком Location, указывающим на URL созданного ресурса.</returns>
+        /// <response code="201">Мероприятие успешно создано. Возвращается объект мероприятия и ссылка на ресурс (Location header).</response>
         /// <response code="400">Ошибка валидации или некорректные данные (HTTP 400 Bad Request)</response>
         [Authorize(Roles = "Admin")]
         [HttpPost]
-        [ProducesResponseType(StatusCodes.Status202Accepted, Type = typeof(Event))]
+        [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(Event))]
         [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(string))]
         public async Task<ActionResult<Event>> Post([FromBody] EventCreateDto eventDto)
         {
@@ -197,7 +196,7 @@ namespace Identity.Service.Controllers
             };
 
             @event.Id = await _eventService.CreateEventAsync(@event);
-            // TODO: Возвращать EventInfoDto, т.к. выводится поле Booking 
+            // TODO: Возвращать EventInfoDto, т.к. выводится поле Booking
 
             return CreatedAtAction(
                 actionName: nameof(GetById),
@@ -205,6 +204,7 @@ namespace Identity.Service.Controllers
                 value: @event
             );
         }
+
 
         /// <summary>
         /// Полностью обновляет существующее мероприятие.
