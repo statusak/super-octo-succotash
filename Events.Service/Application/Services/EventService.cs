@@ -27,7 +27,7 @@ namespace Events.Service.Application.Services
             {
                 CountEvents = _events.Count(),
                 Events = _events.GetPage(page, pageSize)
-            }; 
+            };
         }
 
         public async Task<PaginatedResult> GetAllAsync(int page, int pageSize)
@@ -65,7 +65,7 @@ namespace Events.Service.Application.Services
                 StartAt = filterEvent.StartAt,
                 EndAt = filterEvent.EndAt,
             };
-           
+
             return new PaginatedResult
             {
                 CountEvents = await _events.CountAsync(),
@@ -185,7 +185,7 @@ namespace Events.Service.Application.Services
 
         public async Task<bool> DeleteEventAsync(Guid id)
         {
-            if(await _events.DeleteAsync(id))
+            if (await _events.DeleteAsync(id))
             {
                 await _eventCacheRepository.DeleteValueByIdAsync(id);
                 await _eventCacheRepository.DeleteValueTop10Async();
@@ -193,7 +193,7 @@ namespace Events.Service.Application.Services
             }
             return false;
         }
-        
+
         public async Task<List<Event>> GetActiveEventsAsync()
         {
             return await _events.GetActiveAsync();

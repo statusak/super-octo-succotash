@@ -5,6 +5,6 @@ namespace Events.Service.Domain.Exceptions;
 /// </summary>
 public class BookingForPastEventException : Exception
 {
-    public BookingForPastEventException() {}
+    public BookingForPastEventException() { }
     public BookingForPastEventException(string message) : base(message) { }
 }

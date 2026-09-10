@@ -15,7 +15,7 @@ namespace Events.Service.Infrastructure.DataAccess.Configurations
 
             builder.Property(e => e.Title).IsRequired().HasMaxLength(64);
             builder.Property(e => e.Description).HasMaxLength(512);
-            
+
             builder.Property(e => e.TotalSeats).IsRequired().HasColumnType("decimal(18,2)");
             builder.Property(e => e.AvailableSeats).IsRequired().HasColumnType("decimal(18,2)");
 

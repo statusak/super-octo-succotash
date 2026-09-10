@@ -15,7 +15,7 @@ public static class InfrastructureCollectionExtensions
 {
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
-        string connectionString, 
+        string connectionString,
         string bootstrapServers)
     {
         /// Из-за настройки o.EnableRetryOnFailure() вылетает ошибка, 
@@ -33,7 +33,7 @@ public static class InfrastructureCollectionExtensions
         //     }));
         ///
         /// 
-        
+
 
         services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
 
@@ -61,9 +61,9 @@ public static class InfrastructureCollectionExtensions
         services.AddScoped<IEventRepository, EventRepository>();
         services.AddSingleton<IEventKafkaPublisher, EventKafkaPublisher>();
         services.AddScoped<IEventCacheRepository, EventCacheRepository>();
-        
+
         services.AddHostedService<EventBackgroundService>();
-        
+
         return services;
     }
 }

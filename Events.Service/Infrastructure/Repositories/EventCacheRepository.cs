@@ -92,7 +92,8 @@ public class EventCacheRepository : IEventCacheRepository
                 JsonSerializer.Serialize(events),
                 _expiryTop10Events
             );
-        } catch (RedisException ex)
+        }
+        catch (RedisException ex)
         {
             _logger.LogError(ex, $"Ошибка установки ключа {cacheKey} в Redis");
         }

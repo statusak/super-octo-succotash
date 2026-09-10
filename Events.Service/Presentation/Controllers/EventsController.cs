@@ -289,7 +289,7 @@ namespace Identity.Service.Controllers
         {
             try
             {
-                if(await _eventService.DeleteEventAsync(index))
+                if (await _eventService.DeleteEventAsync(index))
                 {
                     return Ok();
                 }
