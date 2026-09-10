@@ -193,7 +193,7 @@ public class EventBackgroundService : BackgroundService
                     bookingCreated.Id);
 
                 var cacheRepo = scope.ServiceProvider.GetRequiredService<IEventCacheRepository>();
-                await cacheRepo.DeleteValueByIdAsync(bookingCreated.Id);
+                await cacheRepo.DeleteValueByIdAsync(bookingCreated.EventId);
 
                 await _kafkaPublisher.PublishBookingResponseAsync(new BookingResponse
                 {
@@ -261,7 +261,7 @@ public class EventBackgroundService : BackgroundService
             if (released)
             {
                 var cacheRepo = scope.ServiceProvider.GetRequiredService<IEventCacheRepository>();
-                await cacheRepo.DeleteValueByIdAsync(cancellation.Id);
+                await cacheRepo.DeleteValueByIdAsync(cancellation.EventId);
 
                 _logger.LogInformation(
                     "Места для мероприятия {EventId} освобождены. Бронирование {BookingId} отменено.",
