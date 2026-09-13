@@ -100,16 +100,52 @@ namespace Identity.Service.Controllers
         [HttpGet("{index:guid}")]
         public async Task<ActionResult<Event>> GetById(Guid index)
         {
-            try
-            {
-                var eventItem = await _eventService.GetEventByIdAsync(index);
-                // TODO: Возвращать EventInfoDto, т.к. выводится поле Booking 
-                return Ok(eventItem);
-            }
-            catch (InvalidOperationException)
+            var eventItem = await _eventService.GetEventByIdCacheAsync(index);
+            // TODO: Возвращать EventInfoDto
+            if (eventItem == null)
             {
                 return NotFound($"Event with index {index} not found");
             }
+
+            return Ok(eventItem);
+        }
+
+
+        /// <summary>
+        /// Получает топ‑10 мероприятий по популярности.
+        /// </summary>
+        /// <remarks>
+        /// Возвращает список из 10 наиболее востребованных мероприятий. Критерий отбора («топ») определяется внутренней логикой сервиса 
+        /// (например, по количеству бронирований, рейтингу или посещаемости). Порядок элементов — от наиболее популярного к менее популярному.
+        ///
+        /// Пример запроса:
+        /// GET /Events/top
+        ///
+        /// Пример ответа (HTTP 200 OK):
+        /// <code>
+        /// [
+        ///   {
+        ///     "id": "308dd020-a855-4e80-b29e-b3582b6de65c",
+        ///     "title": "Конференция разработчиков",
+        ///     "description": "Ежегодная конференция...",
+        ///     "totalSeats": 10,
+        ///     "availableSeats": 3,
+        ///     "startAt": "2023-12-01T10:00:00",
+        ///     "endAt": "2023-12-01T18:00:00"
+        ///   },
+        ///   ...
+        /// ]
+        /// </code>
+        /// </remarks>
+        /// <response code="200">Успешный ответ: список топ‑10 мероприятий (HTTP 200 OK)</response>
+        /// <returns>Список из до 10 объектов мероприятий</returns>
+        [HttpGet("top")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<Event>))]
+        public async Task<ActionResult<List<Event>>> GetTop10()
+        {
+            var eventItems = await _eventService.GetTop10Async();
+            // TODO: Возвращать EventInfoDto, т.к. выводится поле Booking 
+            return Ok(eventItems);
         }
 
         /// <summary>
@@ -134,12 +170,12 @@ namespace Identity.Service.Controllers
         /// }
         /// </code>
         /// </remarks>
-        /// <returns>HTTP статус 202 Accepted с объектом мероприятия и заголовком Location, указывающим на URL созданного ресурса.</returns>
-        /// <response code="202">Мероприятие успешно создано. Возвращается объект мероприятия и ссылка на ресурс (Location header).</response>
+        /// <returns>HTTP статус 201 Created с объектом мероприятия и заголовком Location, указывающим на URL созданного ресурса.</returns>
+        /// <response code="201">Мероприятие успешно создано. Возвращается объект мероприятия и ссылка на ресурс (Location header).</response>
         /// <response code="400">Ошибка валидации или некорректные данные (HTTP 400 Bad Request)</response>
         [Authorize(Roles = "Admin")]
         [HttpPost]
-        [ProducesResponseType(StatusCodes.Status202Accepted, Type = typeof(Event))]
+        [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(Event))]
         [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(string))]
         public async Task<ActionResult<Event>> Post([FromBody] EventCreateDto eventDto)
         {
@@ -160,7 +196,7 @@ namespace Identity.Service.Controllers
             };
 
             @event.Id = await _eventService.CreateEventAsync(@event);
-            // TODO: Возвращать EventInfoDto, т.к. выводится поле Booking 
+            // TODO: Возвращать EventInfoDto, т.к. выводится поле Booking
 
             return CreatedAtAction(
                 actionName: nameof(GetById),
@@ -168,6 +204,7 @@ namespace Identity.Service.Controllers
                 value: @event
             );
         }
+
 
         /// <summary>
         /// Полностью обновляет существующее мероприятие.
@@ -208,11 +245,20 @@ namespace Identity.Service.Controllers
 
             try
             {
-                bool res = await _eventService.UpdateEventAsync(index, eventDto.Title, eventDto.Description, eventDto.StartAt, eventDto.EndAt);
+                var dto = new EventRepositoryUpdateDto
+                {
+                    Id = index,
+                    Title = eventDto.Title,
+                    Description = eventDto.Description,
+                    StartAt = eventDto.StartAt,
+                    EndAt = eventDto.EndAt
+                };
+
+                bool res = await _eventService.UpdateEventAsync(index, dto);
                 if (res)
                 {
                     return NoContent();
-                } 
+                }
                 return NotFound($"Event with index {index} not found");
             }
             catch (InvalidOperationException)
@@ -220,6 +266,8 @@ namespace Identity.Service.Controllers
                 return NotFound($"Event with index {index} not found");
             }
         }
+
+
 
         /// <summary>
         /// Удаляет мероприятие из системы по его идентификатору.
@@ -241,7 +289,7 @@ namespace Identity.Service.Controllers
         {
             try
             {
-                if(await _eventService.DeleteEventAsync(index))
+                if (await _eventService.DeleteEventAsync(index))
                 {
                     return Ok();
                 }

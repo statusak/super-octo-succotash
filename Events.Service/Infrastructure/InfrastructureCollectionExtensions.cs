@@ -6,6 +6,8 @@ using Events.Service.Infrastructure.Services;
 using Events.Service.Infrastructure.DataAccess;
 using Events.Service.Infrastructure.Config;
 using Events.Service.Infrastructure.Repositories;
+using StackExchange.Redis;
+using Microsoft.Extensions.Options;
 
 namespace Events.Service.Infrastructure;
 
@@ -13,7 +15,7 @@ public static class InfrastructureCollectionExtensions
 {
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
-        string connectionString, 
+        string connectionString,
         string bootstrapServers)
     {
         /// Из-за настройки o.EnableRetryOnFailure() вылетает ошибка, 
@@ -31,7 +33,7 @@ public static class InfrastructureCollectionExtensions
         //     }));
         ///
         /// 
-        
+
 
         services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
 
@@ -40,12 +42,28 @@ public static class InfrastructureCollectionExtensions
             options.BootstrapServers = bootstrapServers;
         });
 
+        services.AddSingleton<IConnectionMultiplexer>(provider =>
+        {
+            var options = provider.GetRequiredService<IOptions<RedisSettings>>().Value;
+
+            var configOptions = new ConfigurationOptions
+            {
+                EndPoints = { options.Servers },
+                Password = options.Password,
+                ConnectTimeout = options.ConnectTimeout,
+                SyncTimeout = options.SyncTimeout,
+                AbortOnConnectFail = options.AbortOnConnectFail
+            };
+
+            return ConnectionMultiplexer.Connect(configOptions);
+        });
 
         services.AddScoped<IEventRepository, EventRepository>();
         services.AddSingleton<IEventKafkaPublisher, EventKafkaPublisher>();
-        
+        services.AddScoped<IEventCacheRepository, EventCacheRepository>();
+
         services.AddHostedService<EventBackgroundService>();
-        
+
         return services;
     }
 }

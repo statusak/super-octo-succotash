@@ -1,4 +1,5 @@
-﻿using Events.Service.Domain.Models;
+﻿using Events.Service.Application.Models;
+using Events.Service.Domain.Models;
 
 namespace Events.Service.Application.Interfaces
 {
@@ -94,6 +95,8 @@ namespace Events.Service.Application.Interfaces
         /// Рекомендуется использовать только для детального просмотра конкретного мероприятия.
         /// </remarks>
         Task<Event?> GetEventByIdAsync(Guid id);
+
+        Task<Event?> GetEventByIdCacheAsync(Guid id);
 
         /// <summary>
         /// Пытается зарезервировать указанное количество мест на мероприятии.
@@ -211,37 +214,7 @@ namespace Events.Service.Application.Interfaces
         /// <exception cref="InvalidOperationException">Выбрасывается, если мероприятие с указанным ID не найдено.</exception>
         /// <exception cref="ValidationException">Выбрасывается при нарушении правил валидации данных.</exception>
         /// <exception cref="ArgumentNullException">Выбрасывается, если переданный объект <c>event</c> равен <c>null</c>.</exception>
-        Task<bool> UpdateEventAsync(Guid id, Event @event);
-
-        /// <summary>
-        /// Частично обновляет данные существующего мероприятия, позволяя изменить ключевые поля.
-        /// </summary>
-        /// <param name="id">Уникальный идентификатор мероприятия, которое необходимо обновить.</param>
-        /// <param name="Title">Новое название мероприятия.</param>
-        /// <param name="Description">Новое описание мероприятия (может быть <c>null</c>).</param>
-        /// <param name="StartAt">Новая дата и время начала мероприятия.</param>
-        /// <param name="EndAt">Новая дата и время окончания мероприятия.</param>
-        /// <exception cref="InvalidOperationException">Выбрасывается, если мероприятие с указанным ID не найдено.</exception>
-        /// <remarks>
-        /// Альтернативный метод обновления, удобный для сценариев, где не требуется передавать полный объект <see cref="Event"/>.
-        /// Позволяет гибко обновлять только необходимые поля.
-        /// </remarks>
-        bool UpdateEvent(Guid id, string Title, string? Description, DateTime StartAt, DateTime EndAt);
-
-        /// <summary>
-        /// Частично обновляет данные существующего мероприятия, позволяя изменить ключевые поля (асинхронно).
-        /// </summary>
-        /// <param name="id">Уникальный идентификатор мероприятия, которое необходимо обновить.</param>
-        /// <param name="Title">Новое название мероприятия.</param>
-        /// <param name="Description">Новое описание мероприятия (может быть <c>null</c>).</param>
-        /// <param name="StartAt">Новая дата и время начала мероприятия.</param>
-        /// <param name="EndAt">Новая дата и время окончания мероприятия.</param>
-        /// <exception cref="InvalidOperationException">Выбрасывается, если мероприятие с указанным ID не найдено.</exception>
-        /// <remarks>
-        /// Альтернативный метод обновления, удобный для сценариев, где не требуется передавать полный объект <see cref="Event"/>.
-        /// Позволяет гибко обновлять только необходимые поля.
-        /// </remarks>
-        Task<bool> UpdateEventAsync(Guid id, string Title, string? Description, DateTime StartAt, DateTime EndAt);
+        Task<bool> UpdateEventAsync(Guid id, EventRepositoryUpdateDto dto);
 
         /// <summary>
         /// Удаляет мероприятие из системы по его уникальному идентификатору.
@@ -268,5 +241,7 @@ namespace Events.Service.Application.Interfaces
         Task<bool> DeleteEventAsync(Guid id);
 
         Task<List<Event>> GetActiveEventsAsync();
+
+        Task<List<Event>> GetTop10Async();
     }
 }

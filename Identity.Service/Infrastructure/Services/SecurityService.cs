@@ -27,10 +27,10 @@ public class SecurityService : ISecurityService
             throw new ArgumentException("Password cannot be null or empty.", nameof(password));
 
         byte[] inputBytes = Encoding.UTF8.GetBytes(password);
-    
+
         // Compute the hash algorithm bytes
         byte[] hashBytes = SHA256.HashData(inputBytes);
-        
+
         // Convert byte array to a clean uppercase Hexadecimal string
         return Convert.ToHexString(hashBytes).ToLower(); // Remove .ToLower()
     }
@@ -67,7 +67,7 @@ public class SecurityService : ISecurityService
             new Claim(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         };
 
-        
+
 
         var token = new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(
             issuer: _jwtSettings.Issuer,

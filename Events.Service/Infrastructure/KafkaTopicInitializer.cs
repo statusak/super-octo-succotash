@@ -5,7 +5,7 @@ using CSCourse.Contracts.Kafka;
 namespace Events.Service.Infrastructure;
 
 public static class KafkaTopicInitializer
-{   
+{
     public static async Task EnsureTopicsAsync(string bootstrapServers)
     {
         var config = new AdminClientConfig
@@ -37,7 +37,7 @@ public static class KafkaTopicInitializer
         {
             if (!e.Results.All(r => r.Error.Code == ErrorCode.TopicAlreadyExists))
                 throw;
-            
+
             Console.WriteLine("[KAFKA] Topics already exist.");
         }
     }

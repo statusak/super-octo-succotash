@@ -151,7 +151,7 @@ namespace Bookings.Service.Controllers
                 return BadRequest("User ID not found in claims");
 
             var role = GetCurrentUserRole();
-            if(role == null)
+            if (role == null)
                 return BadRequest("User role not found");
 
             try

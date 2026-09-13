@@ -24,7 +24,7 @@ public static class InfrastructureCollectionExtensions
     /// <returns>Обновлённая коллекция сервисов для цепочки вызовов.</returns>
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
-        string connectionString, 
+        string connectionString,
         string bootstrapServers)
     {
         // Из-за настройки o.EnableRetryOnFailure() вылетает ошибка,
@@ -50,9 +50,9 @@ public static class InfrastructureCollectionExtensions
 
         services.AddScoped<IBookingRepository, BookingRepository>();
         services.AddSingleton<IBookingKafkaPublisher, BookingKafkaPublisher>();
-        
+
         services.AddHostedService<BookingBackgroundService>();
-        
+
         return services;
     }
 }

@@ -48,8 +48,6 @@ services:
       POSTGRES_DB: users
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    ports:
-      - "127.0.0.1:5433:5432"
     volumes:
       - users-db-data:/var/lib/postgresql/data
     healthcheck:
@@ -65,8 +63,6 @@ services:
       POSTGRES_DB: events
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    ports:
-      - "127.0.0.1:5434:5432"
     volumes:
       - events-db-data:/var/lib/postgresql/data
     healthcheck:
@@ -82,8 +78,6 @@ services:
       POSTGRES_DB: bookings
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    ports:
-      - "127.0.0.1:5435:5432"
     volumes:
       - bookings-db-data:/var/lib/postgresql/data
     healthcheck:
@@ -91,6 +85,129 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: eventapi-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  events-service:
+    build:
+      context: .
+      dockerfile: Events.Service/Dockerfile
+      network: host
+      args:
+        HTTP_PROXY: ${HTTP_PROXY-}
+        HTTPS_PROXY: ${HTTPS_PROXY-}
+
+    container_name: eventapi-events-service
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      # База данных
+      ConnectionStrings__DefaultConnection: "Host=events-db;Port=5432;Database=events;Username=postgres;Password=postgres"
+      
+      # Kafka (важно: внутренний порт 29092, а не 9092)
+      ConnectionStrings__BootstrapServers: "kafka:29092"
+      
+      # Redis
+      Redis__Servers: "redis:6379"
+      Redis__ConnectTimeout: 5000
+      Redis__SyncTimeout: 3000
+      Redis__AbortOnConnectFail: "false"
+      Redis__ExpiryEventByIdMinutes: 10
+      Redis__ExpiryTop10EventsMinutes: 1
+
+      # JWT (если нужно переопределить в Docker)
+      JwtSettings__Secret: "super-secret-key-change-in-production-at-least-32-chars-long!"
+      JwtSettings__Issuer: "https://super-octo-succotash.com"
+      JwtSettings__Audience: "https://super-octo-succotash.com"
+      JwtSettings__ExpirationMinutes: 10
+
+      # Логирование и AllowedHosts при необходимости
+      Logging__LogLevel__Default: "Information"
+      AllowedHosts: "*"
+    depends_on:
+      events-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  bookings-service:
+    build:
+      context: .
+      dockerfile: Bookings.Service/Dockerfile
+      network: host
+      args:
+        HTTP_PROXY: ${HTTP_PROXY-}
+        HTTPS_PROXY: ${HTTPS_PROXY-}
+
+    container_name: eventapi-bookings-service
+    ports:
+      - "127.0.0.1:8081:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      # База данных
+      ConnectionStrings__DefaultConnection: "Host=bookings-db;Port=5432;Database=bookings;Username=postgres;Password=postgres"
+      
+      # Kafka (важно: внутренний порт 29092, а не 9092)
+      ConnectionStrings__BootstrapServers: "kafka:29092"
+    
+      # JWT (если нужно переопределить в Docker)
+      JwtSettings__Secret: "super-secret-key-change-in-production-at-least-32-chars-long!"
+      JwtSettings__Issuer: "https://super-octo-succotash.com"
+      JwtSettings__Audience: "https://super-octo-succotash.com"
+      JwtSettings__ExpirationMinutes: 10
+
+      # Логирование и AllowedHosts при необходимости
+      Logging__LogLevel__Default: "Information"
+      AllowedHosts: "*"
+    depends_on:
+      bookings-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+
+  users-service:
+    build:
+      context: .
+      dockerfile: Identity.Service/Dockerfile
+      network: host
+      args:
+        HTTP_PROXY: ${HTTP_PROXY-}
+        HTTPS_PROXY: ${HTTPS_PROXY-}
+
+    container_name: eventapi-identity-service
+    ports:
+      - "127.0.0.1:8082:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      # База данных
+      ConnectionStrings__DefaultConnection: "Host=users-db;Port=5432;Database=users;Username=postgres;Password=postgres"
+    
+      # JWT (если нужно переопределить в Docker)
+      JwtSettings__Secret: "super-secret-key-change-in-production-at-least-32-chars-long!"
+      JwtSettings__Issuer: "https://super-octo-succotash.com"
+      JwtSettings__Audience: "https://super-octo-succotash.com"
+      JwtSettings__ExpirationMinutes: 10
+
+      # Логирование и AllowedHosts при необходимости
+      Logging__LogLevel__Default: "Information"
+      AllowedHosts: "*"
+    depends_on:
+      users-db:
+        condition: service_healthy
+    restart: unless-stopped
+
+
 volumes:
   zookeeper-data:
   zookeeper-logs:

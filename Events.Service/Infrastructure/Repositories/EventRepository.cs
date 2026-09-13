@@ -80,7 +80,7 @@ public class EventRepository : IEventRepository
         {
             filteredEvents = filteredEvents.Where(e => e.EndAt <= filterEvent.EndAt);
         }
-        
+
         return filteredEvents.Skip((page - 1) * pageSize).Take(pageSize).ToList();
     }
     public async Task<List<Event>> GetFilteredPageAsync(FilterRepositoryEventDto filterEvent, int page, int pageSize)
@@ -135,8 +135,8 @@ public class EventRepository : IEventRepository
         try
         {
             var @event = await _context.Events.FirstAsync(e => e.Id == id);
-            
-            if(DateTime.Now > @event.StartAt)
+
+            if (DateTime.Now > @event.StartAt)
             {
                 throw new BookingForPastEventException($"cannot reserve seats after start event: {id}");
             }
@@ -168,7 +168,7 @@ public class EventRepository : IEventRepository
         {
             var @event = _context.Events.First(e => e.Id == id);
 
-            if(DateTime.Now > @event.StartAt)
+            if (DateTime.Now > @event.StartAt)
             {
                 // Rollback need for release line in DB
                 transaction.Rollback();
@@ -326,6 +326,15 @@ public class EventRepository : IEventRepository
     {
         return await _context.Events
                             .Where(e => e.EndAt > DateTime.UtcNow)
+                            .ToListAsync();
+    }
+
+    public async Task<List<Event>> GetTop10Async()
+    {
+        return await _context.Events
+                            .Where(e => e.TotalSeats > 0)
+                            .OrderByDescending(e => (e.TotalSeats - e.AvailableSeats) / (double)e.TotalSeats)
+                            .Take(10)
                             .ToListAsync();
     }
 }

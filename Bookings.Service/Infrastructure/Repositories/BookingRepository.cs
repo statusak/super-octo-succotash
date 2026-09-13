@@ -31,7 +31,8 @@ public class BookingRepository : IBookingRepository
     /// <returns>Идентификатор созданного бронирования.</returns>
     public Guid Create(BookingRepositoryCreateDto booking)
     {
-        var newBooking = new Booking {
+        var newBooking = new Booking
+        {
             Id = Guid.NewGuid(),
             EventId = booking.EventId,
             UserId = booking.UserId,
@@ -62,7 +63,8 @@ public class BookingRepository : IBookingRepository
     /// <returns>Созданная сущность <see cref="Booking"/>.</returns>
     public async Task<Booking> CreateAsync(BookingRepositoryCreateDto booking)
     {
-        var newBooking = new Booking {
+        var newBooking = new Booking
+        {
             Id = Guid.NewGuid(),
             EventId = booking.EventId,
             UserId = booking.UserId,
@@ -140,7 +142,7 @@ public class BookingRepository : IBookingRepository
     public async Task<int> GetCountActiveBookingsByUserAndEventIdsAsync(Guid userId, IEnumerable<Guid> eventIds)
     {
         if (!eventIds.Any())
-                return 0;
+            return 0;
 
         var activeStatuses = new[] { BookingStatus.Pending, BookingStatus.Confirmed };
 

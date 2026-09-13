@@ -18,7 +18,7 @@ namespace CSCourse.Infrastructure.DataAccess.Configurations
                 .HasMaxLength(100);
 
             builder.HasIndex(a => a.Login).IsUnique();
-                
+
             builder.Property(a => a.HashPassword)
                 .IsRequired()
                 .HasMaxLength(256);

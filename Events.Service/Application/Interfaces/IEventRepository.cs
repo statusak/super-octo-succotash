@@ -231,5 +231,7 @@ namespace Events.Service.Application.Interfaces
         Task<int> CountAsync();
 
         Task<List<Event>> GetActiveAsync();
+
+        Task<List<Event>> GetTop10Async();
     }
 }
