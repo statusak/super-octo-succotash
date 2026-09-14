@@ -8,6 +8,11 @@ using System.Text;
 using Identity.Service.Infrastructure.DataAccess;
 using Microsoft.EntityFrameworkCore;
 using CSCourse.Contracts.Models;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Metrics;
+using Serilog;
+using Serilog.Formatting.Compact;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +20,13 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+
+var connectionTracing = builder.Configuration.GetConnectionString("Otlp:Endpoint")
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
+
+const string serviceName = "identity-service-api";
+const string serviceVersion = "1.0.0";
 
 builder.Services.AddAuthorization();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -49,7 +61,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddInfrastructure(connectionString);
-// builder.Services.AddApplication();
 
 builder.Services.AddSwaggerGen(options =>
 {
@@ -77,9 +88,30 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+builder.Services
+    .AddOpenApi()
+    .AddOpenTelemetry()
+    .ConfigureResource(resource => resource
+        .AddService(
+            serviceName: serviceName,
+            serviceVersion: serviceVersion))
+    .WithTracing(tracing => tracing
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddEntityFrameworkCoreInstrumentation()
+        .AddOtlpExporter(o => o.Endpoint = new Uri(connectionTracing)))
+    .WithMetrics(metrics => metrics
+        .AddAspNetCoreInstrumentation()
+        .AddRuntimeInstrumentation()
+        .AddPrometheusExporter());
+
+builder.Host.UseSerilog((ctx, cfg) =>
+    cfg.ReadFrom.Configuration(ctx.Configuration)
+       .WriteTo.Console(new CompactJsonFormatter()));
 
 var app = builder.Build();
+
+app.MapPrometheusScrapingEndpoint();
 
 app.UseAuthentication();
 app.UseAuthorization();
