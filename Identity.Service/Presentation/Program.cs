@@ -21,7 +21,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 
-var connectionTracing = builder.Configuration.GetConnectionString("Otlp:Endpoint")
+var connectionTracing = builder.Configuration.GetSection("Otlp:Endpoint").ToString()
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
 
