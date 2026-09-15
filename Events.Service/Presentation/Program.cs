@@ -10,6 +10,11 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using Serilog;
+using Serilog.Formatting.Compact;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +26,24 @@ var bootstrapServers = builder.Configuration.GetConnectionString("BootstrapServe
 
 builder.Services.Configure<RedisSettings>(builder.Configuration.GetSection("Redis"));
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+
+var otlpEndpoint = builder.Configuration.GetValue<string>("Otlp:Endpoint");
+
+if (string.IsNullOrWhiteSpace(otlpEndpoint))
+    throw new InvalidOperationException("Configuration 'Otlp:Endpoint' is missing or empty");
+
+Uri otlpUri;
+try
+{
+    otlpUri = new Uri(otlpEndpoint);
+}
+catch (UriFormatException ex)
+{
+    throw new InvalidOperationException($"Invalid Otlp:Endpoint value '{otlpEndpoint}'. It must be a valid URI.", ex);
+}
+
+const string serviceName = "events-service-api";
+const string serviceVersion = "1.0.0";
 
 builder.Services.AddAuthorization();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -85,7 +108,26 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+builder.Services
+    .AddOpenApi()
+    .AddOpenTelemetry()
+    .ConfigureResource(resource => resource
+        .AddService(
+            serviceName: serviceName,
+            serviceVersion: serviceVersion))
+    .WithTracing(tracing => tracing
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddEntityFrameworkCoreInstrumentation()
+        .AddOtlpExporter(o => o.Endpoint = otlpUri))
+    .WithMetrics(metrics => metrics
+        .AddAspNetCoreInstrumentation()
+        .AddRuntimeInstrumentation()
+        .AddPrometheusExporter());
+
+builder.Host.UseSerilog((ctx, cfg) =>
+    cfg.ReadFrom.Configuration(ctx.Configuration)
+       .WriteTo.Console(new CompactJsonFormatter()));
 
 
 // --------- INIT KAFKA --------- //
@@ -93,6 +135,7 @@ await KafkaTopicInitializer.EnsureTopicsAsync(bootstrapServers);
 // ---------           --------- //
 var app = builder.Build();
 
+app.MapPrometheusScrapingEndpoint();
 
 app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
 app.UseAuthentication();
