@@ -21,8 +21,20 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 
-var connectionTracing = builder.Configuration.GetSection("Otlp:Endpoint").ToString()
-    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+var otlpEndpoint = builder.Configuration.GetValue<string>("Otlp:Endpoint");
+
+if (string.IsNullOrWhiteSpace(otlpEndpoint))
+    throw new InvalidOperationException("Configuration 'Otlp:Endpoint' is missing or empty");
+
+Uri otlpUri;
+try
+{
+    otlpUri = new Uri(otlpEndpoint);
+}
+catch (UriFormatException ex)
+{
+    throw new InvalidOperationException($"Invalid Otlp:Endpoint value '{otlpEndpoint}'. It must be a valid URI.", ex);
+}
 
 
 const string serviceName = "identity-service-api";
@@ -99,7 +111,7 @@ builder.Services
         .AddAspNetCoreInstrumentation()
         .AddHttpClientInstrumentation()
         .AddEntityFrameworkCoreInstrumentation()
-        .AddOtlpExporter(o => o.Endpoint = new Uri(connectionTracing)))
+        .AddOtlpExporter(o => o.Endpoint = otlpUri))
     .WithMetrics(metrics => metrics
         .AddAspNetCoreInstrumentation()
         .AddRuntimeInstrumentation()

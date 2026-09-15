@@ -202,7 +202,7 @@ services:
       # Логирование и AllowedHosts при необходимости
       Logging__LogLevel__Default: "Information"
       AllowedHosts: "*"
-      Otlp__Endpoint: http://jaeger:4317
+      Otlp__Endpoint: jaeger:4317
     depends_on:
       users-db:
         condition: service_healthy
