@@ -9,7 +9,8 @@ Event Manager — распределённая система на стеке .N
 - управление мероприятиями (создание, фильтрация, пагинация, резервирование мест);
 - обработку бронирований с асинхронной фоновой обработкой и защитой от состояний гонки;
 - разграничение прав (Admin/User) и глобальную обработку ошибок по RFC 7807;
-- асинхронную коммуникацию между сервисами через Kafka (событийная модель).
+- асинхронную коммуникацию между сервисами через Kafka (событийная модель);
+- наблюдаемость: распределённый трейсинг через OpenTelemetry + Jaeger, метрики через Prometheus, структурированное логгирование через Serilog.
 
 ---
 
@@ -69,20 +70,22 @@ Event Manager — распределённая система на стеке .N
 ## Структура проекта
 
 ```txt
-├── docker-compose.yaml # Оркестрация контейнеров (PostgreSQL, Kafka, сервисы)
-|
-├── Contracts # Общие контракты: исключения, DTO, Kafka-топики
-├── Bookings.Service # Микросервис бронирований
-│     ├── Application # Интерфейсы, DTO, сервисы
-│     ├── Domain # Модели и исключения домена
-│     ├── Infrastructure # EF Core, репозитории, миграции, Kafka-клиенты
-│     └── Presentation # Контроллеры, middleware, Program.cs
-├── Events.Service # Микросервис мероприятий
+├── docker-compose.yaml          # Оркестрация контейнеров (PostgreSQL, Kafka, Redis, Prometheus, Jaeger, Grafana, сервисы)
+├── prometheus.yml               # Конфигурация Prometheus: scrape-таргеты и интервалы
+├── grafana-Booking-service.json # Дашборд Grafana для сервиса бронирований
+│
+├── Contracts                    # Общие контракты: исключения, DTO, Kafka-топики
+├── Bookings.Service             # Микросервис бронирований
+│     ├── Application            # Интерфейсы, DTO, сервисы
+│     ├── Domain                 # Модели и исключения домена
+│     ├── Infrastructure         # EF Core, репозитории, миграции, Kafka-клиенты
+│     └── Presentation           # Контроллеры, middleware, Program.cs
+├── Events.Service               # Микросервис мероприятий
 │     ├── Infrastructure
 │     ├── Application
 │     ├── Domain
 │     └── Presentation
-└── Identity.Service # Микросервис идентификации
+└── Identity.Service             # Микросервис идентификации
       ├── Application
       ├── Domain
       ├── Infrastructure
@@ -171,10 +174,92 @@ dotnet dotnet test Tests/Unit/Tests.Unit.csproj
 
 ---
 
+## Мониторинг и наблюдаемость
+
+Система оснащена полным стеком наблюдаемости: распределённый трейсинг, сбор метрик и структурированное логгирование. Инструментирование реализовано через **OpenTelemetry** во всех трёх микросервисах.
+
+### Трейсинг (OpenTelemetry + Jaeger)
+
+Каждый сервис настраивает OpenTelemetry tracing со следующими параметрами:
+
+| Параметр | Значение |
+| --- | --- |
+| Имена сервисов | `bookings-service-api`, `events-service-api`, `identity-service-api` |
+| Версия сервисов | 1.0.0 |
+| Экспорт | OTLP gRPC → Jaeger |
+| Endpoint (локально) | `http://localhost:4317` |
+| Endpoint (Docker) | `http://jaeger:4317` |
+| Batch export — задержка | 10 000 мс |
+| Batch export — таймаут | 15 000 мс |
+
+Инструментирование трейсинга:
+- **ASP.NET Core** — автоматические спаны для входящих HTTP-запросов; путь `/metrics` исключён из трейсинга;
+- **HttpClient** — спаны для исходящих HTTP-вызовов;
+- **EntityFrameworkCore** — спаны для запросов к БД.
+
+Endpoint для OTLP задаётся в секции Otlp конфигурации appsettings.json. В docker-compose.yaml передаётся через переменную окружения `Otlp__Endpoint`.
+
+Jaeger UI доступен по адресу `http://localhost:16686`.
+
+### Метрики (OpenTelemetry + Prometheus + Grafana)
+
+Каждый сервис экспортирует метрики в формате Prometheus через endpoint `/metrics` (MapPrometheusScrapingEndpoint).
+
+Инструментирование метрик:
+- **ASP.NET Core** — счётчики и гистограммы HTTP-запросов (длительность, активные запросы, RPS);
+- **.NET Runtime** — метрики GC, thread pool, памяти и прочее.
+
+Prometheus скрапит все три сервиса каждые 15 секунд. Конфигурация scrape-таргетов описана в файле **prometheus.yml**:
+
+| Job name | Target | Path |
+| --- | --- | --- |
+| `events-service` | events-service:8080 | /metrics |
+| `bookings-service` | bookings-service:8080 | /metrics |
+| `users-service` | users-service:8080 | /metrics |
+
+Grafana предзаполнена дашбордом для сервиса бронирований (`grafana-Booking-service.json`). Дашборд содержит панели:
+
+- **Latency (p50, p95, p99)** — перцентили длительности HTTP-запросов на основе гистограммы http\_server\_request\_duration\_seconds;
+- **Active Requests** — количество запросов в обработке (http\_server\_active\_requests);
+- **Throughput (RPS)** — пропускная способность по числу запросов за 5 минут (rate http\_server\_request\_duration\_seconds\_count).
+
+Доступ к UI:
+- Prometheus — `http://localhost:9090`
+- Grafana — `http://localhost:3000` (логин/пароль: `admin`/`admin`)
+
+### Логгирование (Serilog)
+
+Во всех сервисах настроен **Serilog** со структурированным выводом в консоль в формате Compact JSON (CompactJsonFormatter). Конфигурация считывается из секции Serilog в appsettings.json:
+
+| Параметр | Значение |
+| --- | --- |
+| `MinimumLevel.Default` | Information |
+| `Override.Microsoft` | Warning |
+| `Override.System` | Warning |
+
+### Инфраструктура наблюдаемости в docker-compose.yaml
+
+| Контейнер | Образ | Порты | Назначение |
+| --- | --- | --- | --- |
+| `prometheus` | `prom/prometheus:v2.51.0` | 9090 | Сбор и хранение метрик |
+| `jaeger` | `jaegertracing/all-in-one:1.56` | 16686 (UI), 4317 (OTLP gRPC) | Сбор и просмотр распределённых трейсов |
+| `grafana` | `grafana/grafana:10.4.2` | 3000 | Визуализация метрик через дашборды |
+
+Jaeger запускается с включённым OTLP-коллектором (COLLECTOR\_OTLP\_ENABLED=true). Grafana использует постоянный том grafana-data для сохранения конфигурации дашбордов между перезапусками.
+
+---
+
 ## Запуск системы
 
 ```bash
 docker compose up
 ```
 
-Swagger UI доступен по адресу /swagger для каждого сервиса.
+После запуска доступны:
+
+| Сервис | Адрес |
+| --- | --- |
+| Swagger UI (каждый микросервис) | `/swagger` |
+| Jaeger UI | `http://localhost:16686` |
+| Prometheus | `http://localhost:9090` |
+| Grafana | `http://localhost:3000` (admin/admin) |

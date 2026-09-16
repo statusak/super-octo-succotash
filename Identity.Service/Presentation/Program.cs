@@ -8,6 +8,12 @@ using System.Text;
 using Identity.Service.Infrastructure.DataAccess;
 using Microsoft.EntityFrameworkCore;
 using CSCourse.Contracts.Models;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Metrics;
+using Serilog;
+using Serilog.Formatting.Compact;
+using OpenTelemetry.Exporter;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +21,25 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+
+var otlpEndpoint = builder.Configuration.GetValue<string>("Otlp:Endpoint");
+
+if (string.IsNullOrWhiteSpace(otlpEndpoint))
+    throw new InvalidOperationException("Configuration 'Otlp:Endpoint' is missing or empty");
+
+Uri otlpUri;
+try
+{
+    otlpUri = new Uri(otlpEndpoint);
+}
+catch (UriFormatException ex)
+{
+    throw new InvalidOperationException($"Invalid Otlp:Endpoint value '{otlpEndpoint}'. It must be a valid URI.", ex);
+}
+
+
+const string serviceName = "identity-service-api";
+const string serviceVersion = "1.0.0";
 
 builder.Services.AddAuthorization();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -49,7 +74,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddInfrastructure(connectionString);
-// builder.Services.AddApplication();
 
 builder.Services.AddSwaggerGen(options =>
 {
@@ -77,9 +101,45 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+builder.Services
+    .AddOpenApi()
+    .AddOpenTelemetry()
+    .ConfigureResource(resource => resource
+        .AddService(
+            serviceName: serviceName,
+            serviceVersion: serviceVersion))
+    .WithTracing(tracing => tracing
+        .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName))    
+        .AddAspNetCoreInstrumentation(options =>
+        {
+            options.Filter = httpContext => 
+                {
+                    var path = httpContext.Request.Path;
+                    return !path.StartsWithSegments("/metrics");
+                };
+        })
+        .AddHttpClientInstrumentation()
+        .AddEntityFrameworkCoreInstrumentation()
+        .AddOtlpExporter(options =>
+            {
+                options.Endpoint = otlpUri;
+                options.Protocol = OtlpExportProtocol.Grpc;
+                options.BatchExportProcessorOptions.ScheduledDelayMilliseconds = 10000;
+                options.BatchExportProcessorOptions.ExporterTimeoutMilliseconds = 15000;
+            }))
+    .WithMetrics(metrics => metrics
+        .AddAspNetCoreInstrumentation()
+        .AddRuntimeInstrumentation()
+        .AddPrometheusExporter());
+
+
+builder.Host.UseSerilog((ctx, cfg) =>
+    cfg.ReadFrom.Configuration(ctx.Configuration)
+       .WriteTo.Console(new CompactJsonFormatter()));
 
 var app = builder.Build();
+
+app.MapPrometheusScrapingEndpoint();
 
 app.UseAuthentication();
 app.UseAuthorization();

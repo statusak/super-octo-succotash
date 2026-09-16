@@ -10,6 +10,12 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using Serilog;
+using Serilog.Formatting.Compact;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +27,24 @@ var bootstrapServers = builder.Configuration.GetConnectionString("BootstrapServe
 
 builder.Services.Configure<RedisSettings>(builder.Configuration.GetSection("Redis"));
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+
+var otlpEndpoint = builder.Configuration.GetValue<string>("Otlp:Endpoint");
+
+if (string.IsNullOrWhiteSpace(otlpEndpoint))
+    throw new InvalidOperationException("Configuration 'Otlp:Endpoint' is missing or empty");
+
+Uri otlpUri;
+try
+{
+    otlpUri = new Uri(otlpEndpoint);
+}
+catch (UriFormatException ex)
+{
+    throw new InvalidOperationException($"Invalid Otlp:Endpoint value '{otlpEndpoint}'. It must be a valid URI.", ex);
+}
+
+const string serviceName = "events-service-api";
+const string serviceVersion = "1.0.0";
 
 builder.Services.AddAuthorization();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -85,7 +109,40 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+builder.Services
+    .AddOpenApi()
+    .AddOpenTelemetry()
+    .ConfigureResource(resource => resource
+        .AddService(
+            serviceName: serviceName,
+            serviceVersion: serviceVersion))
+    .WithTracing(tracing => tracing
+        .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName))    
+        .AddAspNetCoreInstrumentation(options =>
+        {
+            options.Filter = httpContext => 
+                {
+                    var path = httpContext.Request.Path;
+                    return !path.StartsWithSegments("/metrics");
+                };
+        })
+        .AddHttpClientInstrumentation()
+        .AddEntityFrameworkCoreInstrumentation()
+        .AddOtlpExporter(options =>
+            {
+                options.Endpoint = otlpUri;
+                options.Protocol = OtlpExportProtocol.Grpc;
+                options.BatchExportProcessorOptions.ScheduledDelayMilliseconds = 10000;
+                options.BatchExportProcessorOptions.ExporterTimeoutMilliseconds = 15000;
+            }))
+    .WithMetrics(metrics => metrics
+        .AddAspNetCoreInstrumentation()
+        .AddRuntimeInstrumentation()
+        .AddPrometheusExporter());
+
+builder.Host.UseSerilog((ctx, cfg) =>
+    cfg.ReadFrom.Configuration(ctx.Configuration)
+       .WriteTo.Console(new CompactJsonFormatter()));
 
 
 // --------- INIT KAFKA --------- //
@@ -93,6 +150,7 @@ await KafkaTopicInitializer.EnsureTopicsAsync(bootstrapServers);
 // ---------           --------- //
 var app = builder.Build();
 
+app.MapPrometheusScrapingEndpoint();
 
 app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
 app.UseAuthentication();
