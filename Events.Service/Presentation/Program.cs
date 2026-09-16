@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -116,10 +117,24 @@ builder.Services
             serviceName: serviceName,
             serviceVersion: serviceVersion))
     .WithTracing(tracing => tracing
-        .AddAspNetCoreInstrumentation()
+        .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName))    
+        .AddAspNetCoreInstrumentation(options =>
+        {
+            options.Filter = httpContext => 
+                {
+                    var path = httpContext.Request.Path;
+                    return !path.StartsWithSegments("/metrics");
+                };
+        })
         .AddHttpClientInstrumentation()
         .AddEntityFrameworkCoreInstrumentation()
-        .AddOtlpExporter(o => o.Endpoint = otlpUri))
+        .AddOtlpExporter(options =>
+            {
+                options.Endpoint = otlpUri;
+                options.Protocol = OtlpExportProtocol.Grpc;
+                options.BatchExportProcessorOptions.ScheduledDelayMilliseconds = 10000;
+                options.BatchExportProcessorOptions.ExporterTimeoutMilliseconds = 15000;
+            }))
     .WithMetrics(metrics => metrics
         .AddAspNetCoreInstrumentation()
         .AddRuntimeInstrumentation()

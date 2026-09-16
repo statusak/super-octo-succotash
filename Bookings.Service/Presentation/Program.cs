@@ -14,6 +14,7 @@ using OpenTelemetry.Trace;
 using OpenTelemetry.Metrics;
 using Serilog;
 using Serilog.Formatting.Compact;
+using OpenTelemetry.Exporter;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -113,14 +114,29 @@ builder.Services
             serviceName: serviceName,
             serviceVersion: serviceVersion))
     .WithTracing(tracing => tracing
-        .AddAspNetCoreInstrumentation()
+        .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName))    
+        .AddAspNetCoreInstrumentation(options =>
+        {
+            options.Filter = httpContext => 
+                {
+                    var path = httpContext.Request.Path;
+                    return !path.StartsWithSegments("/metrics");
+                };
+        })
         .AddHttpClientInstrumentation()
         .AddEntityFrameworkCoreInstrumentation()
-        .AddOtlpExporter(o => o.Endpoint = otlpUri))
+        .AddOtlpExporter(options =>
+            {
+                options.Endpoint = otlpUri;
+                options.Protocol = OtlpExportProtocol.Grpc;
+                options.BatchExportProcessorOptions.ScheduledDelayMilliseconds = 10000;
+                options.BatchExportProcessorOptions.ExporterTimeoutMilliseconds = 15000;
+            }))
     .WithMetrics(metrics => metrics
         .AddAspNetCoreInstrumentation()
         .AddRuntimeInstrumentation()
         .AddPrometheusExporter());
+
 
 builder.Host.UseSerilog((ctx, cfg) =>
     cfg.ReadFrom.Configuration(ctx.Configuration)

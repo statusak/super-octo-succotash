@@ -128,6 +128,8 @@ services:
       JwtSettings__Audience: "https://super-octo-succotash.com"
       JwtSettings__ExpirationMinutes: 10
 
+      Otlp__Endpoint: "http://jaeger:4317"
+
       # Логирование и AllowedHosts при необходимости
       Logging__LogLevel__Default: "Information"
       AllowedHosts: "*"
@@ -166,6 +168,8 @@ services:
       JwtSettings__Audience: "https://super-octo-succotash.com"
       JwtSettings__ExpirationMinutes: 10
 
+      Otlp__Endpoint: "http://jaeger:4317"
+
       # Логирование и AllowedHosts при необходимости
       Logging__LogLevel__Default: "Information"
       AllowedHosts: "*"
@@ -202,7 +206,7 @@ services:
       # Логирование и AllowedHosts при необходимости
       Logging__LogLevel__Default: "Information"
       AllowedHosts: "*"
-      Otlp__Endpoint: jaeger:4317
+      Otlp__Endpoint: "http://jaeger:4317"
     depends_on:
       users-db:
         condition: service_healthy
